@@ -13,7 +13,8 @@ interface MessageActionSheetProps {
   onReply: () => void
   onReact: (emoji: string) => void
   onCopy: () => void
-  onDelete: () => void
+  onDeleteForMe: () => void
+  onDeleteForEveryone: () => void
 }
 
 /**
@@ -28,7 +29,8 @@ export default function MessageActionSheet({
   onReply,
   onReact,
   onCopy,
-  onDelete,
+  onDeleteForMe,
+  onDeleteForEveryone,
 }: MessageActionSheetProps) {
   // Close on Escape key
   useEffect(() => {
@@ -133,13 +135,24 @@ export default function MessageActionSheet({
               />
             )}
 
-            {/* Delete (own messages only) */}
-            {isSelf && !isDeleted && (
+            {/* Delete for Me */}
+            {!isDeleted && (
               <ActionItem
                 icon={<Trash2 className="h-5 w-5 text-rose-500" />}
-                label="delete message"
+                label="delete for me"
                 labelClass="text-rose-600 dark:text-rose-400"
-                onClick={() => handleAction(onDelete)}
+                onClick={() => handleAction(onDeleteForMe)}
+                destructive
+              />
+            )}
+
+            {/* Delete for Everyone */}
+            {isSelf && !isDeleted && (
+              <ActionItem
+                icon={<Trash2 className="h-5 w-5 text-rose-600" />}
+                label="delete for everyone"
+                labelClass="text-rose-700 dark:text-rose-300"
+                onClick={() => handleAction(onDeleteForEveryone)}
                 destructive
               />
             )}

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { ArrowLeft, Users, MoreVertical, Phone, Sun, Moon, Copy, BellOff, LogOut } from 'lucide-react'
+import { ArrowLeft, Users, MoreVertical, Phone, Sun, Moon, Copy, BellOff, LogOut, Trash2 } from 'lucide-react'
 import { UserProfile } from '@/types'
 import { useTheme } from 'next-themes'
 import MessageList from './MessageList'
@@ -67,6 +67,8 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
     sendMessage,
     toggleReaction,
     deleteMessage,
+    deleteMessageForMe,
+    clearChatForMe,
     replyTo,
     setReplyTo,
   } = useMessages(groupId, activeUser)
@@ -205,6 +207,20 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
                     mute notifications
                   </button>
 
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      if (confirm("are you sure you want to clear this chat's history for yourself? this cannot be undone.")) {
+                        clearChatForMe()
+                      }
+                      setMoreMenuOpen(false)
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all text-left cursor-pointer"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                    clear chat history
+                  </button>
+
                   {/* Separator */}
                   <div className="my-1 mx-2 h-px bg-black/5 dark:bg-white/5" />
 
@@ -233,6 +249,7 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
           onReact={toggleReaction}
           onReply={setReplyTo}
           onDelete={deleteMessage}
+          onDeleteForMe={deleteMessageForMe}
         />
 
         {/* ══════════════════════════════════════

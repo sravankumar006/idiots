@@ -67,14 +67,54 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
   const [mobileView, setMobileView] = useState<'sidebar' | 'chat'>('sidebar')
 
   // ——— Groups / channel list ———
-  const groupsList = initialGroups.length > 0 ? initialGroups : [
+  const MOCK_GROUPS = [
     { id: 'default-group', group_name: 'general',    created_by: 'sys', created_at: new Date().toISOString() },
     { id: 'focus-group',   group_name: 'focus room', created_by: 'sys', created_at: new Date().toISOString() },
     { id: 'ai-logs',       group_name: 'ai logs',    created_by: 'sys', created_at: new Date().toISOString() },
   ]
-  const [selectedGroup, setSelectedGroup] = useState<ChatGroup | null>(groupsList[0])
+  const [groups, setGroups] = useState<ChatGroup[]>(initialGroups.length > 0 ? initialGroups : MOCK_GROUPS)
+  const [selectedGroup, setSelectedGroup] = useState<ChatGroup | null>(
+    initialGroups.length > 0 ? initialGroups[0] : MOCK_GROUPS[0]
+  )
 
   useEffect(() => { setMounted(true) }, [])
+
+  // Auto-seed default groups if database has none
+  useEffect(() => {
+    const ensureGroups = async () => {
+      if (initialGroups.length === 0 && activeProfile) {
+        try {
+          const { data: dbGroups, error: fetchError } = await supabase
+            .from('groups')
+            .select('*')
+            .order('group_name', { ascending: true })
+
+          if (!fetchError && (!dbGroups || dbGroups.length === 0)) {
+            const seedData = [
+              { group_name: 'general', created_by: activeProfile.id },
+              { group_name: 'focus room', created_by: activeProfile.id },
+              { group_name: 'ai logs', created_by: activeProfile.id },
+            ]
+            const { data: inserted, error: insertError } = await supabase
+              .from('groups')
+              .insert(seedData)
+              .select()
+
+            if (!insertError && inserted && inserted.length > 0) {
+              setGroups(inserted)
+              setSelectedGroup(inserted[0])
+            }
+          } else if (dbGroups && dbGroups.length > 0) {
+            setGroups(dbGroups)
+            setSelectedGroup(dbGroups[0])
+          }
+        } catch (e) {
+          console.warn("Autoseed groups check failed:", e)
+        }
+      }
+    }
+    ensureGroups()
+  }, [initialGroups, activeProfile, supabase])
 
   // Fetch friend profiles for the online list
   useEffect(() => {
@@ -173,7 +213,7 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
           Rooms
         </p>
         <div className="space-y-0.5">
-          {groupsList.map((g) => {
+          {groups.map((g) => {
             const isActive = selectedGroup?.id === g.id
             return (
               <button

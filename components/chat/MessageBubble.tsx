@@ -31,6 +31,7 @@ interface MessageBubbleProps {
   onReact: (messageId: string, emoji: string) => void
   onReply: (message: ChatMessage) => void
   onDelete: (messageId: string) => void
+  onDeleteForMe: (messageId: string) => void
 }
 
 export default function MessageBubble({
@@ -39,6 +40,7 @@ export default function MessageBubble({
   onReact,
   onReply,
   onDelete,
+  onDeleteForMe,
 }: MessageBubbleProps) {
   const isSelf = message.sender_id === activeUserId
   const isDeleted = message.type === 'deleted'
@@ -340,7 +342,8 @@ export default function MessageBubble({
           onReply={() => onReply(message)}
           onReact={(emoji) => onReact(message.id, emoji)}
           onCopy={handleCopy}
-          onDelete={() => onDelete(message.id)}
+          onDeleteForMe={() => onDeleteForMe(message.id)}
+          onDeleteForEveryone={() => onDelete(message.id)}
         />
       )}
 
@@ -349,7 +352,13 @@ export default function MessageBubble({
         <ReactionPicker
           x={reactionPickerPos.x}
           y={reactionPickerPos.y}
+          message={message}
+          isSelf={isSelf}
           onReact={(emoji) => onReact(message.id, emoji)}
+          onReply={() => onReply(message)}
+          onCopy={handleCopy}
+          onDeleteForMe={() => onDeleteForMe(message.id)}
+          onDeleteForEveryone={() => onDelete(message.id)}
           onClose={() => setReactionPickerPos(null)}
         />
       )}
