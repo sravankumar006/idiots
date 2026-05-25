@@ -16,6 +16,22 @@ export async function POST(req: Request) {
   try {
     const { prompt, groupId, aiMessageId, contextMessages } = await req.json()
 
+    // Guard against missing API Key
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    if (!apiKey) {
+      const warningText = `⚠️ **Gemini API Key Missing**
+
+To activate your AI Companion, please add \`GEMINI_API_KEY\` to your \`.env.local\` file and restart the Next.js development server:
+
+\`\`\`bash
+GEMINI_API_KEY=your_actual_api_key_here
+\`\`\``;
+      
+      return new Response(warningText, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+      });
+    }
+
     // Build the AI conversation history
     const coreMessages = contextMessages.map((msg: any) => ({
       role: msg.type === 'ai' ? 'assistant' : 'user',

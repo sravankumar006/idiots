@@ -15,24 +15,29 @@ create table if not exists public.ai_logs (
 -- Enable Row Level Security (RLS)
 alter table public.ai_logs enable row level security;
 
--- Policy for reading logs: all authenticated users can read logs
+-- Policy for reading logs: authenticated users can read group chat logs (room_id is not null) or their own personal logs (room_id is null)
+drop policy if exists "Allow read access to ai_logs for authenticated users" on public.ai_logs;
 create policy "Allow read access to ai_logs for authenticated users"
 on public.ai_logs for select
 to authenticated
-using (true);
+using (room_id is not null or user_id = auth.uid());
 
 -- Policy for inserting logs: authenticated users can insert their own logs
+drop policy if exists "Allow insert access to ai_logs for authenticated users" on public.ai_logs;
 create policy "Allow insert access to ai_logs for authenticated users"
 on public.ai_logs for insert
 to authenticated
 with check (auth.uid() = user_id);
 
--- Register with Realtime if needed (optional, but good for sync)
+-- Register all tables with Realtime Replication publication cleanly
 begin;
-  -- Add table to realtime replication publication if it exists
-  alter publication supabase_realtime add table public.ai_logs;
-exception
-  when others then
-    -- If publication or table already exists in it, ignore
-    null;
-end;
+  drop publication if exists supabase_realtime;
+  create publication supabase_realtime;
+commit;
+
+alter publication supabase_realtime add table public.groups;
+alter publication supabase_realtime add table public.messages;
+alter publication supabase_realtime add table public.reactions;
+alter publication supabase_realtime add table public.deleted_messages;
+alter publication supabase_realtime add table public.group_clears;
+alter publication supabase_realtime add table public.ai_logs;

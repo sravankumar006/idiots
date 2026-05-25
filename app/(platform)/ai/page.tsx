@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { 
   Sparkles, 
   Search, 
@@ -12,12 +12,14 @@ import {
   Brain, 
   Filter, 
   Cpu, 
-  Trash2,
-  Calendar,
   Terminal,
-  Activity
+  Activity,
+  CornerDownLeft,
+  Settings,
+  Heart
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { ChatMessage, UserProfile } from '@/types'
 import PageContainer from '@/components/layout/PageContainer'
 import SectionHeader from '@/components/layout/SectionHeader'
 import { Card } from '@/components/ui/Card'
@@ -51,9 +53,19 @@ const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
   'avatar-shadow-blade': { gradient: 'from-slate-400 to-indigo-500', symbol: 'MS' },
 }
 
-export default function AiLogsPage() {
+export default function AiPage() {
+  const [activeTab, setActiveTab] = useState<'consultant' | 'logs'>('consultant')
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null)
+  
+  // Tab 1: Personal AI Consultant States
+  const [personalPrompt, setPersonalPrompt] = useState('')
+  const [personalMessages, setPersonalMessages] = useState<ChatMessage[]>([])
+  const [isTyping, setIsTyping] = useState(false)
+  const chatEndRef = useRef<HTMLDivElement>(null)
+
+  // Tab 2: Shared Logs Archive States
   const [logs, setLogs] = useState<LogItem[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loadingLogs, setLoadingLogs] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedGroup, setSelectedGroup] = useState<string>('all')
   const [selectedUser, setSelectedUser] = useState<string>('all')
@@ -62,11 +74,95 @@ export default function AiLogsPage() {
 
   const supabase = createClient()
 
-  // Fetch logs on mount
+  // Fetch currentUser session on mount
+  useEffect(() => {
+    async function fetchUser() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setCurrentUser({
+          id: user.id,
+          email: user.email || '',
+          username: user.user_metadata?.username || 'Explorer',
+          avatar: user.user_metadata?.avatar || 'avatar-cyber-ghost',
+          created_at: user.created_at,
+        })
+      }
+    }
+    fetchUser()
+  }, [])
+
+  // Auto-scroll personal consultant chat on message change
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [personalMessages])
+
+  // Fetch private consultant messages once user is available
+  useEffect(() => {
+    if (!currentUser) return
+    const userProfile = currentUser
+
+    async function fetchPersonalHistory() {
+      try {
+        const { data, error } = await supabase
+          .from('ai_logs')
+          .select('*')
+          .is('room_id', null)
+          .eq('user_id', userProfile.id)
+          .order('created_at', { ascending: true })
+
+        if (error) throw error
+
+        if (data) {
+          const msgs: ChatMessage[] = []
+          data.forEach((log: any) => {
+            // User Prompt Message
+            msgs.push({
+              id: `${log.id}-user`,
+              group_id: '',
+              sender_id: userProfile.id,
+              message: log.prompt,
+              type: 'text',
+              reply_to: null,
+              created_at: log.created_at,
+              profiles: userProfile,
+              reactions: []
+            })
+            // AI Response Message
+            msgs.push({
+              id: `${log.id}-ai`,
+              group_id: '',
+              sender_id: 'ai-system',
+              message: log.response,
+              type: 'ai',
+              reply_to: null,
+              created_at: log.created_at,
+              profiles: {
+                id: 'ai-system',
+                username: 'companion',
+                email: 'ai@system.local',
+                avatar: 'avatar-cyber-ghost',
+                created_at: log.created_at
+              },
+              reactions: []
+            })
+          })
+          setPersonalMessages(msgs)
+        }
+      } catch (err) {
+        console.error('Failed to load private consultant history:', err)
+      }
+    }
+
+    fetchPersonalHistory()
+  }, [currentUser])
+
+  // Fetch shared logs on mount
   useEffect(() => {
     async function fetchLogs() {
       try {
-        setLoading(true)
+        setLoadingLogs(true)
         const { data, error } = await supabase
           .from('ai_logs')
           .select(`
@@ -93,7 +189,7 @@ export default function AiLogsPage() {
       } catch (err) {
         console.error('Failed to fetch AI logs:', err)
       } finally {
-        setLoading(false)
+        setLoadingLogs(false)
       }
     }
 
@@ -141,7 +237,103 @@ export default function AiLogsPage() {
     }
   }, [])
 
-  // Helper: Copy response
+  // Action: Send Private Message in Personal Consultant
+  const handleSendPersonal = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!personalPrompt.trim() || !currentUser || isTyping) return
+    const userProfile = currentUser
+
+    const text = personalPrompt.trim()
+    setPersonalPrompt('')
+    setIsTyping(true)
+
+    // 1. Optimistic User message
+    const userMsg: ChatMessage = {
+      id: `user-${Date.now()}`,
+      group_id: '',
+      sender_id: userProfile.id,
+      message: text,
+      type: 'text',
+      reply_to: null,
+      created_at: new Date().toISOString(),
+      profiles: userProfile,
+      reactions: []
+    }
+
+    // 2. Optimistic empty AI message
+    const aiMessageId = `ai-${Date.now()}`
+    const aiMsg: ChatMessage = {
+      id: aiMessageId,
+      group_id: '',
+      sender_id: 'ai-system',
+      message: '',
+      type: 'ai',
+      reply_to: null,
+      created_at: new Date().toISOString(),
+      profiles: {
+        id: 'ai-system',
+        username: 'companion',
+        email: 'ai@system.local',
+        avatar: 'avatar-cyber-ghost',
+        created_at: new Date().toISOString()
+      },
+      reactions: [],
+      sending: true
+    }
+
+    setPersonalMessages(prev => [...prev, userMsg, aiMsg])
+
+    try {
+      // Map previous messages to prompt context
+      const context = personalMessages.slice(-15).map(m => ({
+        type: m.type,
+        message: m.message
+      }))
+
+      // Call route
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: text,
+          groupId: null, // Indicates private/personal consultant
+          contextMessages: context
+        })
+      })
+
+      if (!response.ok || !response.body) throw new Error('Private stream response failed')
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let accumulatedText = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value, { stream: true })
+        accumulatedText += chunk
+
+        setPersonalMessages(prev => 
+          prev.map(m => m.id === aiMessageId ? { ...m, message: accumulatedText } : m)
+        )
+      }
+
+      setPersonalMessages(prev => 
+        prev.map(m => m.id === aiMessageId ? { ...m, sending: false } : m)
+      )
+
+    } catch (err) {
+      console.error('Personal Companion request failed:', err)
+      setPersonalMessages(prev => 
+        prev.map(m => m.id === aiMessageId ? { ...m, error: true, sending: false, message: 'I encountered an error trying to process your request.' } : m)
+      )
+    } finally {
+      setIsTyping(false)
+    }
+  }
+
+  // Copy response helper
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text).then(() => {
       setCopiedId(id)
@@ -149,7 +341,7 @@ export default function AiLogsPage() {
     }).catch(err => console.error('Copy failed', err))
   }
 
-  // Toggle expanded view
+  // Expand/collapse logs helper
   const toggleExpand = (id: string) => {
     setExpandedLogs(prev => ({ ...prev, [id]: !prev[id] }))
   }
@@ -171,8 +363,11 @@ export default function AiLogsPage() {
     ).entries()
   )
 
-  // Filter logs based on inputs
+  // Filter logs list (only show items where room_id is not null)
   const filteredLogs = logs.filter(log => {
+    // Only display group logs in the logs tab
+    if (!log.room_id) return false
+
     const matchesSearch = 
       log.prompt.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.response.toLowerCase().includes(searchQuery.toLowerCase())
@@ -184,232 +379,440 @@ export default function AiLogsPage() {
   })
 
   // Group metrics
-  const totalQueries = logs.length
-  const activeRoomsCount = new Set(logs.filter(l => l.room_id).map(l => l.room_id)).size
-  const activeUsersCount = new Set(logs.filter(l => l.profiles?.id).map(l => l.profiles?.id)).size
-  
-  // Calculate average length of AI responses (simple proxy metric)
-  const averageLength = totalQueries > 0 
-    ? Math.round(logs.reduce((sum, log) => sum + log.response.length, 0) / totalQueries)
+  const groupLogsOnly = logs.filter(l => l.room_id)
+  const totalGroupQueries = groupLogsOnly.length
+  const activeRoomsCount = new Set(groupLogsOnly.map(l => l.room_id)).size
+  const activeUsersCount = new Set(groupLogsOnly.map(l => l.profiles?.id)).size
+  const averageLength = totalGroupQueries > 0 
+    ? Math.round(groupLogsOnly.reduce((sum, log) => sum + log.response.length, 0) / totalGroupQueries)
     : 0
+
+  const presets = [
+    'Help me map out a database schema for user profiles',
+    'Review key design concepts of glassmorphic styling',
+    'Synthesize a project proposal structure',
+    'Generate a funny joke about programmer bugs'
+  ]
+
+  const activeAvatarId = currentUser?.avatar || 'avatar-cyber-ghost'
+  const activeAvatar = AVATAR_MAP[activeAvatarId] || AVATAR_MAP['avatar-cyber-ghost']
 
   return (
     <PageContainer>
-      <SectionHeader 
-        title="companion archive" 
-        description="A real-time searchable index of all shared intelligence, companion queries, and synthesis logs."
-      />
-
-      {/* Diagnostics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 select-none">
-        <Card className="p-5 flex items-center justify-between hover:border-violet-500/10">
-          <div className="space-y-1.5">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">Total Queries</span>
-            <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-rose-400">
-              {loading ? '...' : totalQueries}
-            </span>
-          </div>
-          <Activity className="h-6 w-6 text-violet-400/60" />
-        </Card>
-
-        <Card className="p-5 flex items-center justify-between hover:border-cyan-500/10">
-          <div className="space-y-1.5">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">Active Rooms</span>
-            <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
-              {loading ? '...' : activeRoomsCount}
-            </span>
-          </div>
-          <MessageSquare className="h-6 w-6 text-cyan-400/60" />
-        </Card>
-
-        <Card className="p-5 flex items-center justify-between hover:border-emerald-500/10">
-          <div className="space-y-1.5">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">Involved Friends</span>
-            <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">
-              {loading ? '...' : activeUsersCount}
-            </span>
-          </div>
-          <User className="h-6 w-6 text-emerald-400/60" />
-        </Card>
-
-        <Card className="p-5 flex items-center justify-between hover:border-amber-500/10">
-          <div className="space-y-1.5">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">Avg Output Size</span>
-            <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-rose-400">
-              {loading ? '...' : `${averageLength} chars`}
-            </span>
-          </div>
-          <Terminal className="h-6 w-6 text-amber-400/60" />
-        </Card>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mt-2">
-        {/* Search */}
-        <div className="lg:col-span-2 relative flex items-center">
-          <Search className="absolute left-4 h-4 w-4 text-gray-500" />
-          <input
-            type="text"
-            placeholder="Search prompt or response contents..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#0a0b15]/40 glass-panel border border-black/5 dark:border-white/5 rounded-2xl py-3 pl-11 pr-4 text-xs text-gray-900 dark:text-white placeholder:text-gray-500 focus:outline-none focus:border-violet-500/30 transition-all font-semibold"
-          />
+      {/* Immersive Header & Tab Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-black/5 dark:border-white/5 select-none">
+        <div className="space-y-1">
+          <h2 className="text-xl font-extrabold text-gray-900 dark:text-white tracking-wide uppercase flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-violet-400" />
+            Companion Node
+          </h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold tracking-wide">
+            Interact with your private AI Consultant or explore shared group query intelligence.
+          </p>
         </div>
 
-        {/* Group Filter */}
-        <div className="relative flex items-center">
-          <Filter className="absolute left-4 h-4 w-4 text-gray-500" />
-          <select
-            value={selectedGroup}
-            onChange={(e) => setSelectedGroup(e.target.value)}
-            className="w-full appearance-none bg-[#0a0b15]/40 glass-panel border border-black/5 dark:border-white/5 rounded-2xl py-3 pl-11 pr-4 text-xs text-gray-700 dark:text-gray-300 font-semibold focus:outline-none focus:border-violet-500/30 transition-all cursor-pointer"
+        {/* Tab Switcher */}
+        <div className="flex bg-black/10 dark:bg-white/3 p-1 rounded-2xl border border-black/5 dark:border-white/5 shrink-0 self-start sm:self-center">
+          <button
+            onClick={() => setActiveTab('consultant')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'consultant'
+                ? 'bg-violet-500/10 text-violet-600 dark:text-white border-l-2 border-violet-400'
+                : 'text-gray-400 hover:text-gray-200'
+            }`}
           >
-            <option value="all">all rooms</option>
-            {uniqueGroups.map(([id, name]) => (
-              <option key={id} value={id}>#{name.toLowerCase()}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* User Filter */}
-        <div className="relative flex items-center">
-          <User className="absolute left-4 h-4 w-4 text-gray-500" />
-          <select
-            value={selectedUser}
-            onChange={(e) => setSelectedUser(e.target.value)}
-            className="w-full appearance-none bg-[#0a0b15]/40 glass-panel border border-black/5 dark:border-white/5 rounded-2xl py-3 pl-11 pr-4 text-xs text-gray-700 dark:text-gray-300 font-semibold focus:outline-none focus:border-violet-500/30 transition-all cursor-pointer"
+            <User className="h-3.5 w-3.5" />
+            Personal Consultant
+          </button>
+          <button
+            onClick={() => setActiveTab('logs')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'logs'
+                ? 'bg-violet-500/10 text-violet-600 dark:text-white border-l-2 border-violet-400'
+                : 'text-gray-400 hover:text-gray-200'
+            }`}
           >
-            <option value="all">all users</option>
-            {uniqueUsers.map(([id, name]) => (
-              <option key={id} value={id}>{name.toLowerCase()}</option>
-            ))}
-          </select>
+            <MessageSquare className="h-3.5 w-3.5" />
+            #ai logs
+          </button>
         </div>
       </div>
 
-      {/* Main Logs Chronology */}
-      <div className="space-y-4 mt-2">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 space-y-4 select-none">
-            <div className="h-10 w-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center animate-spin">
-              <Sparkles className="h-5 w-5 text-violet-400" />
-            </div>
-            <span className="text-xs font-semibold text-gray-500 tracking-wider">synchronizing local companion logs...</span>
+      {/* ============================================================== */}
+      {/* TAB 1: PERSONAL AI CONSULTANT                                  */}
+      {/* ============================================================== */}
+      {activeTab === 'consultant' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Diagnostic Sidebar */}
+          <div className="space-y-4 select-none">
+            <Card className="p-6 space-y-4 hover:border-violet-500/10">
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/5 pb-3">
+                <Cpu className="h-4 w-4 text-violet-400" />
+                Consultant Node
+              </h3>
+              
+              <div className="space-y-3 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-gray-500 font-semibold">Security Context</span>
+                  <span className="text-emerald-400 font-bold flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Private 1-on-1
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500 font-semibold">API Model</span>
+                  <span className="text-violet-300 font-bold">gemini-1.5-flash</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500 font-semibold">Logs Location</span>
+                  <span className="text-gray-300 font-bold lowercase">ai_logs (room_id: null)</span>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-6 space-y-4 hover:border-rose-500/10">
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/5 pb-3">
+                <Brain className="h-4 w-4 text-rose-400" />
+                Prompt Presets
+              </h3>
+              <div className="space-y-2">
+                {presets.map((preset, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setPersonalPrompt(preset)}
+                    className="w-full text-left p-3 rounded-xl bg-white/2 hover:bg-white/5 border border-white/5 text-[11px] font-semibold text-gray-400 hover:text-white transition-all cursor-pointer leading-normal"
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            </Card>
           </div>
-        ) : filteredLogs.length === 0 ? (
-          <Card className="flex flex-col items-center justify-center text-center py-24 select-none border border-black/5 dark:border-white/5">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-violet-500/10 to-rose-500/10 border border-violet-500/20 flex items-center justify-center mb-4">
-              <Brain className="h-6 w-6 text-violet-400 animate-pulse" />
+
+          {/* Dialogue Space */}
+          <div className="lg:col-span-2 flex flex-col h-[600px]">
+            <Card className="flex-1 p-0 flex flex-col overflow-hidden hover:border-white/5">
+              {/* Messages viewport */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                {personalMessages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center p-8 select-none">
+                    <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-violet-500/10 to-rose-500/10 border border-violet-500/20 flex items-center justify-center mb-4">
+                      <Sparkles className="h-6 w-6 text-violet-400" />
+                    </div>
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-1">Your Personal Consultant</h3>
+                    <p className="text-xs text-gray-500 max-w-sm font-semibold leading-relaxed">
+                      Ask technical questions, draft concepts, or synthesize topics. Chat history in this tab is personal and kept secure.
+                    </p>
+                  </div>
+                ) : (
+                  personalMessages.map((msg, idx) => {
+                    const isSelf = msg.sender_id === currentUser?.id
+                    const avatarId = msg.profiles?.avatar || 'avatar-cyber-ghost'
+                    const avatar = AVATAR_MAP[avatarId] || AVATAR_MAP['avatar-cyber-ghost']
+                    
+                    return (
+                      <div 
+                        key={msg.id || idx} 
+                        className={`flex gap-3 max-w-xl animate-fadeIn ${
+                          isSelf ? 'ml-auto flex-row-reverse' : ''
+                        }`}
+                      >
+                        {/* Avatar */}
+                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center text-[10px] font-semibold text-white shadow-md shrink-0 select-none ${
+                          isSelf 
+                            ? `bg-gradient-to-br ${activeAvatar.gradient}` 
+                            : 'bg-gradient-to-br from-indigo-500 to-purple-500'
+                        }`}>
+                          {isSelf ? activeAvatar.symbol : 'AI'}
+                        </div>
+
+                        <div className="space-y-1">
+                          <span className={`text-[10px] font-bold text-gray-500 block ${isSelf ? 'text-right' : 'text-left'}`}>
+                            {isSelf ? 'You' : 'Companion'}
+                          </span>
+                          <div className={`p-4 rounded-2xl text-[13px] leading-relaxed border ${
+                            isSelf 
+                              ? 'bg-[#6366f1] text-white border-black/5 dark:bg-[#5b5fcf] dark:border-white/5 rounded-tr-none' 
+                              : 'bg-[#1c1f26] text-gray-200 border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.1)] dark:bg-[#16181d] dark:border-indigo-400/20 rounded-tl-none'
+                          }`}>
+                            {!isSelf ? (
+                              <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-xl prose-code:text-indigo-300 break-words leading-relaxed text-gray-300">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                  {msg.message}
+                                </ReactMarkdown>
+                              </div>
+                            ) : (
+                              <p className="whitespace-pre-wrap break-words">{msg.message}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+
+                {/* Typing Indicator */}
+                {isTyping && personalMessages[personalMessages.length - 1]?.sending && (
+                  <div className="flex gap-3 max-w-xl animate-pulse">
+                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-[10px] font-semibold text-white shrink-0">
+                      AI
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-gray-500 block">Companion</span>
+                      <div className="p-3.5 bg-white/5 rounded-2xl border border-white/5 rounded-tl-none flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Chat Input form */}
+              <form onSubmit={handleSendPersonal} className="p-4 border-t border-white/5 shrink-0 bg-[#0a0b15]/40 select-none">
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    placeholder="Consult your private companion..."
+                    value={personalPrompt}
+                    onChange={(e) => setPersonalPrompt(e.target.value)}
+                    disabled={isTyping}
+                    className="w-full bg-white/2 border border-white/5 rounded-2xl py-3.5 pl-4 pr-16 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-violet-500/40 transition-all font-semibold"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isTyping}
+                    className="absolute right-2 py-1.5 px-3 rounded-lg bg-violet-500/15 hover:bg-violet-500/30 border border-violet-500/25 text-violet-300 transition-all cursor-pointer flex items-center gap-1 text-[10px] font-bold"
+                  >
+                    <span>Query</span>
+                    <CornerDownLeft className="h-3 w-3" />
+                  </button>
+                </div>
+              </form>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* TAB 2: SHARED #AI LOGS                                         */}
+      {/* ============================================================== */}
+      {activeTab === 'logs' && (
+        <div className="space-y-4">
+          {/* Diagnostics Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 select-none">
+            <Card className="p-5 flex items-center justify-between hover:border-violet-500/10">
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">Lounge Queries</span>
+                <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-rose-400">
+                  {loadingLogs ? '...' : totalGroupQueries}
+                </span>
+              </div>
+              <Activity className="h-6 w-6 text-violet-400/60" />
+            </Card>
+
+            <Card className="p-5 flex items-center justify-between hover:border-cyan-500/10">
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">Active Rooms</span>
+                <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
+                  {loadingLogs ? '...' : activeRoomsCount}
+                </span>
+              </div>
+              <MessageSquare className="h-6 w-6 text-cyan-400/60" />
+            </Card>
+
+            <Card className="p-5 flex items-center justify-between hover:border-emerald-500/10">
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">Active Friends</span>
+                <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">
+                  {loadingLogs ? '...' : activeUsersCount}
+                </span>
+              </div>
+              <User className="h-6 w-6 text-emerald-400/60" />
+            </Card>
+
+            <Card className="p-5 flex items-center justify-between hover:border-amber-500/10">
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">Avg Output Size</span>
+                <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-rose-400">
+                  {loadingLogs ? '...' : `${averageLength} chars`}
+                </span>
+              </div>
+              <Terminal className="h-6 w-6 text-amber-400/60" />
+            </Card>
+          </div>
+
+          {/* Search & Filtering controls */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            {/* Search */}
+            <div className="lg:col-span-2 relative flex items-center">
+              <Search className="absolute left-4 h-4 w-4 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Search group prompt or response contents..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-[#0a0b15]/40 glass-panel border border-black/5 dark:border-white/5 rounded-2xl py-3 pl-11 pr-4 text-xs text-gray-900 dark:text-white placeholder:text-gray-500 focus:outline-none focus:border-violet-500/30 transition-all font-semibold"
+              />
             </div>
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-1">No companion logs found</h3>
-            <p className="text-xs text-gray-500 max-w-sm font-semibold leading-relaxed">
-              {searchQuery || selectedGroup !== 'all' || selectedUser !== 'all'
-                ? "Try adjusting your query or filter parameters to locate the recorded items."
-                : "Ask queries to the AI directly inside any room chat using @ai to populate the logs archive."
-              }
-            </p>
-          </Card>
-        ) : (
-          filteredLogs.map((log) => {
-            const isExpanded = expandedLogs[log.id] || false
-            const isLong = log.response.length > 500
-            const displayResponse = isExpanded || !isLong 
-              ? log.response 
-              : `${log.response.substring(0, 500)}...`
 
-            const avatarId = log.profiles?.avatar || 'avatar-cyber-ghost'
-            const avatar = AVATAR_MAP[avatarId] || AVATAR_MAP['avatar-cyber-ghost']
-
-            const timeFormatted = new Date(log.created_at).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: false
-            })
-
-            return (
-              <Card 
-                key={log.id} 
-                className="p-6 md:p-8 space-y-5 hover:border-white/10 shadow-sm border border-black/5 dark:border-white/5 relative overflow-hidden transition-all duration-300 hover:shadow-[0_0_20px_rgba(139,92,246,0.03)]"
+            {/* Room Filter */}
+            <div className="relative flex items-center">
+              <Filter className="absolute left-4 h-4 w-4 text-gray-500" />
+              <select
+                value={selectedGroup}
+                onChange={(e) => setSelectedGroup(e.target.value)}
+                className="w-full appearance-none bg-[#0a0b15]/40 glass-panel border border-black/5 dark:border-white/5 rounded-2xl py-3 pl-11 pr-4 text-xs text-gray-700 dark:text-gray-300 font-semibold focus:outline-none focus:border-violet-500/30 transition-all cursor-pointer"
               >
-                {/* Log Meta Header */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-black/5 dark:border-white/5">
-                  <div className="flex items-center gap-3">
-                    {/* User avatar who queried */}
-                    <div className={`h-8 w-8 rounded-full bg-gradient-to-br ${avatar.gradient} flex items-center justify-center text-[10px] font-semibold text-white select-none`}>
-                      {avatar.symbol}
-                    </div>
+                <option value="all">all rooms</option>
+                {uniqueGroups.map(([id, name]) => (
+                  <option key={id} value={id}>#{name.toLowerCase()}</option>
+                ))}
+              </select>
+            </div>
 
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-extrabold text-gray-900 dark:text-white">
-                          {log.profiles?.username || 'explorer'}
-                        </span>
-                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-full border border-black/5 dark:border-white/5">
-                          {log.groups ? `#${log.groups.group_name}` : 'direct query'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-semibold select-none">
-                        <Clock className="h-3 w-3" />
-                        <span>{timeFormatted}</span>
-                      </div>
-                    </div>
-                  </div>
+            {/* User Filter */}
+            <div className="relative flex items-center">
+              <User className="absolute left-4 h-4 w-4 text-gray-500" />
+              <select
+                value={selectedUser}
+                onChange={(e) => setSelectedUser(e.target.value)}
+                className="w-full appearance-none bg-[#0a0b15]/40 glass-panel border border-black/5 dark:border-white/5 rounded-2xl py-3 pl-11 pr-4 text-xs text-gray-700 dark:text-gray-300 font-semibold focus:outline-none focus:border-violet-500/30 transition-all cursor-pointer"
+              >
+                <option value="all">all users</option>
+                {uniqueUsers.map(([id, name]) => (
+                  <option key={id} value={id}>{name.toLowerCase()}</option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-                  {/* Model badge and actions */}
-                  <div className="flex items-center gap-2 select-none">
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-violet-400 bg-violet-500/10 px-2.5 py-1 rounded-xl border border-violet-500/20">
-                      <Cpu className="h-3 w-3" />
-                      {log.model}
-                    </span>
-
-                    <button
-                      onClick={() => handleCopy(log.id, log.response)}
-                      className={`p-2 rounded-xl border transition-all cursor-pointer flex items-center justify-center ${
-                        copiedId === log.id 
-                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
-                          : 'bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 text-gray-400 hover:text-white hover:bg-white/10'
-                      }`}
-                      title="Copy AI Response"
-                    >
-                      {copiedId === log.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                    </button>
-                  </div>
+          {/* Logs List Container */}
+          <div className="space-y-4">
+            {loadingLogs ? (
+              <div className="flex flex-col items-center justify-center py-20 space-y-4 select-none">
+                <div className="h-10 w-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center animate-spin">
+                  <Sparkles className="h-5 w-5 text-violet-400" />
                 </div>
-
-                {/* Question/Prompt Section */}
-                <div className="bg-black/5 dark:bg-white/[0.02] border border-black/5 dark:border-white/5 rounded-2xl p-4 space-y-1.5">
-                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block select-none">Query prompt</span>
-                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">
-                    {log.prompt}
-                  </p>
+                <span className="text-xs font-semibold text-gray-500 tracking-wider">indexing shared intelligence logs...</span>
+              </div>
+            ) : filteredLogs.length === 0 ? (
+              <Card className="flex flex-col items-center justify-center text-center py-24 select-none border border-black/5 dark:border-white/5">
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-violet-500/10 to-rose-500/10 border border-violet-500/20 flex items-center justify-center mb-4">
+                  <Brain className="h-6 w-6 text-violet-400 animate-pulse" />
                 </div>
-
-                {/* Response Section */}
-                <div className="space-y-2">
-                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block select-none">Companion synthesis</span>
-                  <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-xl prose-code:text-violet-300 break-words leading-relaxed text-gray-800 dark:text-gray-300">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {displayResponse}
-                    </ReactMarkdown>
-                  </div>
-
-                  {isLong && (
-                    <button
-                      onClick={() => toggleExpand(log.id)}
-                      className="text-[10px] font-bold text-violet-400 hover:text-violet-300 transition-colors pt-2 block cursor-pointer select-none"
-                    >
-                      {isExpanded ? 'Show less' : 'Read full response'}
-                    </button>
-                  )}
-                </div>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-1">No companion logs found</h3>
+                <p className="text-xs text-gray-500 max-w-sm font-semibold leading-relaxed">
+                  {searchQuery || selectedGroup !== 'all' || selectedUser !== 'all'
+                    ? "Try adjusting your query or filter parameters to locate the recorded items."
+                    : "Ask queries to the AI directly inside any room chat using @ai to populate the logs archive."
+                  }
+                </p>
               </Card>
-            )
-          })
-        )}
-      </div>
+            ) : (
+              filteredLogs.map((log) => {
+                const isExpanded = expandedLogs[log.id] || false
+                const isLong = log.response.length > 500
+                const displayResponse = isExpanded || !isLong 
+                  ? log.response 
+                  : `${log.response.substring(0, 500)}...`
+
+                const avatarId = log.profiles?.avatar || 'avatar-cyber-ghost'
+                const avatar = AVATAR_MAP[avatarId] || AVATAR_MAP['avatar-cyber-ghost']
+
+                const timeFormatted = new Date(log.created_at).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false
+                })
+
+                return (
+                  <Card 
+                    key={log.id} 
+                    className="p-6 md:p-8 space-y-5 hover:border-white/10 shadow-sm border border-black/5 dark:border-white/5 relative overflow-hidden transition-all duration-300 hover:shadow-[0_0_20px_rgba(139,92,246,0.03)]"
+                  >
+                    {/* Log Meta Header */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-black/5 dark:border-white/5">
+                      <div className="flex items-center gap-3">
+                        <div className={`h-8 w-8 rounded-full bg-gradient-to-br ${avatar.gradient} flex items-center justify-center text-[10px] font-semibold text-white select-none`}>
+                          {avatar.symbol}
+                        </div>
+
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-extrabold text-gray-900 dark:text-white">
+                              {log.profiles?.username || 'explorer'}
+                            </span>
+                            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-full border border-black/5 dark:border-white/5">
+                              #{log.groups?.group_name || 'chat room'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-semibold select-none">
+                            <Clock className="h-3 w-3" />
+                            <span>{timeFormatted}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Model badge and actions */}
+                      <div className="flex items-center gap-2 select-none">
+                        <span className="flex items-center gap-1 text-[10px] font-bold text-violet-400 bg-violet-500/10 px-2.5 py-1 rounded-xl border border-violet-500/20">
+                          <Cpu className="h-3 w-3" />
+                          {log.model}
+                        </span>
+
+                        <button
+                          onClick={() => handleCopy(log.id, log.response)}
+                          className={`p-2 rounded-xl border transition-all cursor-pointer flex items-center justify-center ${
+                            copiedId === log.id 
+                              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                              : 'bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 text-gray-400 hover:text-white hover:bg-white/10'
+                          }`}
+                          title="Copy AI Response"
+                        >
+                          {copiedId === log.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Question/Prompt Section */}
+                    <div className="bg-black/5 dark:bg-white/[0.02] border border-black/5 dark:border-white/5 rounded-2xl p-4 space-y-1.5">
+                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block select-none">Query prompt</span>
+                      <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">
+                        {log.prompt}
+                      </p>
+                    </div>
+
+                    {/* Response Section */}
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block select-none">Companion synthesis</span>
+                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-xl prose-code:text-violet-300 break-words leading-relaxed text-gray-800 dark:text-gray-300">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {displayResponse}
+                        </ReactMarkdown>
+                      </div>
+
+                      {isLong && (
+                        <button
+                          onClick={() => toggleExpand(log.id)}
+                          className="text-[10px] font-bold text-violet-400 hover:text-violet-300 transition-colors pt-2 block cursor-pointer select-none"
+                        >
+                          {isExpanded ? 'Show less' : 'Read full response'}
+                        </button>
+                      )}
+                    </div>
+                  </Card>
+                )
+              })
+            )}
+          </div>
+        </div>
+      )}
     </PageContainer>
   )
 }
