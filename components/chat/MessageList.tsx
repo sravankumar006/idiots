@@ -18,6 +18,9 @@ interface MessageListProps {
   onDelete: (messageId: string) => void
   onDeleteForMe: (messageId: string) => void
   onClearChat: () => void
+  studyModeActive?: boolean
+  studyFilterActive?: boolean
+  isDeepFocusActive?: boolean
 }
 
 // Memoized bubble — prevents re-renders when only typing indicator changes
@@ -32,7 +35,11 @@ const MemoizedBubble = memo(MessageBubble, (prev, next) => {
     prev.activeUserId === next.activeUserId &&
     prev.groupPosition === next.groupPosition &&
     prev.isLatestMessage === next.isLatestMessage &&
-    prev.groupMemberIds === next.groupMemberIds
+    prev.groupMemberIds === next.groupMemberIds &&
+    // @ts-ignore
+    prev.studyModeActive === next.studyModeActive &&
+    // @ts-ignore
+    prev.studyFilterActive === next.studyFilterActive
   )
 })
 MemoizedBubble.displayName = 'MemoizedMessageBubble'
@@ -59,6 +66,9 @@ export default function MessageList({
   onDelete,
   onDeleteForMe,
   onClearChat,
+  studyModeActive = false,
+  studyFilterActive = false,
+  isDeepFocusActive = false,
 }: MessageListProps) {
   const { containerRef, handleScroll, adjustScroll } = useAutoScroll()
 
@@ -175,6 +185,9 @@ export default function MessageList({
                 onDelete={onDelete}
                 onDeleteForMe={onDeleteForMe}
                 onClearChat={onClearChat}
+                // @ts-ignore
+                studyModeActive={studyModeActive}
+                studyFilterActive={studyFilterActive}
               />
             </div>
           </React.Fragment>

@@ -1,14 +1,32 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { UserProfile } from '@/types'
 
 export function useRealtimeChat(groupId: string, activeUser: UserProfile | null) {
   const [onlineUsers, setOnlineUsers] = useState<Record<string, any>>({})
   const [typingUsers, setTypingUsers] = useState<Record<string, boolean>>({})
+  const [myFocus, setMyFocus] = useState<{
+    isFocusing: boolean
+    status: string
+    focusSince: string | null
+    isDeepFocus: boolean
+  }>({
+    isFocusing: false,
+    status: '',
+    focusSince: null,
+    isDeepFocus: false
+  })
+
   const supabase = createClient()
   const channelRef = useRef<any>(null)
+  const myFocusRef = useRef(myFocus)
+
+  // Keep ref in sync to avoid channel recreation
+  useEffect(() => {
+    myFocusRef.current = myFocus
+  }, [myFocus])
 
   // Broadcast that active user is typing
   const sendTypingStatus = (isTyping: boolean) => {
@@ -24,6 +42,30 @@ export function useRealtimeChat(groupId: string, activeUser: UserProfile | null)
       },
     })
   }
+
+  // Update focus presence payload dynamically (no channel recreation)
+  const updateFocusStatus = useCallback(async (isFocusing: boolean, status: string, isDeepFocus: boolean) => {
+    if (!activeUser || !channelRef.current) return
+
+    const focusSince = isFocusing ? (myFocusRef.current.focusSince || new Date().toISOString()) : null
+    const nextFocus = { isFocusing, status, focusSince, isDeepFocus }
+    setMyFocus(nextFocus)
+
+    try {
+      await channelRef.current.track({
+        userId: activeUser.id,
+        username: activeUser.username,
+        avatar: activeUser.avatar,
+        onlineAt: new Date().toISOString(),
+        isFocusing,
+        focusStatus: status,
+        focusSince,
+        isDeepFocus,
+      })
+    } catch (e) {
+      console.warn("Presence track error:", e)
+    }
+  }, [activeUser])
 
   useEffect(() => {
     if (!activeUser) return
@@ -75,12 +117,16 @@ export function useRealtimeChat(groupId: string, activeUser: UserProfile | null)
     // 3. Subscribe to the channel
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
-        // Sync active user presence
+        // Sync active user presence with initial/current focus state
         await channel.track({
           userId: activeUser.id,
           username: activeUser.username,
           avatar: activeUser.avatar,
           onlineAt: new Date().toISOString(),
+          isFocusing: myFocusRef.current.isFocusing,
+          focusStatus: myFocusRef.current.status,
+          focusSince: myFocusRef.current.focusSince,
+          isDeepFocus: myFocusRef.current.isDeepFocus,
         })
       }
     })
@@ -96,6 +142,8 @@ export function useRealtimeChat(groupId: string, activeUser: UserProfile | null)
     onlineUsers,
     typingUsers,
     sendTypingStatus,
+    myFocus,
+    updateFocusStatus,
   }
 }
 export default useRealtimeChat

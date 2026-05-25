@@ -25,7 +25,8 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
   // 1. Send Message Action (optimistic update + upload + insert)
   const sendMessage = async (
     text: string,
-    fileInfo?: { file: File; type: string } | { stickerUrl: string; type: 'sticker' }
+    fileInfo?: { file: File; type: string } | { stickerUrl: string; type: 'sticker' },
+    studyModeActive: boolean = false
   ) => {
     if (!text.trim() && !fileInfo && !activeUser) return
     if (!activeUser) return
@@ -228,6 +229,7 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
               aiMessageId,
               contextMessages: messages.slice(-15),
               attachedFile, // pass context file info to route
+              studyModeActive,
             })
           })
 

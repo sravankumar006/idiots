@@ -45,6 +45,8 @@ interface MessageBubbleProps {
   onDelete: (messageId: string) => void
   onDeleteForMe: (messageId: string) => void
   onClearChat: () => void
+  studyModeActive?: boolean
+  studyFilterActive?: boolean
 }
 
 export default function MessageBubble({
@@ -58,6 +60,8 @@ export default function MessageBubble({
   onDelete,
   onDeleteForMe,
   onClearChat,
+  studyModeActive = false,
+  studyFilterActive = false,
 }: MessageBubbleProps) {
   const isAiMessage = message.type === 'ai'
   // AI messages always render on the left (not self)
@@ -69,6 +73,12 @@ export default function MessageBubble({
   const [reactionPickerPos, setReactionPickerPos] = useState<{ x: number; y: number } | null>(null)
   const [isSeenModalOpen, setIsSeenModalOpen] = useState(false)
   const [isOnline, setIsOnline] = useState(true)
+  const [mediaCollapsed, setMediaCollapsed] = useState(studyFilterActive)
+
+  // Sync media collapse with filter active status
+  useEffect(() => {
+    setMediaCollapsed(studyFilterActive)
+  }, [studyFilterActive])
 
   // Track online status
   useEffect(() => {
@@ -205,25 +215,68 @@ export default function MessageBubble({
 
     return (
       <div className="space-y-2">
+        {/* Images with click-to-expand study filter */}
         {message.type === 'image' && message.file_url && (
-          <ImageMessage src={message.file_url} fileName={message.file_name || undefined} isSending={message.sending} />
+          mediaCollapsed ? (
+            <button
+              onClick={() => setMediaCollapsed(false)}
+              className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] border border-black/5 dark:border-white/5 text-xs text-gray-500 dark:text-gray-400 font-medium tracking-wide transition-all duration-200 cursor-pointer w-fit select-none lowercase"
+            >
+              <ImageIcon className="h-4 w-4 text-amber-500" />
+              <span>image hidden by study filter — click to view</span>
+            </button>
+          ) : (
+            <ImageMessage src={message.file_url} fileName={message.file_name || undefined} isSending={message.sending} />
+          )
         )}
+        
+        {/* Videos with click-to-expand study filter */}
         {message.type === 'video' && message.file_url && (
-          <VideoMessage src={message.file_url} fileName={message.file_name || undefined} />
+          mediaCollapsed ? (
+            <button
+              onClick={() => setMediaCollapsed(false)}
+              className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] border border-black/5 dark:border-white/5 text-xs text-gray-500 dark:text-gray-400 font-medium tracking-wide transition-all duration-200 cursor-pointer w-fit select-none lowercase"
+            >
+              <ImageIcon className="h-4 w-4 text-amber-500" />
+              <span>video hidden by study filter — click to view</span>
+            </button>
+          ) : (
+            <VideoMessage src={message.file_url} fileName={message.file_name || undefined} />
+          )
         )}
+        
+        {/* PDFs are never collapsed since they are prioritised */}
         {message.type === 'pdf' && message.file_url && (
           <PDFMessage src={message.file_url} fileName={message.file_name || undefined} fileSize={message.file_size} />
         )}
+        
+        {/* Stickers with click-to-expand study filter */}
         {message.type === 'sticker' && message.file_url && (
-          <StickerMessage src={message.file_url} />
+          mediaCollapsed ? (
+            <button
+              onClick={() => setMediaCollapsed(false)}
+              className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] border border-black/5 dark:border-white/5 text-xs text-gray-500 dark:text-gray-400 font-medium tracking-wide transition-all duration-200 cursor-pointer w-fit select-none lowercase"
+            >
+              <ImageIcon className="h-4 w-4 text-amber-500" />
+              <span>sticker hidden by study filter — click to view</span>
+            </button>
+          ) : (
+            <StickerMessage src={message.file_url} />
+          )
         )}
         {(message.type === 'text' || message.type === 'ai' || hasCaption) && (
           <div
-            className={`p-3.5 text-[13px] leading-relaxed border ${
+            className={`p-3.5 text-[13px] leading-relaxed border transition-all duration-500 ${
               message.type === 'ai'
-                ? 'bg-[#1c1f26] text-gray-200 border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.1)] dark:bg-[#16181d] dark:border-indigo-400/20'
+                ? studyModeActive
+                  ? 'bg-[#18181f] text-gray-300 border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.02)] dark:bg-[#121216] dark:border-amber-500/10'
+                  : 'bg-[#1c1f26] text-gray-200 border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.1)] dark:bg-[#16181d] dark:border-indigo-400/20'
                 : isSelf
-                ? `bg-[#6366f1] text-white border-black/5 dark:bg-[#5b5fcf] dark:text-white dark:border-white/5`
+                ? studyModeActive
+                  ? 'bg-[#d97706] text-white border-transparent dark:bg-[#b45309]'
+                  : `bg-[#6366f1] text-white border-black/5 dark:bg-[#5b5fcf] dark:text-white dark:border-white/5`
+                : studyModeActive
+                ? 'bg-white text-gray-800 border-amber-500/10 dark:bg-[#16181d] dark:text-gray-200 dark:border-white/5'
                 : `bg-white text-gray-800 border-black/5 dark:bg-[#1c1f26] dark:text-gray-200 dark:border-white/5 shadow-sm`
             } ${
               // Dynamic border radius for grouping
@@ -244,13 +297,13 @@ export default function MessageBubble({
               <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-xl prose-code:text-indigo-300 break-words">
                 {/* AI mode badge — shows context being analyzed */}
                 {(message.aiMode === 'image-analyze') && (
-                  <div className="flex items-center gap-1.5 text-[10px] text-indigo-400/70 mb-2 select-none not-prose">
+                  <div className="flex items-center gap-1.5 text-[10px] text-amber-500/80 mb-2 select-none not-prose">
                     <ImageIcon className="h-3 w-3" />
                     <span>analyzing image from chat</span>
                   </div>
                 )}
                 {(message.aiMode === 'pdf-analyze') && (
-                  <div className="flex items-center gap-1.5 text-[10px] text-violet-400/70 mb-2 select-none not-prose">
+                  <div className="flex items-center gap-1.5 text-[10px] text-amber-500/80 mb-2 select-none not-prose">
                     <FileText className="h-3 w-3" />
                     <span>reading pdf from chat</span>
                   </div>
@@ -392,11 +445,13 @@ export default function MessageBubble({
               {/* Message content */}
               {renderMessageContent()}
 
-              {/* Desktop hover action bar — visible on group-hover */}
-              {!isDeleted && (
+              {/* Quick actions hover bar (desktop only) */}
+              {!isDeleted && !message.sending && (
                 <div
-                  className={`absolute top-[-30px] hidden group-hover:flex items-center gap-1 bg-[#fefdfb] dark:bg-[#1c1f26] border border-black/8 dark:border-white/10 rounded-xl px-1.5 py-1 z-20 shadow-lg transition-all duration-150 ${
-                    isSelf ? 'left-0' : 'right-0'
+                  className={`hidden md:flex opacity-0 group-hover:opacity-100 items-center gap-1 absolute z-30 -top-5.5 ${
+                    isSelf ? 'right-4' : 'left-4'
+                  } bg-[#faf9f6]/95 dark:bg-[#16181d]/95 backdrop-blur border border-black/6 dark:border-white/5 rounded-xl shadow-lg shadow-black/5 p-1 ${
+                    studyModeActive ? 'border-amber-500/10 shadow-none duration-100' : 'transition-all duration-150 transform translate-y-1 group-hover:translate-y-0'
                   }`}
                   role="toolbar"
                   aria-label="Message actions"
@@ -409,7 +464,9 @@ export default function MessageBubble({
                         <button
                           key={emoji}
                           onClick={() => onReact(message.id, emoji)}
-                          className={`p-1 hover:scale-125 focus:scale-125 transition-transform text-[13px] cursor-pointer rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
+                          className={`p-1 ${
+                            studyModeActive ? 'scale-100' : 'hover:scale-125 focus:scale-125 transition-transform'
+                          } text-[13px] cursor-pointer rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
                             alreadyReacted ? 'bg-violet-500/10 rounded' : ''
                           }`}
                           aria-label={`React with ${emoji}${alreadyReacted ? ' (remove)' : ''}`}

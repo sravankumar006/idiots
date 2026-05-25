@@ -81,11 +81,20 @@ Use proper headings (# ## ###), bullet points, bold text, tables, and other mark
 Start your response with the document content directly — no preamble like "Here is the document:".
 `
 
+const STUDY_MODE_SUFFIX = `
+The user is currently studying in a collaborative Study Mode session.
+Adjust your behavior as follows:
+- Act as a quiet, supportive, and focused study companion.
+- Keep your tone supportive, calm, and encouraging.
+- Avoid casual emoji/banter spam or distracting conversation.
+- Keep explanations clear, structured, and concise (use revision bullet points, step-by-step code annotations, and clear definitions where appropriate).
+`
+
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: Request) {
   try {
-    const { prompt, groupId, aiMessageId, contextMessages, attachedFile } = await req.json()
+    const { prompt, groupId, aiMessageId, contextMessages, attachedFile, studyModeActive } = await req.json()
 
     // Guard against missing API Key
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY
@@ -108,6 +117,7 @@ export async function POST(req: Request) {
     // ─── System prompt ─────────────────────────────────────────────────────
     let systemPrompt = BASE_SYSTEM_PROMPT
     if (isPDFGen) systemPrompt += PDF_GENERATE_SUFFIX
+    if (studyModeActive) systemPrompt += STUDY_MODE_SUFFIX
 
     // ─── PDF text context ───────────────────────────────────────────────────
     let pdfContext = ''

@@ -1,14 +1,16 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { ArrowLeft, Users, MoreVertical, Phone, Sun, Moon, Copy, BellOff, LogOut, Trash2 } from 'lucide-react'
+import { ArrowLeft, Users, MoreVertical, Phone, Sun, Moon, Copy, BellOff, LogOut, Trash2, BookOpen, Sparkles, X, Flame } from 'lucide-react'
 import { UserProfile } from '@/types'
 import { useTheme } from 'next-themes'
 import MessageList from './MessageList'
 import MessageInput from './MessageInput'
 import DragDropZone from './DragDropZone'
+import StudyPanel from './StudyPanel'
 import useMessages from '@/hooks/useMessages'
 import useRealtimeChat from '@/hooks/useRealtimeChat'
+import useRealtimeGroupState from '@/hooks/useRealtimeGroupState'
 
 // Avatar palette — same as workspace (kept local to avoid coupling)
 const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
@@ -73,7 +75,35 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
     setReplyTo,
   } = useMessages(groupId, activeUser)
 
-  const { onlineUsers, typingUsers, sendTypingStatus } = useRealtimeChat(groupId, activeUser)
+  const {
+    onlineUsers,
+    typingUsers,
+    sendTypingStatus,
+    myFocus,
+    updateFocusStatus
+  } = useRealtimeChat(groupId, activeUser)
+
+  const {
+    studyModeActive,
+    timerEndsAt,
+    timerDuration,
+    timerType,
+    toggleStudyMode,
+    startTimer,
+    stopTimer
+  } = useRealtimeGroupState(groupId)
+
+  // Local Study Panel Open state (default true on desktop, false on mobile)
+  const [studyPanelOpen, setStudyPanelOpen] = useState(true)
+  // Local Study Filter active state
+  const [studyFilterActive, setStudyFilterActive] = useState(false)
+
+  // Close study panel automatically on tiny mobile screens initially
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setStudyPanelOpen(false)
+    }
+  }, [studyModeActive])
 
   const onlineCount = Object.keys(onlineUsers).length
   const cleanName = groupName.replace('#', '').toLowerCase()
@@ -89,17 +119,28 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
 
   return (
     <DragDropZone onFileDrop={setDraftFile}>
-      <div className="flex flex-col h-full bg-[#f0ede8] dark:bg-[#0f0f12] relative overflow-hidden">
+      <div className={`flex flex-col h-full relative overflow-hidden transition-all duration-500 ${
+        studyModeActive
+          ? 'bg-[#f6f3eb] dark:bg-[#0c0c0f]'
+          : 'bg-[#f0ede8] dark:bg-[#0f0f12]'
+      }`}>
 
         {/* ── Subtle background texture ── */}
         <div className="absolute inset-0 opacity-[0.015] dark:opacity-[0.03] pointer-events-none"
-          style={{ backgroundImage: 'radial-gradient(circle at 30% 20%, #6366f1 0%, transparent 60%), radial-gradient(circle at 80% 80%, #8b5cf6 0%, transparent 50%)' }}
+          style={{ backgroundImage: studyModeActive
+            ? 'radial-gradient(circle at 30% 20%, #f59e0b 0%, transparent 60%), radial-gradient(circle at 80% 80%, #d97706 0%, transparent 50%)'
+            : 'radial-gradient(circle at 30% 20%, #6366f1 0%, transparent 60%), radial-gradient(circle at 80% 80%, #8b5cf6 0%, transparent 50%)'
+          }}
         />
 
         {/* ══════════════════════════════════════
             STICKY HEADER
             ══════════════════════════════════════ */}
-        <header className="relative z-10 flex items-center gap-3 px-4 h-14 shrink-0 bg-[#faf9f6]/80 dark:bg-[#16181d]/80 backdrop-blur-xl border-b border-black/5 dark:border-white/[0.05]">
+        <header className={`relative z-10 flex items-center gap-3 px-4 h-14 shrink-0 backdrop-blur-xl border-b transition-all duration-500 ${
+          studyModeActive
+            ? 'bg-[#faf8f4]/90 dark:bg-[#121216]/90 border-amber-500/10 shadow-[0_1px_10px_rgba(245,158,11,0.02)]'
+            : 'bg-[#faf9f6]/80 dark:bg-[#16181d]/80 border-black/5 dark:border-white/[0.05]'
+        }`}>
 
           {/* Back arrow — mobile only */}
           {onBack && (
@@ -123,9 +164,9 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
               {cleanName}
             </p>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0" />
+              <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${studyModeActive ? 'bg-amber-400' : 'bg-emerald-400'}`} />
               <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">
-                {onlineCount} {onlineCount === 1 ? 'person' : 'people'} here
+                {studyModeActive ? 'zen study session' : `${onlineCount} ${onlineCount === 1 ? 'person' : 'people'} here`}
               </span>
             </div>
           </div>
@@ -140,6 +181,39 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
             >
               <Phone className="h-4 w-4" />
             </button>
+
+            {/* Study Mode Toggles (visible only if study mode is active) */}
+            {studyModeActive && (
+              <>
+                {/* Study Filter Toggle */}
+                <button
+                  onClick={() => setStudyFilterActive(v => !v)}
+                  className={`flex items-center justify-center h-8 w-8 rounded-full transition-all cursor-pointer ${
+                    studyFilterActive
+                      ? 'bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400'
+                      : 'hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200'
+                  }`}
+                  title={studyFilterActive ? "Study chat filter: on (prioritizing text, code & PDFs)" : "Study chat filter: off"}
+                  aria-label="Toggle study chat filter"
+                >
+                  <Sparkles className="h-4.5 w-4.5" />
+                </button>
+
+                {/* Study Sidebar Toggle */}
+                <button
+                  onClick={() => setStudyPanelOpen(v => !v)}
+                  className={`flex items-center justify-center h-8 w-8 rounded-full transition-all cursor-pointer ${
+                    studyPanelOpen
+                      ? 'bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400'
+                      : 'hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200'
+                  }`}
+                  title={studyPanelOpen ? "Close study room panel" : "Open study room panel"}
+                  aria-label="Toggle study room panel"
+                >
+                  <BookOpen className="h-4.5 w-4.5" />
+                </button>
+              </>
+            )}
 
             {/* Members count pill */}
             <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/[0.04] dark:bg-white/[0.05] border border-black/5 dark:border-white/5">
@@ -198,6 +272,23 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
                     copy room name
                   </button>
 
+                  {/* Toggle Study Mode */}
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      toggleStudyMode(!studyModeActive)
+                      setMoreMenuOpen(false)
+                    }}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer ${
+                      studyModeActive
+                        ? 'text-amber-600 dark:text-amber-400 bg-amber-500/5 hover:bg-amber-500/10'
+                        : 'text-gray-600 dark:text-gray-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <BookOpen className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                    {studyModeActive ? 'disable study mode' : 'enable study mode'}
+                  </button>
+
                   <button
                     role="menuitem"
                     onClick={() => setMoreMenuOpen(false)}
@@ -239,32 +330,65 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
         </header>
 
         {/* ══════════════════════════════════════
-            MESSAGE HISTORY (fills all space)
+            SPLIT LAYOUT FOR CHAT + SIDEBAR
             ══════════════════════════════════════ */}
-        <MessageList
-          messages={messages}
-          isLoading={isLoading}
-          activeUser={activeUser}
-          typingUsers={typingUsers}
-          onReact={toggleReaction}
-          onReply={setReplyTo}
-          onDelete={deleteMessage}
-          onDeleteForMe={deleteMessageForMe}
-          onClearChat={clearChatForMe}
-        />
+        <div className="flex-1 flex min-h-0 overflow-hidden relative">
+          
+          {/* Main chat column */}
+          <div className="flex-1 flex flex-col min-h-0 min-w-0">
+            <MessageList
+              messages={messages}
+              isLoading={isLoading}
+              activeUser={activeUser}
+              typingUsers={typingUsers}
+              onReact={toggleReaction}
+              onReply={setReplyTo}
+              onDelete={deleteMessage}
+              onDeleteForMe={deleteMessageForMe}
+              onClearChat={clearChatForMe}
+              // @ts-ignore (we will add these types or they are handled in MessageList)
+              studyModeActive={studyModeActive}
+              studyFilterActive={studyFilterActive}
+              isDeepFocusActive={myFocus.isDeepFocus}
+            />
 
-        {/* ══════════════════════════════════════
-            MESSAGE INPUT
-            ══════════════════════════════════════ */}
-        <MessageInput
-          onSendMessage={sendMessage}
-          replyTo={replyTo}
-          onClearReply={() => setReplyTo(null)}
-          onTypingStatusChange={sendTypingStatus}
-          disabled={isLoading || !activeUser}
-          draftFile={draftFile}
-          setDraftFile={setDraftFile}
-        />
+            <MessageInput
+              onSendMessage={(text, fileInfo) => sendMessage(text, fileInfo, studyModeActive)}
+              replyTo={replyTo}
+              onClearReply={() => setReplyTo(null)}
+              onTypingStatusChange={sendTypingStatus}
+              disabled={isLoading || !activeUser}
+              draftFile={draftFile}
+              setDraftFile={setDraftFile}
+            />
+          </div>
+
+          {/* Study Room sidebar (slides in from right/absolute on mobile, relative on desktop) */}
+          {studyModeActive && studyPanelOpen && (
+            <div className="absolute top-0 right-0 z-50 h-full w-80 lg:relative lg:z-0 border-l border-black/5 dark:border-white/[0.05] shadow-2xl lg:shadow-none">
+              {/* Close button on mobile overlay */}
+              <button
+                onClick={() => setStudyPanelOpen(false)}
+                className="lg:hidden absolute top-3.5 right-3.5 z-50 flex items-center justify-center h-8 w-8 rounded-full bg-black/5 hover:bg-black/10 text-gray-500 hover:text-gray-800 transition-all cursor-pointer"
+                aria-label="Close study room panel"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <StudyPanel
+                groupId={groupId}
+                activeUserId={activeUser?.id || ''}
+                onlineUsers={onlineUsers}
+                myFocus={myFocus}
+                updateFocusStatus={updateFocusStatus}
+                timerEndsAt={timerEndsAt}
+                timerDuration={timerDuration}
+                timerType={timerType}
+                startTimer={startTimer}
+                stopTimer={stopTimer}
+              />
+            </div>
+          )}
+        </div>
 
       </div>
     </DragDropZone>
