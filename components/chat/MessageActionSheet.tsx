@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useCallback } from 'react'
-import { Reply, SmilePlus, Copy, Trash2, Share2, X } from 'lucide-react'
+import { Reply, SmilePlus, Copy, Trash2, Share2, X, Eye } from 'lucide-react'
 import { ChatMessage } from '@/types'
 
 const QUICK_EMOJIS = ['👍', '❤️', '🔥', '😂', '😮', '✨']
@@ -16,6 +16,7 @@ interface MessageActionSheetProps {
   onDeleteForMe: () => void
   onDeleteForEveryone: () => void
   onClearChat: () => void
+  onShowSeenBy?: () => void
 }
 
 /**
@@ -33,6 +34,7 @@ export default function MessageActionSheet({
   onDeleteForMe,
   onDeleteForEveryone,
   onClearChat,
+  onShowSeenBy,
 }: MessageActionSheetProps) {
   // Close on Escape key
   useEffect(() => {
@@ -134,6 +136,15 @@ export default function MessageActionSheet({
                 subLabel="coming soon"
                 onClick={() => {}}
                 disabled
+              />
+            )}
+
+            {/* Who Saw This? */}
+            {!isDeleted && onShowSeenBy && (
+              <ActionItem
+                icon={<Eye className="h-5 w-5 text-violet-500" />}
+                label="who saw this?"
+                onClick={() => handleAction(onShowSeenBy)}
               />
             )}
 

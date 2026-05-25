@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState, useCallback, useRef } from 'react'
-import { CornerUpLeft, Reply } from 'lucide-react'
+import React, { useState, useCallback, useRef, useEffect } from 'react'
+import { CornerUpLeft, Reply, Image as ImageIcon, FileText } from 'lucide-react'
 import { ChatMessage, ChatReaction } from '@/types'
 import ImageMessage from './ImageMessage'
 import VideoMessage from './VideoMessage'
@@ -10,6 +10,8 @@ import StickerMessage from './StickerMessage'
 import UploadProgress from './UploadProgress'
 import MessageActionSheet from './MessageActionSheet'
 import ReactionPicker from './ReactionPicker'
+import ReadReceiptsModal from './ReadReceiptsModal'
+import AIPDFDownload from './AIPDFDownload'
 import { useSwipeGesture } from '@/hooks/useSwipeGesture'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -27,10 +29,17 @@ const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
   'avatar-shadow-blade': { gradient: 'from-slate-400 to-indigo-500', symbol: 'MS' },
 }
 
+// Hardcoded AI profile avatar
+const AI_AVATAR = { gradient: 'from-indigo-500 to-violet-600', symbol: '🤖' }
+
+type MessageStatus = 'offline' | 'sent' | 'seen'
+
 interface MessageBubbleProps {
   message: ChatMessage
   activeUserId: string
   groupPosition?: 'single' | 'first' | 'middle' | 'last'
+  isLatestMessage?: boolean
+  groupMemberIds?: string[]
   onReact: (messageId: string, emoji: string) => void
   onReply: (message: ChatMessage) => void
   onDelete: (messageId: string) => void
@@ -42,18 +51,38 @@ export default function MessageBubble({
   message,
   activeUserId,
   groupPosition = 'single',
+  isLatestMessage = false,
+  groupMemberIds = [],
   onReact,
   onReply,
   onDelete,
   onDeleteForMe,
   onClearChat,
 }: MessageBubbleProps) {
-  const isSelf = message.sender_id === activeUserId
+  const isAiMessage = message.type === 'ai'
+  // AI messages always render on the left (not self)
+  const isSelf = isAiMessage ? false : message.sender_id === activeUserId
   const isDeleted = message.type === 'deleted'
 
   // ——— State ———
   const [showActionSheet, setShowActionSheet] = useState(false)
   const [reactionPickerPos, setReactionPickerPos] = useState<{ x: number; y: number } | null>(null)
+  const [isSeenModalOpen, setIsSeenModalOpen] = useState(false)
+  const [isOnline, setIsOnline] = useState(true)
+
+  // Track online status
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    setIsOnline(navigator.onLine)
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
 
   // Long-press detection refs
   const longPressTimer = useRef<NodeJS.Timeout | null>(null)
@@ -69,8 +98,8 @@ export default function MessageBubble({
     : ''
 
   // Avatar
-  const avatarId = message.profiles?.avatar || 'avatar-cyber-ghost'
-  const avatar = AVATAR_MAP[avatarId] || AVATAR_MAP['avatar-cyber-ghost']
+  const avatarId = isAiMessage ? 'avatar-cyber-ghost' : (message.profiles?.avatar || 'avatar-cyber-ghost')
+  const avatar = isAiMessage ? AI_AVATAR : (AVATAR_MAP[avatarId] || AVATAR_MAP['avatar-cyber-ghost'])
 
   // Reaction counts
   const reactionCounts: Record<string, { count: number; hasReacted: boolean }> = {}
@@ -85,6 +114,20 @@ export default function MessageBubble({
       }
     })
   }
+
+  // ——— Traffic Light Status ———
+  const computeStatus = (): MessageStatus => {
+    if (message.error || message.sending || !isOnline) return 'offline'
+    const seenList = message.message_seen || []
+    // Other group members (excluding the sender)
+    const otherMembers = groupMemberIds.filter((id) => id !== message.sender_id)
+    if (otherMembers.length === 0) return 'sent'
+    const seenUserIds = new Set(seenList.map((s) => s.user_id))
+    const allSeen = otherMembers.every((id) => seenUserIds.has(id))
+    return allSeen ? 'seen' : 'sent'
+  }
+
+  const messageStatus = isSelf && isLatestMessage && !isDeleted ? computeStatus() : null
 
   // ——— Swipe gesture (mobile reply) ———
   const { handlers: swipeHandlers, swipeOffset, isSwiping } = useSwipeGesture({
@@ -132,6 +175,11 @@ export default function MessageBubble({
       e.preventDefault()
     }
   }, [isDeleted, message, onReply])
+
+  // ——— Show seen by ———
+  const handleShowSeenBy = useCallback(() => {
+    setIsSeenModalOpen(true)
+  }, [])
 
   // ——— Message content renderer ———
   const renderMessageContent = () => {
@@ -194,9 +242,29 @@ export default function MessageBubble({
           >
             {message.type === 'ai' ? (
               <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-xl prose-code:text-indigo-300 break-words">
+                {/* AI mode badge — shows context being analyzed */}
+                {(message.aiMode === 'image-analyze') && (
+                  <div className="flex items-center gap-1.5 text-[10px] text-indigo-400/70 mb-2 select-none not-prose">
+                    <ImageIcon className="h-3 w-3" />
+                    <span>analyzing image from chat</span>
+                  </div>
+                )}
+                {(message.aiMode === 'pdf-analyze') && (
+                  <div className="flex items-center gap-1.5 text-[10px] text-violet-400/70 mb-2 select-none not-prose">
+                    <FileText className="h-3 w-3" />
+                    <span>reading pdf from chat</span>
+                  </div>
+                )}
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {message.message}
                 </ReactMarkdown>
+                {/* PDF generation — show download button */}
+                {message.aiMode === 'pdf-generate' && !message.sending && message.message && (
+                  <AIPDFDownload
+                    content={message.message}
+                    filename={`ai-document-${new Date().toISOString().slice(0, 10)}`}
+                  />
+                )}
               </div>
             ) : (
               <p className="whitespace-pre-wrap break-words">{message.message}</p>
@@ -207,13 +275,38 @@ export default function MessageBubble({
     )
   }
 
+  // ——— Traffic Light Capsule ———
+  const TrafficLight = () => {
+    if (!messageStatus) return null
+
+    const colors: Record<MessageStatus, { dot: string; label: string; ring: string }> = {
+      offline: { dot: 'bg-rose-500', label: 'offline / pending', ring: 'ring-rose-500/20' },
+      sent:    { dot: 'bg-amber-400', label: 'sent',             ring: 'ring-amber-400/20' },
+      seen:    { dot: 'bg-emerald-400', label: 'seen by all',    ring: 'ring-emerald-400/20' },
+    }
+    const c = colors[messageStatus]
+
+    return (
+      <div
+        className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-black/5 dark:border-white/8 bg-black/[0.03] dark:bg-white/[0.04] select-none cursor-default ring-2 ${c.ring} transition-all duration-500`}
+        title={c.label}
+        aria-label={`Message status: ${c.label}`}
+      >
+        {/* Three dots like traffic lights — always visible but only active dot is bright */}
+        <span className={`h-2 w-2 rounded-full transition-all duration-500 ${messageStatus === 'offline' ? c.dot + ' shadow-[0_0_6px_1px_rgba(239,68,68,0.6)]' : 'bg-gray-200 dark:bg-white/10'}`} />
+        <span className={`h-2 w-2 rounded-full transition-all duration-500 ${messageStatus === 'sent' ? c.dot + ' shadow-[0_0_6px_1px_rgba(251,191,36,0.6)]' : 'bg-gray-200 dark:bg-white/10'}`} />
+        <span className={`h-2 w-2 rounded-full transition-all duration-500 ${messageStatus === 'seen' ? c.dot + ' shadow-[0_0_6px_1px_rgba(52,211,153,0.6)]' : 'bg-gray-200 dark:bg-white/10'}`} />
+      </div>
+    )
+  }
+
   return (
     <>
       {/* Main bubble wrapper */}
       <article
         data-message-id={message.id}
         role="article"
-        aria-label={`${message.profiles?.username || 'user'} at ${timeStr}: ${isDeleted ? 'message deleted' : (message.message || message.file_name || 'media')}`}
+        aria-label={`${isAiMessage ? 'idiot ai' : (message.profiles?.username || 'user')} at ${timeStr}: ${isDeleted ? 'message deleted' : (message.message || message.file_name || 'media')}`}
         tabIndex={0}
         onKeyDown={handleKeyDown}
         onContextMenu={handleContextMenu}
@@ -266,10 +359,10 @@ export default function MessageBubble({
 
             {/* Sender + time (Only show on first or single message, or if self and need to show sending status) */}
             {((groupPosition === 'first' || groupPosition === 'single') || isSelf) && (
-              <div className={`flex items-baseline gap-2 select-none lowercase ${isSelf ? 'justify-end' : ''}`}>
+              <div className={`flex items-center gap-2 select-none lowercase ${isSelf ? 'justify-end' : ''}`}>
                 {!isSelf && (
                   <span className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">
-                    {message.profiles?.username || 'explorer'}
+                    {isAiMessage ? 'idiot ai' : (message.profiles?.username || 'explorer')}
                   </span>
                 )}
                 <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">{timeStr}</span>
@@ -362,6 +455,13 @@ export default function MessageBubble({
                 ))}
               </div>
             )}
+
+            {/* Traffic Light — only on latest message sent by self */}
+            {messageStatus && (
+              <div className={`flex mt-1 ${isSelf ? 'justify-end' : 'justify-start'}`}>
+                <TrafficLight />
+              </div>
+            )}
           </div>
         </div>
       </article>
@@ -378,6 +478,7 @@ export default function MessageBubble({
           onDeleteForMe={() => onDeleteForMe(message.id)}
           onDeleteForEveryone={() => onDelete(message.id)}
           onClearChat={onClearChat}
+          onShowSeenBy={isSelf ? handleShowSeenBy : undefined}
         />
       )}
 
@@ -395,8 +496,17 @@ export default function MessageBubble({
           onDeleteForEveryone={() => onDelete(message.id)}
           onClearChat={onClearChat}
           onClose={() => setReactionPickerPos(null)}
+          onShowSeenBy={isSelf ? handleShowSeenBy : undefined}
         />
       )}
+
+      {/* Read Receipts Modal */}
+      <ReadReceiptsModal
+        isOpen={isSeenModalOpen}
+        onClose={() => setIsSeenModalOpen(false)}
+        message={message}
+        activeUserId={activeUserId}
+      />
     </>
   )
 }

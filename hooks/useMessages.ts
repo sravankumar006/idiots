@@ -169,13 +169,38 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
 
       // --- AI INTEGRATION: Detect @ai and trigger shared AI ---
       if (text.includes('@ai')) {
-        const aiMessageId = `ai-${Date.now()}`
-        
+        const aiMessageId = crypto.randomUUID()
+
+        // ── Find context file: check current uploaded file first, then fall back to recent history
+        type AttachedFile = { type: 'image' | 'pdf'; url: string; name: string } | null
+        let attachedFile: AttachedFile = null
+
+        if (finalFileUrl && (message_type === 'image' || message_type === 'pdf')) {
+          attachedFile = {
+            type: message_type as 'image' | 'pdf',
+            url: finalFileUrl,
+            name: file_name || (message_type === 'pdf' ? 'document.pdf' : 'image')
+          }
+        } else {
+          const recentMsgs = messages.slice(-20)
+          for (let i = recentMsgs.length - 1; i >= 0; i--) {
+            const m = recentMsgs[i]
+            if (m.file_url && m.type === 'image') {
+              attachedFile = { type: 'image', url: m.file_url, name: m.file_name || 'image' }
+              break
+            }
+            if (m.file_url && m.type === 'pdf') {
+              attachedFile = { type: 'pdf', url: m.file_url, name: m.file_name || 'document.pdf' }
+              break
+            }
+          }
+        }
+
         // 1. Optimistic empty AI message
         const aiMessage: ChatMessage = {
           id: aiMessageId,
           group_id: groupId,
-          sender_id: activeUser.id, // Using user's ID to pass RLS, but type='ai' makes it render as AI
+          sender_id: activeUser.id,
           message: '',
           type: 'ai',
           reply_to: null,
@@ -201,7 +226,8 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
               prompt: text,
               groupId,
               aiMessageId,
-              contextMessages: messages.slice(-15) // send last 15 messages for context
+              contextMessages: messages.slice(-15),
+              attachedFile, // pass context file info to route
             })
           })
 
@@ -209,7 +235,7 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
             try {
               const errData = await response.json()
               if (errData.message) {
-                setMessages((prev) => 
+                setMessages((prev) =>
                   prev.map(m => m.id === aiMessageId ? { ...m, message: errData.message, sending: false } : m)
                 )
                 return
@@ -219,6 +245,13 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
           }
 
           if (!response.body) throw new Error('AI stream failed')
+
+          // Read the AI mode from the response header
+          const aiModeHeader = response.headers.get('X-AI-Mode') as ChatMessage['aiMode'] | null
+          const resolvedAiMode: ChatMessage['aiMode'] = 
+            (aiModeHeader === 'pdf-generate' || aiModeHeader === 'image-analyze' || aiModeHeader === 'pdf-analyze')
+              ? aiModeHeader
+              : undefined
 
           const reader = response.body.getReader()
           const decoder = new TextDecoder()
@@ -230,13 +263,13 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
           while (true) {
             const { done, value } = await reader.read()
             if (done) break
-            
+
             const chunk = decoder.decode(value, { stream: true })
             accumulatedText += chunk
-            
+
             // Update local state instantly
-            setMessages((prev) => 
-              prev.map(m => m.id === aiMessageId ? { ...m, message: accumulatedText } : m)
+            setMessages((prev) =>
+              prev.map(m => m.id === aiMessageId ? { ...m, message: accumulatedText, aiMode: resolvedAiMode } : m)
             )
 
             // Broadcast to others in the room
@@ -247,9 +280,9 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
             })
           }
 
-          // 4. Save final AI message to DB securely so it persists
+          // 4. Save final AI message to DB so it persists for all users
           if (!accumulatedText) {
-            setMessages((prev) => 
+            setMessages((prev) =>
               prev.map(m => m.id === aiMessageId ? { ...m, error: true, sending: false, message: '⚠️ **API Quota/Access Error**\n\nThe AI companion failed to respond. This is typically due to an API quota limit or key restriction.' } : m)
             )
             return
@@ -261,23 +294,23 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
             sender_id: activeUser.id,
             message: accumulatedText,
             type: 'ai',
-            reply_to: data.id // Reply to the user's prompt message
+            reply_to: data.id
           }).select('*, profiles(*)').single()
 
           if (finalDbMsg) {
-             setMessages((prev) => 
-               prev.map(m => m.id === aiMessageId ? { ...m, ...finalDbMsg, sending: false } : m)
-             )
+            setMessages((prev) =>
+              prev.map(m => m.id === aiMessageId ? { ...m, ...finalDbMsg, sending: false, aiMode: resolvedAiMode } : m)
+            )
           }
 
         } catch (err) {
-          console.error("AI Streaming error:", err)
-          setMessages((prev) => 
+          console.error('AI Streaming error:', err)
+          setMessages((prev) =>
             prev.map(m => m.id === aiMessageId ? { ...m, error: true, sending: false, message: 'I encountered an error trying to process that.' } : m)
           )
         }
       }
-      // --- END AI INTEGRATION ---
+      // --- END AI INTEGRATION --- ---
 
     } catch (e) {
       console.error("Error sending message:", e)

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ChatMessage, UserProfile, ChatReaction } from '@/types'
+import { ChatMessage, UserProfile, ChatReaction, MessageSeen } from '@/types'
 import { fetchMessages } from '@/lib/chat/fetchMessages'
 import { subscribeToMessages } from '@/lib/chat/subscribeToMessages'
 
@@ -17,7 +17,7 @@ export function useRealtimeMessages(groupId: string, activeUser: UserProfile | n
   // Realtime buffer structures to queue events while fetching history
   const isHistoryLoadedRef = useRef(false)
   const realtimeBufferRef = useRef<Array<{
-    type: 'INSERT' | 'UPDATE' | 'REACTION_INSERT' | 'REACTION_DELETE'
+    type: 'INSERT' | 'UPDATE' | 'REACTION_INSERT' | 'REACTION_DELETE' | 'SEEN_INSERT'
     payload: any
   }>>([])
 
@@ -44,6 +44,29 @@ export function useRealtimeMessages(groupId: string, activeUser: UserProfile | n
     return undefined
   }, [supabase])
 
+  // Helper to mark messages as seen in database
+  const markMessagesAsSeen = useCallback(async (list: ChatMessage[]) => {
+    if (!activeUser || isFallback || list.length === 0) return
+
+    const unseenIds = list
+      .filter(m => m.sender_id !== activeUser.id && m.sender_id !== 'ai-system' && !m.message_seen?.some(s => s.user_id === activeUser.id))
+      .map(m => m.id)
+
+    if (unseenIds.length > 0) {
+      const inserts = unseenIds.map(msgId => ({
+        message_id: msgId,
+        user_id: activeUser.id
+      }))
+
+      try {
+        const { error } = await supabase.from('message_seen').insert(inserts)
+        if (error) throw error
+      } catch (err) {
+        console.warn("Failed to mark messages as seen:", err)
+      }
+    }
+  }, [activeUser, isFallback, supabase])
+
   // Helper to apply a single realtime message insert to the array
   const applyMessageInsert = useCallback(async (newMsg: ChatMessage, list: ChatMessage[]): Promise<ChatMessage[]> => {
     const existingIndex = list.findIndex((m) => m.id === newMsg.id)
@@ -55,7 +78,8 @@ export function useRealtimeMessages(groupId: string, activeUser: UserProfile | n
     const messageWithProfile: ChatMessage = {
       ...newMsg,
       profiles: senderProfile || newMsg.profiles,
-      reactions: newMsg.reactions || []
+      reactions: newMsg.reactions || [],
+      message_seen: newMsg.message_seen || []
     }
 
     // Resolve parent reply
@@ -90,6 +114,59 @@ export function useRealtimeMessages(groupId: string, activeUser: UserProfile | n
     })
   }, [fetchProfile])
 
+  // Helper to apply a single seen insert
+  const applySeenInsert = useCallback(async (seen: MessageSeen, list: ChatMessage[]): Promise<ChatMessage[]> => {
+    const sProfile = await fetchProfile(seen.user_id)
+    const seenWithProfile = { ...seen, profiles: sProfile || seen.profiles }
+
+    return list.map((msg) => {
+      if (msg.id === seen.message_id) {
+        const currentSeen = msg.message_seen || []
+        if (currentSeen.some(s => s.user_id === seen.user_id)) return msg
+        return { ...msg, message_seen: [...currentSeen, seenWithProfile] }
+      }
+      return msg
+    })
+  }, [fetchProfile])
+
+  // ——— Desktop Notifications ———
+  const showNotification = useCallback((message: ChatMessage) => {
+    if (typeof window === 'undefined') return
+    if (!('Notification' in window)) return
+    if (Notification.permission !== 'granted') return
+    if (document.visibilityState === 'visible') return // only when tab is hidden
+
+    const senderName = message.profiles?.username || 'someone'
+    const body = message.type === 'ai'
+      ? 'AI companion replied'
+      : message.type === 'text' || !message.type
+      ? (message.message || 'New message')
+      : `sent a ${message.type}`
+
+    try {
+      const n = new Notification(`💬 ${senderName}`, {
+        body,
+        icon: '/favicon.ico',
+        tag: `chat-${groupId}`, // replace previous notification for same group
+      } as NotificationOptions)
+      n.onclick = () => {
+        window.focus()
+        n.close()
+      }
+    } catch (e) {
+      // Notifications not supported or blocked
+    }
+  }, [groupId])
+
+  // Request notification permission once on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!('Notification' in window)) return
+    if (Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {})
+    }
+  }, [])
+
   // Main lifecycle
   useEffect(() => {
     let active = true
@@ -109,10 +186,16 @@ export function useRealtimeMessages(groupId: string, activeUser: UserProfile | n
           if (!isHistoryLoadedRef.current) {
             realtimeBufferRef.current.push({ type: 'INSERT', payload: newMsg })
           } else {
+            // Trigger notification for messages from other users
+            if (activeUser && newMsg.sender_id !== activeUser.id) {
+              showNotification(newMsg)
+            }
             setMessages((prev) => {
-              let updated = [...prev]
               applyMessageInsert(newMsg, prev).then(res => {
-                if (active) setMessages(res)
+                if (active) {
+                  setMessages(res)
+                  markMessagesAsSeen(res)
+                }
               })
               return prev // wait for async apply
             })
@@ -155,6 +238,18 @@ export function useRealtimeMessages(groupId: string, activeUser: UserProfile | n
                 })
               )
             }
+          }
+        },
+        onSeenChange: async (seen) => {
+          if (!isHistoryLoadedRef.current) {
+            realtimeBufferRef.current.push({ type: 'SEEN_INSERT', payload: seen })
+          } else {
+            setMessages((prev) => {
+              applySeenInsert(seen, prev).then(res => {
+                if (active) setMessages(res)
+              })
+              return prev
+            })
           }
         },
         onAIStream: (messageId, text) => {
@@ -219,6 +314,8 @@ export function useRealtimeMessages(groupId: string, activeUser: UserProfile | n
             }
             return msg
           })
+        } else if (event.type === 'SEEN_INSERT') {
+          mergedMessages = await applySeenInsert(event.payload, mergedMessages)
         }
       }
 
@@ -226,6 +323,9 @@ export function useRealtimeMessages(groupId: string, activeUser: UserProfile | n
       isHistoryLoadedRef.current = true
       realtimeBufferRef.current = []
       setIsLoading(false)
+
+      // Mark fetched history messages as seen
+      markMessagesAsSeen(mergedMessages)
     }
 
     initData()
@@ -236,7 +336,7 @@ export function useRealtimeMessages(groupId: string, activeUser: UserProfile | n
         supabase.removeChannel(channel)
       }
     }
-  }, [groupId, activeUser, supabase, applyMessageInsert, applyReactionInsert])
+  }, [groupId, activeUser, supabase, applyMessageInsert, applyReactionInsert, applySeenInsert, markMessagesAsSeen, showNotification])
 
   return {
     messages,

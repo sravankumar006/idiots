@@ -119,7 +119,7 @@ export async function fetchMessages(
     // 4. Fetch main messages
     let query = supabase
       .from('messages')
-      .select('*, profiles(*), reactions(*, profiles(*))')
+      .select('*, profiles(*), reactions(*, profiles(*)), message_seen(*, profiles(*))')
       .eq('group_id', groupId)
     
     if (clearedAt) {

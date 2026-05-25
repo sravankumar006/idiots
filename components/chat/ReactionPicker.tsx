@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'
-import { Reply, Copy, Trash2 } from 'lucide-react'
+import { Reply, Copy, Trash2, Eye } from 'lucide-react'
 import { ChatMessage } from '@/types'
 import ActionButton from './MessageActions'
 
@@ -17,6 +17,7 @@ interface ReactionPickerProps {
   onDeleteForEveryone: () => void
   onClearChat: () => void
   onClose: () => void
+  onShowSeenBy?: () => void
 }
 
 /**
@@ -36,6 +37,7 @@ export default function ReactionPicker({
   onDeleteForEveryone,
   onClearChat,
   onClose,
+  onShowSeenBy,
 }: ReactionPickerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -126,6 +128,15 @@ export default function ReactionPicker({
               icon={<Copy className="h-4 w-4 text-gray-400 shrink-0" />}
               label="copy text"
               onClick={() => handleAction(onCopy)}
+            />
+          )}
+
+          {/* Who Saw This? */}
+          {!isDeleted && onShowSeenBy && (
+            <ActionButton
+              icon={<Eye className="h-4 w-4 text-violet-500 shrink-0" />}
+              label="who saw this?"
+              onClick={() => handleAction(onShowSeenBy)}
             />
           )}
 

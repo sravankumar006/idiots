@@ -1,11 +1,12 @@
 import { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js'
-import { ChatMessage, ChatReaction } from '@/types'
+import { ChatMessage, ChatReaction, MessageSeen } from '@/types'
 
 interface SubscriptionCallbacks {
   onInsertMessage: (message: ChatMessage) => void
   onUpdateMessage: (message: ChatMessage) => void
   onReactionChange: (event: 'INSERT' | 'DELETE', reaction: ChatReaction) => void
   onAIStream?: (messageId: string, text: string) => void
+  onSeenChange?: (seen: MessageSeen) => void
 }
 
 export function subscribeToMessages(
@@ -55,6 +56,21 @@ export function subscribeToMessages(
           callbacks.onReactionChange('INSERT', payload.new as ChatReaction)
         } else if (payload.eventType === 'DELETE') {
           callbacks.onReactionChange('DELETE', payload.old as ChatReaction)
+        }
+      }
+    )
+    
+    // Listen to read receipts (seen messages)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'message_seen',
+      },
+      (payload) => {
+        if (callbacks.onSeenChange) {
+          callbacks.onSeenChange(payload.new as MessageSeen)
         }
       }
     )

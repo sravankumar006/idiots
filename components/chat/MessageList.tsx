@@ -28,8 +28,11 @@ const MemoizedBubble = memo(MessageBubble, (prev, next) => {
     prev.message.sending === next.message.sending &&
     prev.message.error === next.message.error &&
     prev.message.uploadProgress === next.message.uploadProgress &&
+    prev.message.message_seen === next.message.message_seen &&
     prev.activeUserId === next.activeUserId &&
-    prev.groupPosition === next.groupPosition
+    prev.groupPosition === next.groupPosition &&
+    prev.isLatestMessage === next.isLatestMessage &&
+    prev.groupMemberIds === next.groupMemberIds
   )
 })
 MemoizedBubble.displayName = 'MemoizedMessageBubble'
@@ -63,11 +66,30 @@ export default function MessageList({
     adjustScroll()
   }, [messages, typingUsers, adjustScroll])
 
+  // Compute unique group member IDs from all message senders + active user + message_seen
+  // This is a dynamic definition: anyone who has sent or seen messages is a "member"
+  const groupMemberIds = useMemo(() => {
+    const ids = new Set<string>()
+    if (activeUser) ids.add(activeUser.id)
+    for (const msg of messages) {
+      if (msg.sender_id && msg.sender_id !== 'ai-system' && msg.sender_id !== 'ai-system-stub') {
+        ids.add(msg.sender_id)
+      }
+      if (msg.message_seen) {
+        for (const s of msg.message_seen) {
+          ids.add(s.user_id)
+        }
+      }
+    }
+    return Array.from(ids)
+  }, [messages, activeUser])
+
   // Compute grouping and date separators
   const enrichedMessages = useMemo(() => {
     return messages.map((msg, index) => {
       const prev = messages[index - 1]
       const next = messages[index + 1]
+      const isLatestMessage = index === messages.length - 1
 
       const isSameSenderPrev = prev && prev.sender_id === msg.sender_id && prev.type !== 'deleted' && msg.type !== 'deleted'
       const isSameSenderNext = next && next.sender_id === msg.sender_id && next.type !== 'deleted' && msg.type !== 'deleted'
@@ -105,6 +127,7 @@ export default function MessageList({
         msg,
         groupPosition,
         showDateSeparator,
+        isLatestMessage,
         dateString: showDateSeparator ? formatDateSeparator(msg.created_at || new Date().toISOString()) : ''
       }
     })
@@ -131,7 +154,7 @@ export default function MessageList({
       aria-relevant="additions"
     >
       <div className="flex flex-col mt-auto">
-        {enrichedMessages.map(({ msg, groupPosition, showDateSeparator, dateString }) => (
+        {enrichedMessages.map(({ msg, groupPosition, showDateSeparator, dateString, isLatestMessage }) => (
           <React.Fragment key={msg.id}>
             {showDateSeparator && (
               <div className="flex justify-center my-6">
@@ -145,6 +168,8 @@ export default function MessageList({
                 message={msg}
                 activeUserId={activeUser?.id || ''}
                 groupPosition={groupPosition}
+                isLatestMessage={isLatestMessage}
+                groupMemberIds={groupMemberIds}
                 onReact={onReact}
                 onReply={onReply}
                 onDelete={onDelete}
@@ -165,4 +190,3 @@ export default function MessageList({
 }
 
 export type { MessageListProps }
-

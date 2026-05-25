@@ -28,6 +28,14 @@ export interface ChatReaction {
   profiles?: UserProfile // Joined profile of the user who reacted
 }
 
+export interface MessageSeen {
+  id: string
+  message_id: string
+  user_id: string
+  seen_at: string
+  profiles?: UserProfile
+}
+
 export interface ChatMessage {
   id: string
   group_id: string
@@ -50,9 +58,11 @@ export interface ChatMessage {
     sender_name: string
   } | null
   reactions?: ChatReaction[]
+  message_seen?: MessageSeen[]
   
   // UI states:
   sending?: boolean
   error?: boolean
   uploadProgress?: number // Realtime optimistic progress indicator
+  aiMode?: 'pdf-generate' | 'image-analyze' | 'pdf-analyze' // multimodal AI response mode
 }
