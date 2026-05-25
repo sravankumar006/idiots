@@ -257,7 +257,7 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
           const decoder = new TextDecoder()
           let accumulatedText = ''
 
-          const aiStreamChannel = supabase.channel(`room_${groupId}_ai_stream`)
+          const aiStreamChannel = supabase.channel(`realtime-chat:${groupId}`)
 
           // 3. Read the stream chunk by chunk
           while (true) {
@@ -288,7 +288,7 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
             return
           }
 
-          const { data: finalDbMsg } = await supabase.from('messages').insert({
+          const { data: finalDbMsg, error: aiInsertError } = await supabase.from('messages').insert({
             id: aiMessageId,
             group_id: groupId,
             sender_id: activeUser.id,
@@ -297,9 +297,18 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
             reply_to: data.id
           }).select('*, profiles(*)').single()
 
+          if (aiInsertError) {
+            console.error('AI message insertion failed:', aiInsertError)
+          }
+
           if (finalDbMsg) {
             setMessages((prev) =>
               prev.map(m => m.id === aiMessageId ? { ...m, ...finalDbMsg, sending: false, aiMode: resolvedAiMode } : m)
+            )
+          } else {
+            // Fallback: set sending to false locally so the client doesn't hang in "sending" stage
+            setMessages((prev) =>
+              prev.map(m => m.id === aiMessageId ? { ...m, sending: false, aiMode: resolvedAiMode } : m)
             )
           }
 

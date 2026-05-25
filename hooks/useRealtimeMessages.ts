@@ -94,8 +94,11 @@ export function useRealtimeMessages(groupId: string, activeUser: UserProfile | n
       }
     }
 
-    // Remove any temporary sending copy, then append
-    const filtered = list.filter((m) => m.id !== newMsg.id && !m.sending)
+    // Remove any temporary sending copy of the same message content, then append
+    const filtered = list.filter((m) => 
+      m.id !== newMsg.id && 
+      !(m.sending && m.sender_id === newMsg.sender_id && m.message === newMsg.message)
+    )
     return [...filtered, messageWithProfile]
   }, [fetchProfile])
 
@@ -186,19 +189,54 @@ export function useRealtimeMessages(groupId: string, activeUser: UserProfile | n
           if (!isHistoryLoadedRef.current) {
             realtimeBufferRef.current.push({ type: 'INSERT', payload: newMsg })
           } else {
+            // Fetch profile first asynchronously
+            const senderProfile = await fetchProfile(newMsg.sender_id)
+
             // Trigger notification for messages from other users
             if (activeUser && newMsg.sender_id !== activeUser.id) {
-              showNotification(newMsg)
-            }
-            setMessages((prev) => {
-              applyMessageInsert(newMsg, prev).then(res => {
-                if (active) {
-                  setMessages(res)
-                  markMessagesAsSeen(res)
-                }
+              showNotification({
+                ...newMsg,
+                profiles: senderProfile || newMsg.profiles
               })
-              return prev // wait for async apply
-            })
+            }
+
+            if (active) {
+              setMessages((prev) => {
+                const existingIndex = prev.findIndex((m) => m.id === newMsg.id)
+                if (existingIndex !== -1 && !prev[existingIndex].sending) {
+                  return prev
+                }
+
+                const messageWithProfile: ChatMessage = {
+                  ...newMsg,
+                  profiles: senderProfile || newMsg.profiles,
+                  reactions: newMsg.reactions || [],
+                  message_seen: newMsg.message_seen || []
+                }
+
+                if (newMsg.reply_to) {
+                  const parent = prev.find((m) => m.id === newMsg.reply_to)
+                  if (parent) {
+                    messageWithProfile.replied_message = {
+                      id: parent.id,
+                      message: parent.message,
+                      sender_name: parent.profiles?.username || 'Explorer'
+                    }
+                  }
+                }
+
+                // Filter out the optimistic version (match by ID or sender content match)
+                const filtered = prev.filter((m) => 
+                  m.id !== newMsg.id && 
+                  !(m.sending && m.sender_id === newMsg.sender_id && m.message === newMsg.message)
+                )
+
+                const updated = [...filtered, messageWithProfile]
+                // Mark as seen asynchronously
+                markMessagesAsSeen(updated)
+                return updated
+              })
+            }
           }
         },
         onUpdateMessage: (updatedMsg) => {
@@ -218,12 +256,20 @@ export function useRealtimeMessages(groupId: string, activeUser: UserProfile | n
             })
           } else {
             if (event === 'INSERT') {
-              setMessages((prev) => {
-                applyReactionInsert(reaction, prev).then(res => {
-                  if (active) setMessages(res)
+              const rProfile = await fetchProfile(reaction.user_id)
+              if (active) {
+                setMessages((prev) => {
+                  const reactionWithProfile = { ...reaction, profiles: rProfile || reaction.profiles }
+                  return prev.map((msg) => {
+                    if (msg.id === reaction.message_id) {
+                      const currentReactions = msg.reactions || []
+                      if (currentReactions.some(r => r.id === reaction.id)) return msg
+                      return { ...msg, reactions: [...currentReactions, reactionWithProfile] }
+                    }
+                    return msg
+                  })
                 })
-                return prev
-              })
+              }
             } else {
               setMessages((prev) =>
                 prev.map((msg) => {
@@ -244,12 +290,20 @@ export function useRealtimeMessages(groupId: string, activeUser: UserProfile | n
           if (!isHistoryLoadedRef.current) {
             realtimeBufferRef.current.push({ type: 'SEEN_INSERT', payload: seen })
           } else {
-            setMessages((prev) => {
-              applySeenInsert(seen, prev).then(res => {
-                if (active) setMessages(res)
+            const sProfile = await fetchProfile(seen.user_id)
+            if (active) {
+              setMessages((prev) => {
+                const seenWithProfile = { ...seen, profiles: sProfile || seen.profiles }
+                return prev.map((msg) => {
+                  if (msg.id === seen.message_id) {
+                    const currentSeen = msg.message_seen || []
+                    if (currentSeen.some(s => s.user_id === seen.user_id)) return msg
+                    return { ...msg, message_seen: [...currentSeen, seenWithProfile] }
+                  }
+                  return msg
+                })
               })
-              return prev
-            })
+            }
           }
         },
         onAIStream: (messageId, text) => {
