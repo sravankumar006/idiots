@@ -36,7 +36,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
 
   return (
     <aside 
-      className={`hidden md:flex flex-col h-full glass-panel border-r border-white/5 transition-all duration-500 ease-in-out select-none shrink-0 ${
+      className={`flex flex-col h-full glass-panel border-r border-white/5 transition-all duration-500 ease-in-out select-none shrink-0 ${
         isCollapsed ? 'w-20' : 'w-64'
       }`}
     >

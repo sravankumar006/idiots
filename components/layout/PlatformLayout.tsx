@@ -38,10 +38,12 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
     <div className="relative h-full flex bg-background text-foreground overflow-hidden font-sans transition-colors duration-300">
       
       {/* 1. Desktop & Tablet Sidebar */}
-      <Sidebar 
-        isCollapsed={isSidebarCollapsed} 
-        setIsCollapsed={setIsSidebarCollapsed} 
-      />
+      <div className="hidden md:flex h-full shrink-0">
+        <Sidebar 
+          isCollapsed={isSidebarCollapsed} 
+          setIsCollapsed={setIsSidebarCollapsed} 
+        />
+      </div>
 
       {/* 2. Mobile Slide-out Sidebar Drawer */}
       {mobileMenuOpen && (
