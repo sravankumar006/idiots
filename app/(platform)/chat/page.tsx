@@ -46,7 +46,7 @@ export default async function ChatPage() {
   }
 
   return (
-    <div className="h-screen overflow-hidden">
+    <div className="h-[100dvh] overflow-hidden">
       <ChatWorkspaceClient
         activeUser={activeUser}
         initialGroups={initialGroups}

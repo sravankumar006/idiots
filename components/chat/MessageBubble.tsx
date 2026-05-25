@@ -11,6 +11,8 @@ import UploadProgress from './UploadProgress'
 import MessageActionSheet from './MessageActionSheet'
 import ReactionPicker from './ReactionPicker'
 import { useSwipeGesture } from '@/hooks/useSwipeGesture'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 // Emoji quick-access for hover bar
 const EMOJI_PICKER = ['👍', '❤️', '🔥', '😂', '😮', '✨']
@@ -28,6 +30,7 @@ const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
 interface MessageBubbleProps {
   message: ChatMessage
   activeUserId: string
+  groupPosition?: 'single' | 'first' | 'middle' | 'last'
   onReact: (messageId: string, emoji: string) => void
   onReply: (message: ChatMessage) => void
   onDelete: (messageId: string) => void
@@ -38,6 +41,7 @@ interface MessageBubbleProps {
 export default function MessageBubble({
   message,
   activeUserId,
+  groupPosition = 'single',
   onReact,
   onReply,
   onDelete,
@@ -165,19 +169,38 @@ export default function MessageBubble({
         {message.type === 'sticker' && message.file_url && (
           <StickerMessage src={message.file_url} />
         )}
-        {(message.type === 'text' || hasCaption) && (
+        {(message.type === 'text' || message.type === 'ai' || hasCaption) && (
           <div
-            className={`p-3.5 rounded-2xl text-xs leading-relaxed border ${
+            className={`p-3.5 text-[13px] leading-relaxed border ${
+              message.type === 'ai'
+                ? 'bg-[#1c1f26] text-gray-200 border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.1)] dark:bg-[#16181d] dark:border-indigo-400/20'
+                : isSelf
+                ? `bg-[#6366f1] text-white border-black/5 dark:bg-[#5b5fcf] dark:text-white dark:border-white/5`
+                : `bg-white text-gray-800 border-black/5 dark:bg-[#1c1f26] dark:text-gray-200 dark:border-white/5 shadow-sm`
+            } ${
+              // Dynamic border radius for grouping
               isSelf
-                ? `bg-gradient-to-br from-indigo-50/70 to-violet-50/40 text-gray-800 border-black/5 dark:from-violet-500/10 dark:via-pink-500/5 dark:to-transparent dark:text-white dark:border-white/5 rounded-tr-none ${
-                    message.replied_message ? 'rounded-tl-none' : ''
-                  }`
-                : `bg-gray-100/70 text-gray-800 border-black/5 dark:bg-[#1c1f26]/50 dark:text-gray-300 dark:border-white/3 rounded-tl-none ${
-                    message.replied_message ? 'rounded-tr-none' : ''
-                  }`
+                ? groupPosition === 'first' ? 'rounded-2xl rounded-tr-md'
+                  : groupPosition === 'middle' ? 'rounded-2xl rounded-tr-md rounded-br-md'
+                  : groupPosition === 'last' ? 'rounded-2xl rounded-br-md'
+                  : 'rounded-2xl'
+                : groupPosition === 'first' ? 'rounded-2xl rounded-tl-md'
+                  : groupPosition === 'middle' ? 'rounded-2xl rounded-tl-md rounded-bl-md'
+                  : groupPosition === 'last' ? 'rounded-2xl rounded-bl-md'
+                  : 'rounded-2xl'
+            } ${
+              message.replied_message ? (isSelf ? 'rounded-tr-none' : 'rounded-tl-none') : ''
             }`}
           >
-            <p className="whitespace-pre-wrap break-words">{message.message}</p>
+            {message.type === 'ai' ? (
+              <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-xl prose-code:text-indigo-300 break-words">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {message.message}
+                </ReactMarkdown>
+              </div>
+            ) : (
+              <p className="whitespace-pre-wrap break-words">{message.message}</p>
+            )}
           </div>
         )}
       </div>
@@ -226,30 +249,38 @@ export default function MessageBubble({
             </div>
           )}
 
-          {/* 1. Avatar */}
-          <div
-            className={`h-8 w-8 rounded-lg bg-gradient-to-br ${avatar.gradient} flex items-center justify-center text-xs font-semibold text-black shadow-md shrink-0 select-none`}
-            aria-hidden="true"
-          >
-            {avatar.symbol}
+          {/* 1. Avatar (Only show on last or single message) */}
+          <div className="w-8 shrink-0 flex items-end">
+            {(groupPosition === 'last' || groupPosition === 'single') && !isSelf ? (
+              <div
+                className={`h-8 w-8 rounded-full bg-gradient-to-br ${avatar.gradient} flex items-center justify-center text-[10px] font-semibold text-white shadow-sm shrink-0 select-none`}
+                aria-hidden="true"
+              >
+                {avatar.symbol}
+              </div>
+            ) : null}
           </div>
 
           {/* 2. Content column */}
           <div className="space-y-1 min-w-0 flex-1">
 
-            {/* Sender + time */}
-            <div className={`flex items-baseline gap-2 select-none lowercase ${isSelf ? 'justify-end' : ''}`}>
-              <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-200">
-                {message.profiles?.username || 'explorer'}
-              </span>
-              <span className="text-[9px] text-gray-400 dark:text-gray-500 font-medium">{timeStr}</span>
-              {message.sending && (
-                <span className="text-[9px] text-gray-400 font-medium animate-pulse">sending...</span>
-              )}
-              {message.error && (
-                <span className="text-[9px] text-rose-400 font-medium">failed to send</span>
-              )}
-            </div>
+            {/* Sender + time (Only show on first or single message, or if self and need to show sending status) */}
+            {((groupPosition === 'first' || groupPosition === 'single') || isSelf) && (
+              <div className={`flex items-baseline gap-2 select-none lowercase ${isSelf ? 'justify-end' : ''}`}>
+                {!isSelf && (
+                  <span className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">
+                    {message.profiles?.username || 'explorer'}
+                  </span>
+                )}
+                <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">{timeStr}</span>
+                {message.sending && (
+                  <span className="text-[10px] text-gray-400 font-medium animate-pulse">sending...</span>
+                )}
+                {message.error && (
+                  <span className="text-[10px] text-rose-400 font-medium">failed to send</span>
+                )}
+              </div>
+            )}
 
             {/* Bubble container */}
             <div className="relative">

@@ -166,6 +166,99 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
       setMessages((prev) =>
         prev.map((m) => (m.id === tempId ? { ...m, ...data, sending: false, uploadProgress: undefined } : m))
       )
+
+      // --- AI INTEGRATION: Detect @ai and trigger shared AI ---
+      if (text.includes('@ai')) {
+        const aiMessageId = `ai-${Date.now()}`
+        
+        // 1. Optimistic empty AI message
+        const aiMessage: ChatMessage = {
+          id: aiMessageId,
+          group_id: groupId,
+          sender_id: activeUser.id, // Using user's ID to pass RLS, but type='ai' makes it render as AI
+          message: '',
+          type: 'ai',
+          reply_to: null,
+          created_at: new Date().toISOString(),
+          profiles: {
+            id: 'ai-system',
+            username: 'idiot ai',
+            email: 'ai@system.local',
+            avatar: 'avatar-cyber-ghost',
+            created_at: new Date().toISOString()
+          },
+          sending: true,
+          reactions: []
+        }
+        setMessages((prev) => [...prev, aiMessage])
+
+        try {
+          // 2. Fetch the stream from the API
+          const response = await fetch('/api/ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt: text,
+              groupId,
+              aiMessageId,
+              contextMessages: messages.slice(-15) // send last 15 messages for context
+            })
+          })
+
+          if (!response.ok || !response.body) throw new Error('AI stream failed')
+
+          const reader = response.body.getReader()
+          const decoder = new TextDecoder()
+          let accumulatedText = ''
+
+          const aiStreamChannel = supabase.channel(`room_${groupId}_ai_stream`)
+
+          // 3. Read the stream chunk by chunk
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            
+            const chunk = decoder.decode(value, { stream: true })
+            accumulatedText += chunk
+            
+            // Update local state instantly
+            setMessages((prev) => 
+              prev.map(m => m.id === aiMessageId ? { ...m, message: accumulatedText } : m)
+            )
+
+            // Broadcast to others in the room
+            aiStreamChannel.send({
+              type: 'broadcast',
+              event: 'ai_stream_update',
+              payload: { messageId: aiMessageId, text: accumulatedText }
+            })
+          }
+
+          // 4. Save final AI message to DB securely so it persists
+          const { data: finalDbMsg } = await supabase.from('messages').insert({
+            id: aiMessageId,
+            group_id: groupId,
+            sender_id: activeUser.id,
+            message: accumulatedText,
+            type: 'ai',
+            reply_to: data.id // Reply to the user's prompt message
+          }).select('*, profiles(*)').single()
+
+          if (finalDbMsg) {
+             setMessages((prev) => 
+               prev.map(m => m.id === aiMessageId ? { ...m, ...finalDbMsg, sending: false } : m)
+             )
+          }
+
+        } catch (err) {
+          console.error("AI Streaming error:", err)
+          setMessages((prev) => 
+            prev.map(m => m.id === aiMessageId ? { ...m, error: true, sending: false, message: 'I encountered an error trying to process that.' } : m)
+          )
+        }
+      }
+      // --- END AI INTEGRATION ---
+
     } catch (e) {
       console.error("Error sending message:", e)
       if (localBlobUrl && hasFile) {

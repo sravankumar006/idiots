@@ -93,7 +93,7 @@ export default function MessageInput({
   }, [replyTo])
 
   return (
-    <div className="shrink-0 px-6 pb-6 pt-2 bg-transparent">
+    <div className="shrink-0 px-3 pb-3 md:px-8 md:pb-6 pt-2 bg-transparent">
 
       {/* Reply preview (above pill) */}
       <ReplyPreview message={replyTo} onClose={onClearReply} />
@@ -103,11 +103,11 @@ export default function MessageInput({
 
       {/* ── Pill container ── */}
       <div
-        className={`flex items-end gap-2 bg-[#fefdfb] dark:bg-[#1c1f26] border border-black/5 dark:border-white/[0.06] rounded-3xl transition-all duration-200 ${
+        className={`flex items-end gap-2 bg-white dark:bg-[#16181d] border border-black/[0.03] dark:border-white/[0.04] rounded-[28px] transition-all duration-300 ease-out relative z-10 ${
           isFocused
-            ? 'shadow-[0_12px_24px_-4px_rgba(139,92,246,0.15)] dark:shadow-[0_12px_24px_-4px_rgba(139,92,246,0.25)]'
-            : 'shadow-[0_12px_24px_-4px_rgba(0,0,0,0.04),0_4px_12px_-2px_rgba(0,0,0,0.02)] dark:shadow-[0_12px_24px_-4px_rgba(0,0,0,0.4),0_4px_12px_-2px_rgba(0,0,0,0.25)]'
-        } ${replyTo || draftFile ? 'rounded-t-xl' : ''}`}
+            ? 'shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] -translate-y-0.5'
+            : 'shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.2)] hover:shadow-[0_6px_24px_rgb(0,0,0,0.05)] dark:hover:shadow-[0_6px_24px_rgb(0,0,0,0.25)]'
+        } ${replyTo || draftFile ? 'rounded-t-2xl' : ''}`}
       >
         {/* Attachment button */}
         <div className="flex items-center pl-3 pb-2.5 shrink-0">

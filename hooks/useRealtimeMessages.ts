@@ -156,6 +156,34 @@ export function useRealtimeMessages(groupId: string, activeUser: UserProfile | n
               )
             }
           }
+        },
+        onAIStream: (messageId, text) => {
+          setMessages(prev => {
+            const exists = prev.some(m => m.id === messageId)
+            if (exists) {
+              return prev.map(m => m.id === messageId ? { ...m, message: text } : m)
+            } else {
+              // Placeholder if we receive stream before history or before sender's insert
+              const newAiMsg: ChatMessage = {
+                id: messageId,
+                group_id: groupId,
+                sender_id: 'ai-system-stub',
+                message: text,
+                type: 'ai',
+                reply_to: null,
+                created_at: new Date().toISOString(),
+                profiles: {
+                  id: 'ai-system-stub',
+                  username: 'idiot ai',
+                  email: 'ai@system.local',
+                  avatar: 'avatar-cyber-ghost',
+                  created_at: new Date().toISOString()
+                },
+                sending: true
+              }
+              return [...prev, newAiMsg]
+            }
+          })
         }
       })
     }

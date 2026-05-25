@@ -5,6 +5,7 @@ interface SubscriptionCallbacks {
   onInsertMessage: (message: ChatMessage) => void
   onUpdateMessage: (message: ChatMessage) => void
   onReactionChange: (event: 'INSERT' | 'DELETE', reaction: ChatReaction) => void
+  onAIStream?: (messageId: string, text: string) => void
 }
 
 export function subscribeToMessages(
@@ -42,7 +43,6 @@ export function subscribeToMessages(
       }
     )
 
-    // Listen to reactions
     .on(
       'postgres_changes',
       {
@@ -55,6 +55,17 @@ export function subscribeToMessages(
           callbacks.onReactionChange('INSERT', payload.new as ChatReaction)
         } else if (payload.eventType === 'DELETE') {
           callbacks.onReactionChange('DELETE', payload.old as ChatReaction)
+        }
+      }
+    )
+    
+    // Listen to AI streams
+    .on(
+      'broadcast',
+      { event: 'ai_stream_update' },
+      (payload) => {
+        if (callbacks.onAIStream) {
+          callbacks.onAIStream(payload.payload.messageId, payload.payload.text)
         }
       }
     )
