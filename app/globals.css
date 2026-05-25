@@ -1,26 +1,233 @@
 @import "tailwindcss";
+@variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #faf8f5; /* Warm cream light theme background */
+  --foreground: #2d2d35; /* Soft charcoal text */
+  
+  --color-glow-blue: #4f46e5; /* Indigo */
+  --color-glow-purple: #7c3aed; /* Violet/Lavender */
+  --color-glow-cyan: #db2777; /* Rose/Pink */
+  
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(0, 0, 0, 0.06);
+  --glass-highlight: rgba(255, 255, 255, 0.5);
+  --glass-shadow: rgba(0, 0, 0, 0.06);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.12);
+  --scrollbar-track: rgba(0, 0, 0, 0.02);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+.dark {
+  --background: #090a10; /* Soft warm charcoal black */
+  --foreground: #eceef5; /* Gentle cream white */
+  
+  --color-glow-blue: #6366f1; /* Soothing calm indigo */
+  --color-glow-purple: #ab9df2; /* Muted lavender */
+  --color-glow-cyan: #f272a1; /* Sweet rose/pink */
+  
+  --glass-bg: rgba(14, 15, 26, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.04);
+  --glass-highlight: rgba(255, 255, 255, 0.01);
+  --glass-shadow: rgba(0, 0, 0, 0.45);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.08);
+  --scrollbar-track: rgba(0, 0, 0, 0.3);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@theme {
+  --color-dark-bg: var(--background);
+  --color-dark-card: var(--glass-bg);
+  --color-glow-blue: var(--color-glow-blue);
+  --color-glow-purple: var(--color-glow-purple);
+  --color-glow-cyan: var(--color-glow-cyan);
+  
+  --animate-pulse-slow: pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-glow: glow 2.5s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  from {
+    text-shadow: 0 0 8px rgba(79, 70, 229, 0.2), 0 0 16px rgba(124, 58, 237, 0.15);
+  }
+  to {
+    text-shadow: 0 0 12px rgba(79, 70, 229, 0.4), 0 0 24px rgba(124, 58, 237, 0.3);
   }
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Glassmorphism utility classes */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px 0 var(--glass-shadow);
+}
+
+.glass-input {
+  background: rgba(0, 0, 0, 0.02);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  color: var(--foreground);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark .glass-input {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.glass-input:focus {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(79, 70, 229, 0.4);
+  box-shadow: 0 0 15px rgba(79, 70, 229, 0.1);
+  outline: none;
+}
+
+.dark .glass-input:focus {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.glass-button {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.06) 0%, rgba(124, 58, 237, 0.06) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  color: var(--foreground);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.glass-button:hover {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.12) 0%, rgba(124, 58, 237, 0.12) 100%);
+  border-color: rgba(79, 70, 229, 0.2);
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.1);
+  transform: translateY(-1px);
+}
+
+.glass-button:active {
+  transform: translateY(1px);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb);
+  filter: brightness(1.2);
+}
+
+/* =====================================================
+   INTERACTION ANIMATIONS
+   ===================================================== */
+
+/* Action Sheet — slides up from bottom */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.28s cubic-bezier(0.34, 1.06, 0.64, 1) forwards;
+}
+
+/* Reaction Picker — scales in from slightly below */
+@keyframes scaleIn {
+  from {
+    transform: scale(0.85) translateY(4px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.18s cubic-bezier(0.34, 1.06, 0.64, 1) forwards;
+  transform-origin: top left;
+}
+
+/* FadeIn — for overlays and bubbles */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+/* =====================================================
+   FOCUS RING SYSTEM (Accessibility)
+   ===================================================== */
+
+/* Use indigo focus rings instead of browser default blue */
+:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.7);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Remove outline on mouse click (only show for keyboard users) */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* =====================================================
+   TOUCH TARGET UTILITIES (Accessibility)
+   ===================================================== */
+
+/* Minimum 44×44px touch targets for interactive elements */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Safe area padding for bottom sheets on notched devices */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+/* =====================================================
+   SCROLLBAR (thin variant)
+   ===================================================== */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 9999px;
 }

@@ -1,0 +1,413 @@
+'use client'
+
+import React, { useState, useEffect } from 'react'
+import {
+  Settings, X, Heart, ArrowLeft,
+  LayoutDashboard, Sparkles, Clock, Brain, FolderHeart,
+  Hash, Sun, Moon, ChevronDown
+} from 'lucide-react'
+import { UserProfile, ChatGroup } from '@/types'
+import { createClient } from '@/lib/supabase/client'
+import { useTheme } from 'next-themes'
+import Link from 'next/link'
+import ChatWindow from './ChatWindow'
+import EmptyState from './EmptyState'
+import { Button } from '@/components/ui/Button'
+
+// ——— Avatar palette ———
+const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
+  'avatar-cyber-ghost':  { gradient: 'from-indigo-400 to-purple-500',  symbol: 'CM' },
+  'avatar-neon-pulse':   { gradient: 'from-purple-400 to-pink-500',    symbol: 'SL' },
+  'avatar-alpha-wing':   { gradient: 'from-emerald-400 to-teal-500',   symbol: 'MM' },
+  'avatar-solar-flare':  { gradient: 'from-orange-300 to-rose-400',    symbol: 'WP' },
+  'avatar-void-runner':  { gradient: 'from-rose-400 to-pink-500',      symbol: 'CB' },
+  'avatar-shadow-blade': { gradient: 'from-slate-400 to-indigo-500',   symbol: 'MS' },
+}
+
+const AVATAR_OPTIONS = [
+  { id: 'avatar-cyber-ghost',  name: 'Cosmic Mist',      gradient: 'from-indigo-400 to-purple-500',  symbol: 'CM' },
+  { id: 'avatar-neon-pulse',   name: 'Sweet Lavender',   gradient: 'from-purple-400 to-pink-500',    symbol: 'SL' },
+  { id: 'avatar-alpha-wing',   name: 'Moss Mint',        gradient: 'from-emerald-400 to-teal-500',   symbol: 'MM' },
+  { id: 'avatar-solar-flare',  name: 'Warm Peach',       gradient: 'from-orange-300 to-rose-400',    symbol: 'WP' },
+  { id: 'avatar-void-runner',  name: 'Cherry Blossom',   gradient: 'from-rose-400 to-pink-500',      symbol: 'CB' },
+  { id: 'avatar-shadow-blade', name: 'Moon Slate',       gradient: 'from-slate-400 to-indigo-500',   symbol: 'MS' },
+]
+
+const NAV_ITEMS = [
+  { href: '/dashboard',  label: 'home',           icon: LayoutDashboard },
+  { href: '/ai',         label: 'companion',      icon: Sparkles },
+  { href: '/study',      label: 'zen focus',      icon: Clock },
+  { href: '/memories',   label: 'memories',       icon: Brain },
+  { href: '/projects',   label: 'creative rooms', icon: FolderHeart },
+  { href: '/settings',   label: 'settings',       icon: Settings },
+]
+
+interface ChatWorkspaceClientProps {
+  activeUser: UserProfile | null
+  initialGroups: ChatGroup[]
+}
+
+export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatWorkspaceClientProps) {
+  const supabase = createClient()
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  // ——— Profile state ———
+  const [activeProfile, setActiveProfile] = useState<UserProfile | null>(activeUser)
+  const [friends, setFriends] = useState<UserProfile[]>([])
+
+  // ——— Modal / nav state ———
+  const [profileModalOpen, setProfileModalOpen] = useState(false)
+  const [navOpen, setNavOpen] = useState(false)
+  const [newUsername, setNewUsername] = useState(activeUser?.username || '')
+  const [selectedAvatar, setSelectedAvatar] = useState(activeUser?.avatar || 'avatar-cyber-ghost')
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+
+  // ——— Mobile: 'sidebar' | 'chat' ———
+  const [mobileView, setMobileView] = useState<'sidebar' | 'chat'>('sidebar')
+
+  // ——— Groups / channel list ———
+  const groupsList = initialGroups.length > 0 ? initialGroups : [
+    { id: 'default-group', group_name: 'general',    created_by: 'sys', created_at: new Date().toISOString() },
+    { id: 'focus-group',   group_name: 'focus room', created_by: 'sys', created_at: new Date().toISOString() },
+    { id: 'ai-logs',       group_name: 'ai logs',    created_by: 'sys', created_at: new Date().toISOString() },
+  ]
+  const [selectedGroup, setSelectedGroup] = useState<ChatGroup | null>(groupsList[0])
+
+  useEffect(() => { setMounted(true) }, [])
+
+  // Fetch friend profiles for the online list
+  useEffect(() => {
+    const fetchFriends = async () => {
+      try {
+        const { data } = await supabase.from('profiles').select('*').limit(8)
+        if (data) setFriends((data as UserProfile[]).filter(p => p.id !== activeProfile?.id))
+      } catch { /* silent */ }
+    }
+    if (activeProfile) fetchFriends()
+  }, [activeProfile, supabase])
+
+  // Close nav dropdown on outside click
+  useEffect(() => {
+    if (!navOpen) return
+    const close = () => setNavOpen(false)
+    const t = setTimeout(() => document.addEventListener('click', close), 50)
+    return () => { clearTimeout(t); document.removeEventListener('click', close) }
+  }, [navOpen])
+
+  const openProfileModal = () => {
+    setNewUsername(activeProfile?.username || '')
+    setSelectedAvatar(activeProfile?.avatar || 'avatar-cyber-ghost')
+    setProfileModalOpen(true)
+  }
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newUsername.trim() || !activeProfile) return
+    setIsSavingProfile(true)
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ username: newUsername.trim(), avatar: selectedAvatar })
+        .eq('id', activeProfile.id)
+      if (error) throw error
+      setActiveProfile(prev => prev ? { ...prev, username: newUsername.trim(), avatar: selectedAvatar } : null)
+      setProfileModalOpen(false)
+    } catch { alert('Could not save your changes.') }
+    finally { setIsSavingProfile(false) }
+  }
+
+  const selectChannel = (g: ChatGroup) => {
+    setSelectedGroup(g)
+    setMobileView('chat')
+  }
+
+  const activeAvatar = AVATAR_MAP[activeProfile?.avatar || 'avatar-cyber-ghost'] || AVATAR_MAP['avatar-cyber-ghost']
+
+  // ——— Sidebar inner content (shared between desktop and mobile) ———
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
+
+      {/* ── Brand header ── */}
+      <div className="flex items-center justify-between px-4 h-14 shrink-0 border-b border-black/5 dark:border-white/5">
+        <div className="flex items-center gap-2.5">
+          <div className="h-7 w-7 rounded-xl bg-gradient-to-tr from-violet-500 to-pink-400 flex items-center justify-center text-[11px] font-bold text-white shadow-sm select-none">
+            is
+          </div>
+          <span className="text-sm font-semibold text-gray-900 dark:text-white lowercase tracking-wide">
+            idiots space
+          </span>
+        </div>
+
+        {/* Nav dropdown trigger */}
+        <div className="relative" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => setNavOpen(v => !v)}
+            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition-all cursor-pointer"
+            aria-label="Navigation menu"
+            title="More pages"
+          >
+            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${navOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {navOpen && (
+            <div className="absolute top-full right-0 mt-1 w-48 z-50 bg-white dark:bg-[#0f1020] rounded-xl border border-black/8 dark:border-white/8 shadow-xl p-1.5 animate-scaleIn">
+              {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/5 transition-all"
+                >
+                  <Icon className="h-3.5 w-3.5 text-violet-400 shrink-0" />
+                  {label}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Channels list ── */}
+      <div className="px-3 pt-5 pb-2 shrink-0">
+        <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-2 mb-2">
+          Rooms
+        </p>
+        <div className="space-y-0.5">
+          {groupsList.map((g) => {
+            const isActive = selectedGroup?.id === g.id
+            return (
+              <button
+                key={g.id}
+                onClick={() => selectChannel(g)}
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 text-left cursor-pointer group relative ${
+                  isActive
+                    ? 'bg-violet-500/10 dark:bg-violet-500/12 text-violet-700 dark:text-violet-300'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-black/[0.04] dark:hover:bg-white/[0.04] hover:text-gray-900 dark:hover:text-gray-100'
+                }`}
+              >
+                {/* Active indicator bar */}
+                {isActive && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-violet-500" />
+                )}
+                <Hash className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-violet-500' : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'}`} />
+                <span className="truncate">{g.group_name.replace('#', '').toLowerCase()}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── Online friends (scrollable flex-1) ── */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin px-3 pb-2 min-h-0">
+        <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-2 mb-2 mt-4">
+          Online
+        </p>
+        <div className="space-y-0.5">
+          {friends.map((f) => {
+            const av = AVATAR_MAP[f.avatar || 'avatar-cyber-ghost'] || AVATAR_MAP['avatar-cyber-ghost']
+            return (
+              <div key={f.id} className="flex items-center gap-2.5 px-3 py-2 rounded-xl">
+                <div className="relative shrink-0">
+                  <div className={`h-7 w-7 rounded-full bg-gradient-to-br ${av.gradient} flex items-center justify-center text-[9px] font-semibold text-white shadow-sm`}>
+                    {av.symbol}
+                  </div>
+                  <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-400 border-2 border-white dark:border-[#0a0b14] shadow-sm" />
+                </div>
+                <span className="text-xs text-gray-600 dark:text-gray-400 font-medium truncate lowercase">
+                  {f.username}
+                </span>
+              </div>
+            )
+          })}
+          {friends.length === 0 && (
+            <p className="px-3 py-2 text-[10px] text-gray-400 dark:text-gray-500 italic">
+              just you right now 🌙
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ── Profile footer ── */}
+      <div className="px-3 py-3 border-t border-black/5 dark:border-white/5 shrink-0">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={openProfileModal}
+            className="flex-1 flex items-center gap-2.5 p-2 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-all duration-150 text-left cursor-pointer group"
+            title="Edit profile"
+          >
+            <div className={`h-7 w-7 rounded-full bg-gradient-to-br ${activeAvatar.gradient} flex items-center justify-center text-[9px] font-semibold text-white shadow-md shrink-0`}>
+              {activeAvatar.symbol}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-gray-800 dark:text-white truncate lowercase">
+                {activeProfile?.username || 'you'}
+              </p>
+              <p className="text-[9px] text-gray-400 dark:text-gray-500 font-medium">
+                edit profile
+              </p>
+            </div>
+          </button>
+
+          {/* Theme toggle */}
+          {mounted && (
+            <button
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all cursor-pointer shrink-0"
+              title="Toggle theme"
+              aria-label="Toggle light/dark mode"
+            >
+              {theme === 'dark'
+                ? <Sun className="h-3.5 w-3.5 text-amber-400" />
+                : <Moon className="h-3.5 w-3.5 text-indigo-500" />
+              }
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="flex h-full bg-[#f5f4f0] dark:bg-[#090a10] text-gray-900 dark:text-gray-100 overflow-hidden">
+
+      {/* ═══════════════════════════════════════════
+          DESKTOP SIDEBAR
+          ═══════════════════════════════════════════ */}
+      <aside
+        className={`hidden md:flex flex-col w-[280px] shrink-0 h-full min-h-0 bg-white dark:bg-[#0c0d18] border-r border-black/6 dark:border-white/[0.05]`}
+        aria-label="Sidebar"
+      >
+        <SidebarContent />
+      </aside>
+
+      {/* ═══════════════════════════════════════════
+          MOBILE SIDEBAR (full screen, hidden when chat is open)
+          ═══════════════════════════════════════════ */}
+      {mobileView === 'sidebar' && (
+        <div className="md:hidden flex flex-col w-full h-full bg-white dark:bg-[#0c0d18]">
+          <SidebarContent />
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════
+          MAIN CHAT AREA
+          ═══════════════════════════════════════════ */}
+      <main
+        className={`flex-1 min-w-0 min-h-0 h-full ${mobileView === 'chat' ? 'flex' : 'hidden md:flex'} flex-col`}
+      >
+        {selectedGroup ? (
+          <ChatWindow
+            key={selectedGroup.id}
+            groupId={selectedGroup.id}
+            groupName={selectedGroup.group_name}
+            activeUser={activeProfile}
+            onBack={() => setMobileView('sidebar')}
+          />
+        ) : (
+          <div className="flex-1 flex items-center justify-center bg-[#f0ede8] dark:bg-[#090a10]">
+            <EmptyState />
+          </div>
+        )}
+      </main>
+
+      {/* ═══════════════════════════════════════════
+          PROFILE CUSTOMIZER MODAL
+          ═══════════════════════════════════════════ */}
+      {profileModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fadeIn">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-md"
+            onClick={() => setProfileModalOpen(false)}
+          />
+          <div className="relative w-full sm:max-w-sm bg-white dark:bg-[#0f1020] rounded-t-2xl sm:rounded-2xl border border-black/8 dark:border-white/8 shadow-2xl z-10 p-6 space-y-5 animate-slideUp sm:animate-scaleIn">
+
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Heart className="h-4 w-4 text-violet-500" />
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white lowercase">
+                  your space
+                </h3>
+              </div>
+              <button
+                onClick={() => setProfileModalOpen(false)}
+                className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 hover:text-gray-800 dark:hover:text-white transition-all cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="space-y-5">
+              {/* Username */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">
+                  your name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-white/3 border border-black/8 dark:border-white/8 rounded-xl py-3 px-4 text-sm text-gray-800 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 focus:outline-none focus:border-violet-400/60 dark:focus:border-violet-500/50 transition-all font-medium"
+                  placeholder="what do they call you..."
+                />
+              </div>
+
+              {/* Avatar picker */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">
+                  color aura
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {AVATAR_OPTIONS.map((av) => {
+                    const isSelected = selectedAvatar === av.id
+                    return (
+                      <button
+                        type="button"
+                        key={av.id}
+                        onClick={() => setSelectedAvatar(av.id)}
+                        className={`p-2.5 rounded-xl border flex flex-col items-center gap-1.5 transition-all duration-150 cursor-pointer ${
+                          isSelected
+                            ? 'border-violet-400 bg-violet-50 dark:bg-violet-500/10'
+                            : 'border-black/6 dark:border-white/6 bg-gray-50 dark:bg-white/2 hover:border-black/10 dark:hover:border-white/10'
+                        }`}
+                      >
+                        <div className={`h-8 w-8 rounded-full bg-gradient-to-br ${av.gradient} flex items-center justify-center text-[10px] font-semibold text-white shadow-sm`}>
+                          {av.symbol}
+                        </div>
+                        <span className="text-[9px] font-medium text-gray-500 dark:text-gray-400 truncate max-w-full">
+                          {av.name}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="flex gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setProfileModalOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-black/8 dark:border-white/8 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white hover:bg-black/3 dark:hover:bg-white/3 transition-all cursor-pointer"
+                >
+                  cancel
+                </button>
+                <Button
+                  type="submit"
+                  isLoading={isSavingProfile}
+                  variant="neon"
+                  className="flex-1 py-2.5 rounded-xl text-xs"
+                >
+                  save
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export type { ChatWorkspaceClientProps }
