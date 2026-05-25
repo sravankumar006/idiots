@@ -42,7 +42,7 @@ export default function MobileNav({ onToggleMobileMenu }: MobileNavProps) {
   return (
     <>
       {/* 1. Glassmorphic Bottom Tab Navbar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 h-16 bg-[#0a0b14]/70 backdrop-blur-xl border-t border-white/5 px-6 flex items-center justify-between select-none">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 h-16 bg-[#faf9f6]/80 dark:bg-[#16181d]/85 backdrop-blur-xl border-t border-black/5 dark:border-white/5 px-6 flex items-center justify-between select-none">
         {tabs.map((tab) => {
           const Icon = tab.icon
           const isActive = pathname === tab.href
@@ -52,10 +52,10 @@ export default function MobileNav({ onToggleMobileMenu }: MobileNavProps) {
               key={tab.href}
               href={tab.href}
               className={`flex flex-col items-center gap-1 py-1 text-[10px] font-bold tracking-wider transition-all duration-300 ${
-                isActive ? 'text-violet-400' : 'text-gray-500 hover:text-gray-300'
+                isActive ? 'text-violet-600 dark:text-violet-400' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-300'
               }`}
             >
-              <Icon className={`h-5 w-5 transition-transform active:scale-95 ${isActive ? 'text-violet-400' : 'text-gray-500'}`} />
+              <Icon className={`h-5 w-5 transition-transform active:scale-95 ${isActive ? 'text-violet-600 dark:text-violet-400' : 'text-gray-500'}`} />
               <span>{tab.label}</span>
             </Link>
           )
@@ -65,7 +65,7 @@ export default function MobileNav({ onToggleMobileMenu }: MobileNavProps) {
         <button
           onClick={() => setDrawerOpen(true)}
           className={`flex flex-col items-center gap-1 py-1 text-[10px] font-bold tracking-wider transition-all cursor-pointer ${
-            drawerOpen ? 'text-violet-400' : 'text-gray-500'
+            drawerOpen ? 'text-violet-600 dark:text-violet-400' : 'text-gray-500 dark:text-gray-400'
           }`}
         >
           <Menu className="h-5 w-5" />
@@ -80,7 +80,7 @@ export default function MobileNav({ onToggleMobileMenu }: MobileNavProps) {
           <div className="absolute inset-0" onClick={() => setDrawerOpen(false)} />
           
           {/* Drawer Sheet */}
-          <div className="relative w-full bg-[#0a0b15] border-t border-white/10 rounded-t-3xl p-6 space-y-6 shadow-2xl z-10 animate-slideUp">
+          <div className="relative w-full bg-[#faf9f6] dark:bg-[#16181d] border-t border-black/5 dark:border-white/10 rounded-t-3xl p-6 space-y-6 shadow-2xl z-10 animate-slideUp">
             
             {/* Header */}
             <div className="flex items-center justify-between">
@@ -88,11 +88,11 @@ export default function MobileNav({ onToggleMobileMenu }: MobileNavProps) {
                 <div className="h-6 w-6 rounded-lg bg-gradient-to-tr from-violet-500 to-rose-400 flex items-center justify-center text-[10px] font-black text-black">
                   IS
                 </div>
-                <span className="text-xs font-bold tracking-widest text-white uppercase">Idiots Space Navigation</span>
+                <span className="text-xs font-bold tracking-widest text-gray-900 dark:text-white uppercase">Idiots Space Navigation</span>
               </div>
               <button 
                 onClick={() => setDrawerOpen(false)}
-                className="p-1 rounded-lg hover:bg-white/5 text-gray-400 cursor-pointer"
+                className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-800 dark:hover:text-white cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -103,7 +103,7 @@ export default function MobileNav({ onToggleMobileMenu }: MobileNavProps) {
               <Link
                 href="/memories"
                 onClick={() => setDrawerOpen(false)}
-                className="flex items-center gap-3 p-3.5 rounded-xl bg-white/2 border border-white/5 text-xs font-semibold text-gray-300 hover:text-white"
+                className="flex items-center gap-3 p-3.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
               >
                 <Brain className="h-4.5 w-4.5 text-violet-400" />
                 <span>Mind Logs</span>
@@ -112,7 +112,7 @@ export default function MobileNav({ onToggleMobileMenu }: MobileNavProps) {
               <Link
                 href="/projects"
                 onClick={() => setDrawerOpen(false)}
-                className="flex items-center gap-3 p-3.5 rounded-xl bg-white/2 border border-white/5 text-xs font-semibold text-gray-300 hover:text-white"
+                className="flex items-center gap-3 p-3.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
               >
                 <FolderHeart className="h-4.5 w-4.5 text-rose-400" />
                 <span>Creative Rooms</span>
@@ -121,7 +121,7 @@ export default function MobileNav({ onToggleMobileMenu }: MobileNavProps) {
               <Link
                 href="/settings"
                 onClick={() => setDrawerOpen(false)}
-                className="flex items-center gap-3 p-3.5 rounded-xl bg-white/2 border border-white/5 text-xs font-semibold text-gray-300 hover:text-white col-span-2"
+                className="flex items-center gap-3 p-3.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white col-span-2 transition-colors"
               >
                 <Settings className="h-4.5 w-4.5 text-gray-400" />
                 <span>Preferences</span>

@@ -150,8 +150,8 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
             <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${navOpen ? 'rotate-180' : ''}`} />
           </button>
 
-          {navOpen && (
-            <div className="absolute top-full right-0 mt-1 w-48 z-50 bg-white dark:bg-[#0f1020] rounded-xl border border-black/8 dark:border-white/8 shadow-xl p-1.5 animate-scaleIn">
+            {navOpen && (
+              <div className="absolute top-full right-0 mt-1 w-48 z-50 bg-[#fefdfb] dark:bg-[#1c1f26] rounded-xl border border-black/6 dark:border-white/5 shadow-xl p-1.5 animate-scaleIn">
               {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
                 <Link
                   key={href}
@@ -267,14 +267,14 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
     </div>
   )
 
-  return (
-    <div className="flex h-full bg-[#f5f4f0] dark:bg-[#090a10] text-gray-900 dark:text-gray-100 overflow-hidden">
+    return (
+      <div className="flex h-full bg-[#f4f3ef] dark:bg-[#0f0f12] text-gray-900 dark:text-gray-100 overflow-hidden">
 
       {/* ═══════════════════════════════════════════
           DESKTOP SIDEBAR
           ═══════════════════════════════════════════ */}
       <aside
-        className={`hidden md:flex flex-col w-[280px] shrink-0 h-full min-h-0 bg-white dark:bg-[#0c0d18] border-r border-black/6 dark:border-white/[0.05]`}
+        className={`hidden md:flex flex-col w-[280px] shrink-0 h-full min-h-0 bg-[#faf9f6] dark:bg-[#16181d] border-r border-black/6 dark:border-white/[0.05]`}
         aria-label="Sidebar"
       >
         <SidebarContent />
@@ -284,7 +284,7 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
           MOBILE SIDEBAR (full screen, hidden when chat is open)
           ═══════════════════════════════════════════ */}
       {mobileView === 'sidebar' && (
-        <div className="md:hidden flex flex-col w-full h-full bg-white dark:bg-[#0c0d18]">
+        <div className="md:hidden flex flex-col w-full h-full bg-[#faf9f6] dark:bg-[#16181d]">
           <SidebarContent />
         </div>
       )}
@@ -304,7 +304,7 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
             onBack={() => setMobileView('sidebar')}
           />
         ) : (
-          <div className="flex-1 flex items-center justify-center bg-[#f0ede8] dark:bg-[#090a10]">
+          <div className="flex-1 flex items-center justify-center bg-[#f0ede8] dark:bg-[#0f0f12]">
             <EmptyState />
           </div>
         )}
@@ -320,7 +320,7 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
             className="absolute inset-0 bg-black/50 backdrop-blur-md"
             onClick={() => setProfileModalOpen(false)}
           />
-          <div className="relative w-full sm:max-w-sm bg-white dark:bg-[#0f1020] rounded-t-2xl sm:rounded-2xl border border-black/8 dark:border-white/8 shadow-2xl z-10 p-6 space-y-5 animate-slideUp sm:animate-scaleIn">
+          <div className="relative w-full sm:max-w-sm bg-[#fefdfb] dark:bg-[#1c1f26] rounded-t-2xl sm:rounded-2xl border border-black/6 dark:border-white/5 shadow-2xl z-10 p-6 space-y-5 animate-slideUp sm:animate-scaleIn">
 
             {/* Header */}
             <div className="flex items-center justify-between">
@@ -370,7 +370,7 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
                         className={`p-2.5 rounded-xl border flex flex-col items-center gap-1.5 transition-all duration-150 cursor-pointer ${
                           isSelected
                             ? 'border-violet-400 bg-violet-50 dark:bg-violet-500/10'
-                            : 'border-black/6 dark:border-white/6 bg-gray-50 dark:bg-white/2 hover:border-black/10 dark:hover:border-white/10'
+                            : 'border-black/6 dark:border-white/6 bg-gray-50 dark:bg-[#1c1f26] hover:border-black/10 dark:hover:border-white/10'
                         }`}
                       >
                         <div className={`h-8 w-8 rounded-full bg-gradient-to-br ${av.gradient} flex items-center justify-center text-[10px] font-semibold text-white shadow-sm`}>

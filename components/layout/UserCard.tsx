@@ -28,7 +28,7 @@ export default function UserCard({ profile }: UserCardProps) {
   })
 
   return (
-    <div className="bg-white/2 border border-white/5 rounded-2xl p-5 text-center flex flex-col items-center shadow-lg relative overflow-hidden group">
+    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-5 text-center flex flex-col items-center shadow-lg relative overflow-hidden group">
       
       {/* Decorative gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
@@ -41,7 +41,7 @@ export default function UserCard({ profile }: UserCardProps) {
         </div>
       </div>
 
-      <h3 className="text-sm font-extrabold text-white tracking-wide">
+      <h3 className="text-sm font-extrabold text-gray-900 dark:text-white tracking-wide">
         {profile.username}
       </h3>
       <p className="text-[11px] text-gray-400 truncate w-full mt-0.5">
@@ -49,13 +49,13 @@ export default function UserCard({ profile }: UserCardProps) {
       </p>
 
       {/* Details List */}
-      <div className="w-full mt-4 pt-4 border-t border-white/5 space-y-2 text-left">
+      <div className="w-full mt-4 pt-4 border-t border-black/5 dark:border-white/5 space-y-2 text-left">
         <div className="flex items-center justify-between text-[10px]">
           <span className="text-gray-500 font-semibold uppercase tracking-wider flex items-center gap-1.5">
             <Shield className="h-3 w-3" />
             Class
           </span>
-          <span className="text-violet-300 font-bold">{avatar.name}</span>
+          <span className="text-violet-600 dark:text-violet-300 font-bold">{avatar.name}</span>
         </div>
 
         <div className="flex items-center justify-between text-[10px]">
@@ -63,7 +63,7 @@ export default function UserCard({ profile }: UserCardProps) {
             <Award className="h-3 w-3" />
             Node ID
           </span>
-          <span className="text-gray-300 font-mono font-medium truncate max-w-[100px]" title={profile.id}>
+          <span className="text-gray-700 dark:text-gray-300 font-mono font-medium truncate max-w-[100px]" title={profile.id}>
             {profile.id.substring(0, 8)}...
           </span>
         </div>

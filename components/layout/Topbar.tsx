@@ -41,13 +41,13 @@ export default function Topbar({
   }, [])
 
   return (
-    <header className="glass-panel border-b border-white/5 h-16 flex items-center justify-between px-6 shrink-0 sticky top-0 z-30 select-none">
+    <header className="glass-panel border-b border-black/5 dark:border-white/5 h-16 flex items-center justify-between px-6 shrink-0 sticky top-0 z-30 select-none">
       
       {/* Left: Mobile Menu Trigger + Route Title */}
       <div className="flex items-center gap-3">
         <button 
           onClick={onToggleMobileMenu}
-          className="md:hidden p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-all cursor-pointer"
+          className="md:hidden p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-950 dark:hover:text-white transition-all cursor-pointer"
           title="Toggle Navigation"
           suppressHydrationWarning
         >
@@ -56,7 +56,7 @@ export default function Topbar({
 
         <div className="flex items-center gap-2">
           <Sparkles className="h-4.5 w-4.5 text-violet-400 animate-pulse" />
-          <h1 className="text-base font-extrabold tracking-wide text-white">
+          <h1 className="text-base font-extrabold tracking-wide text-gray-900 dark:text-white">
             {pageTitle}
           </h1>
         </div>
@@ -67,7 +67,7 @@ export default function Topbar({
         <input 
           type="text" 
           placeholder="Search connections..." 
-          className="w-full bg-white/2 border border-white/5 rounded-xl py-2 pl-4 pr-10 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-violet-500/40 transition-all font-medium"
+          className="w-full bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl py-2 pl-4 pr-10 text-xs text-gray-800 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:border-violet-500/40 transition-all font-medium"
           suppressHydrationWarning
         />
         <Search className="h-4 w-4 text-gray-500 absolute right-3" />
@@ -85,7 +85,7 @@ export default function Topbar({
         {mounted && (
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="p-2 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-all cursor-pointer"
+            className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-950 dark:hover:text-white transition-all cursor-pointer"
             title="Toggle color theme"
             suppressHydrationWarning
           >
@@ -99,11 +99,11 @@ export default function Topbar({
 
         {/* Notifications Mock */}
         <button 
-          className="relative p-2 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-all cursor-pointer"
+          className="relative p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-950 dark:hover:text-white transition-all cursor-pointer"
           suppressHydrationWarning
         >
           <Bell className="h-4 w-4" />
-          <span className="absolute top-1 right-1.5 h-1.5 w-1.5 rounded-full bg-rose-500 shadow-[0_0_6px_#f43f5e]" />
+          <span className="absolute top-1 right-1.5 h-1.5 w-1.5 rounded-full bg-rose-50 shadow-[0_0_6px_#f43f5e]" />
         </button>
 
         {/* Toggle Right Panel (Desktop/Tablet) */}
@@ -112,7 +112,7 @@ export default function Topbar({
           className={`hidden md:flex p-2 rounded-xl transition-all cursor-pointer ${
             rightPanelOpen 
               ? 'bg-violet-500/10 text-violet-400 border border-violet-500/20' 
-              : 'hover:bg-white/5 text-gray-400 hover:text-white'
+              : 'hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-950 dark:hover:text-white'
           }`}
           title="view details"
           suppressHydrationWarning

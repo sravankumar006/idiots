@@ -55,18 +55,18 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
           />
           
           {/* Sidebar container */}
-          <div className="relative w-64 h-full bg-[#0a0b15] dark:bg-dark-card border-r border-white/10 flex flex-col z-10 animate-slideRight">
+          <div className="relative w-64 h-full bg-[#faf9f6] dark:bg-[#16181d] border-r border-black/5 dark:border-white/10 flex flex-col z-10 animate-slideRight">
             {/* Header close trigger */}
-            <div className="flex items-center justify-between h-16 px-5 border-b border-white/5">
+            <div className="flex items-center justify-between h-16 px-5 border-b border-black/5 dark:border-white/5">
               <div className="flex items-center gap-2">
                 <div className="h-6 w-6 rounded-lg bg-gradient-to-tr from-violet-500 to-rose-400 flex items-center justify-center text-[10px] font-black text-black">
                   IS
                 </div>
-                <span className="text-xs font-bold tracking-widest text-white uppercase">Idiots Space</span>
+                <span className="text-xs font-bold tracking-widest text-gray-900 dark:text-white uppercase">Idiots Space</span>
               </div>
               <button 
                 onClick={() => setMobileMenuOpen(false)}
-                className="p-1 rounded-lg hover:bg-white/5 text-gray-400 cursor-pointer"
+                className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-950 dark:hover:text-white cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>

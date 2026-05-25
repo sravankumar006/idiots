@@ -87,7 +87,7 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
 
   return (
     <DragDropZone onFileDrop={setDraftFile}>
-      <div className="flex flex-col h-full bg-[#f0ede8] dark:bg-[#090a10] relative overflow-hidden">
+      <div className="flex flex-col h-full bg-[#f0ede8] dark:bg-[#0f0f12] relative overflow-hidden">
 
         {/* ── Subtle background texture ── */}
         <div className="absolute inset-0 opacity-[0.015] dark:opacity-[0.03] pointer-events-none"
@@ -97,7 +97,7 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
         {/* ══════════════════════════════════════
             STICKY HEADER
             ══════════════════════════════════════ */}
-        <header className="relative z-10 flex items-center gap-3 px-4 h-14 shrink-0 bg-white/80 dark:bg-[#0c0d18]/80 backdrop-blur-xl border-b border-black/5 dark:border-white/[0.05]">
+        <header className="relative z-10 flex items-center gap-3 px-4 h-14 shrink-0 bg-[#faf9f6]/80 dark:bg-[#16181d]/80 backdrop-blur-xl border-b border-black/5 dark:border-white/[0.05]">
 
           {/* Back arrow — mobile only */}
           {onBack && (
@@ -180,7 +180,7 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
               {moreMenuOpen && (
                 <div
                   role="menu"
-                  className="absolute top-full right-0 mt-1.5 w-52 z-50 bg-white dark:bg-[#0f1020] rounded-2xl border border-black/8 dark:border-white/8 shadow-xl shadow-black/10 dark:shadow-black/40 p-1.5 animate-scaleIn"
+                  className="absolute top-full right-0 mt-1.5 w-52 z-50 bg-[#fefdfb] dark:bg-[#1c1f26] rounded-2xl border border-black/6 dark:border-white/5 shadow-xl shadow-black/10 dark:shadow-black/40 p-1.5 animate-scaleIn"
                   style={{ transformOrigin: 'top right' }}
                 >
                   {/* Room info */}

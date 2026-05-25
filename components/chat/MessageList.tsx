@@ -71,13 +71,13 @@ export default function MessageList({
     <div
       ref={containerRef}
       onScroll={handleScroll}
-      className="flex-1 min-h-0 overflow-y-auto p-5 space-y-6 scrollbar-thin scroll-smooth"
+      className="flex-1 min-h-0 overflow-y-auto p-5 space-y-3 scrollbar-thin scroll-smooth"
       role="log"
       aria-label="Message history"
       aria-live="polite"
       aria-relevant="additions"
     >
-      <div className="space-y-5">
+      <div className="space-y-3">
         {messages.map((msg) => (
           <MemoizedBubble
             key={msg.id}

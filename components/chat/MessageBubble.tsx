@@ -168,7 +168,7 @@ export default function MessageBubble({
                 ? `bg-gradient-to-br from-indigo-50/70 to-violet-50/40 text-gray-800 border-black/5 dark:from-violet-500/10 dark:via-pink-500/5 dark:to-transparent dark:text-white dark:border-white/5 rounded-tr-none ${
                     message.replied_message ? 'rounded-tl-none' : ''
                   }`
-                : `bg-gray-100/70 text-gray-800 border-black/5 dark:bg-[#0e0f1d]/50 dark:text-gray-300 dark:border-white/3 rounded-tl-none ${
+                : `bg-gray-100/70 text-gray-800 border-black/5 dark:bg-[#1c1f26]/50 dark:text-gray-300 dark:border-white/3 rounded-tl-none ${
                     message.replied_message ? 'rounded-tr-none' : ''
                   }`
             }`}
@@ -190,7 +190,7 @@ export default function MessageBubble({
         tabIndex={0}
         onKeyDown={handleKeyDown}
         onContextMenu={handleContextMenu}
-        className={`flex gap-3 group relative max-w-[85%] sm:max-w-xl animate-fadeIn focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 focus-visible:ring-offset-2 rounded-xl ${
+        className={`flex gap-3 group relative max-w-[75%] animate-fadeIn focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 focus-visible:ring-offset-2 rounded-xl ${
           isSelf ? 'ml-auto flex-row-reverse' : ''
         }`}
         // Long-press (touch) for mobile action sheet
@@ -267,7 +267,7 @@ export default function MessageBubble({
               {/* Desktop hover action bar — visible on group-hover */}
               {!isDeleted && (
                 <div
-                  className={`absolute top-[-30px] hidden group-hover:flex items-center gap-1 bg-white dark:bg-[#0e0f18] border border-black/8 dark:border-white/10 rounded-xl px-1.5 py-1 z-20 shadow-lg transition-all duration-150 ${
+                  className={`absolute top-[-30px] hidden group-hover:flex items-center gap-1 bg-[#fefdfb] dark:bg-[#1c1f26] border border-black/8 dark:border-white/10 rounded-xl px-1.5 py-1 z-20 shadow-lg transition-all duration-150 ${
                     isSelf ? 'left-0' : 'right-0'
                   }`}
                   role="toolbar"
