@@ -15,6 +15,7 @@ interface MessageActionSheetProps {
   onCopy: () => void
   onDeleteForMe: () => void
   onDeleteForEveryone: () => void
+  onClearChat: () => void
 }
 
 /**
@@ -31,6 +32,7 @@ export default function MessageActionSheet({
   onCopy,
   onDeleteForMe,
   onDeleteForEveryone,
+  onClearChat,
 }: MessageActionSheetProps) {
   // Close on Escape key
   useEffect(() => {
@@ -156,6 +158,19 @@ export default function MessageActionSheet({
                 destructive
               />
             )}
+
+            {/* Clear Chat */}
+            <ActionItem
+              icon={<Trash2 className="h-5 w-5 text-rose-500" />}
+              label="clear chat"
+              labelClass="text-rose-600 dark:text-rose-400"
+              onClick={() => handleAction(() => {
+                if (confirm("are you sure you want to clear this chat's history for yourself? this cannot be undone.")) {
+                  onClearChat()
+                }
+              })}
+              destructive
+            />
           </div>
 
           {/* Cancel Button */}

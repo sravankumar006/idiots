@@ -1,8 +1,7 @@
-'use client'
-
-import React, { useEffect, useRef, useCallback } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { Reply, Copy, Trash2 } from 'lucide-react'
 import { ChatMessage } from '@/types'
+import ActionButton from './MessageActions'
 
 const EMOJIS = ['👍', '❤️', '🔥', '😂', '😮', '✨']
 
@@ -16,6 +15,7 @@ interface ReactionPickerProps {
   onCopy: () => void
   onDeleteForMe: () => void
   onDeleteForEveryone: () => void
+  onClearChat: () => void
   onClose: () => void
 }
 
@@ -34,13 +34,14 @@ export default function ReactionPicker({
   onCopy,
   onDeleteForMe,
   onDeleteForEveryone,
+  onClearChat,
   onClose,
 }: ReactionPickerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Smart positioning — ensure popup stays within viewport
   const POPUP_W = 240
-  const POPUP_H = 220
+  const POPUP_H = 260
   const vpW = typeof window !== 'undefined' ? window.innerWidth : 1200
   const vpH = typeof window !== 'undefined' ? window.innerHeight : 800
 
@@ -112,47 +113,53 @@ export default function ReactionPicker({
           
           {/* Reply */}
           {!isDeleted && (
-            <button
+            <ActionButton
+              icon={<Reply className="h-4 w-4 text-indigo-500 shrink-0" />}
+              label="reply"
               onClick={() => handleAction(onReply)}
-              className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-black/[0.04] dark:hover:bg-white/5 hover:text-gray-950 dark:hover:text-white transition-all text-left cursor-pointer"
-            >
-              <Reply className="h-4 w-4 text-indigo-500 shrink-0" />
-              <span>reply</span>
-            </button>
+            />
           )}
 
           {/* Copy Text */}
           {hasText && !isDeleted && (
-            <button
+            <ActionButton
+              icon={<Copy className="h-4 w-4 text-gray-400 shrink-0" />}
+              label="copy text"
               onClick={() => handleAction(onCopy)}
-              className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-black/[0.04] dark:hover:bg-white/5 hover:text-gray-950 dark:hover:text-white transition-all text-left cursor-pointer"
-            >
-              <Copy className="h-4 w-4 text-gray-400 shrink-0" />
-              <span>copy text</span>
-            </button>
+            />
           )}
 
           {/* Delete for Me (always present) */}
           {!isDeleted && (
-            <button
+            <ActionButton
+              icon={<Trash2 className="h-4 w-4 text-rose-500 shrink-0" />}
+              label="delete for me"
               onClick={() => handleAction(onDeleteForMe)}
-              className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all text-left cursor-pointer"
-            >
-              <Trash2 className="h-4 w-4 text-rose-500 shrink-0" />
-              <span>delete for me</span>
-            </button>
+              destructive
+            />
           )}
 
           {/* Delete for Everyone (own messages only) */}
           {isSelf && !isDeleted && (
-            <button
+            <ActionButton
+              icon={<Trash2 className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0" />}
+              label="delete for everyone"
               onClick={() => handleAction(onDeleteForEveryone)}
-              className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-all text-left cursor-pointer"
-            >
-              <Trash2 className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0" />
-              <span>delete for everyone</span>
-            </button>
+              destructive
+            />
           )}
+
+          {/* Clear Chat */}
+          <ActionButton
+            icon={<Trash2 className="h-4 w-4 text-rose-500 shrink-0" />}
+            label="clear chat"
+            onClick={() => handleAction(() => {
+              if (confirm("are you sure you want to clear this chat's history for yourself? this cannot be undone.")) {
+                onClearChat()
+              }
+            })}
+            destructive
+          />
 
         </div>
 
@@ -160,3 +167,4 @@ export default function ReactionPicker({
     </div>
   )
 }
+

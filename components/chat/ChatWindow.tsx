@@ -250,6 +250,7 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
           onReply={setReplyTo}
           onDelete={deleteMessage}
           onDeleteForMe={deleteMessageForMe}
+          onClearChat={clearChatForMe}
         />
 
         {/* ══════════════════════════════════════

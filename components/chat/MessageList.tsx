@@ -1,11 +1,12 @@
 'use client'
 
 import React, { useEffect, memo } from 'react'
-import { Loader2 } from 'lucide-react'
 import { ChatMessage, UserProfile } from '@/types'
 import MessageBubble from './MessageBubble'
 import TypingIndicator from './TypingIndicator'
 import useAutoScroll from '@/hooks/useAutoScroll'
+import EmptyChat from './EmptyChat'
+import MessageSkeleton from './MessageSkeleton'
 
 interface MessageListProps {
   messages: ChatMessage[]
@@ -16,6 +17,7 @@ interface MessageListProps {
   onReply: (message: ChatMessage) => void
   onDelete: (messageId: string) => void
   onDeleteForMe: (messageId: string) => void
+  onClearChat: () => void
 }
 
 // Memoized bubble — prevents re-renders when only typing indicator changes
@@ -40,6 +42,7 @@ export default function MessageList({
   onReply,
   onDelete,
   onDeleteForMe,
+  onClearChat,
 }: MessageListProps) {
   const { containerRef, handleScroll, adjustScroll } = useAutoScroll()
 
@@ -49,32 +52,12 @@ export default function MessageList({
 
   // Skeleton Loading state
   if (isLoading) {
-    return (
-      <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-5 select-none animate-pulse" role="status" aria-live="polite">
-        {[1, 2, 3, 4].map((i) => {
-          const isLeft = i % 2 !== 0
-          return (
-            <div key={i} className={`flex gap-3 max-w-[70%] ${isLeft ? '' : 'ml-auto flex-row-reverse'}`}>
-              <div className="h-8 w-8 rounded-lg bg-gray-200 dark:bg-white/5 shrink-0" />
-              <div className="space-y-1 flex-1">
-                <div className={`h-2.5 w-20 bg-gray-200 dark:bg-white/5 rounded ${isLeft ? '' : 'ml-auto'}`} />
-                <div className={`h-12 bg-gray-200 dark:bg-white/5 rounded-2xl ${isLeft ? 'rounded-tl-none' : 'rounded-tr-none'}`} />
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    )
+    return <MessageSkeleton />
   }
 
   // Empty state
   if (messages.length === 0) {
-    return (
-      <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-6 text-center select-none text-xs text-gray-500">
-        <span className="font-medium">this space is quiet for now.</span>
-        <span className="text-[10px] tracking-wide mt-1 text-gray-400">start the conversation! 👋</span>
-      </div>
-    )
+    return <EmptyChat />
   }
 
   return (
@@ -97,6 +80,7 @@ export default function MessageList({
             onReply={onReply}
             onDelete={onDelete}
             onDeleteForMe={onDeleteForMe}
+            onClearChat={onClearChat}
           />
         ))}
       </div>
@@ -108,3 +92,4 @@ export default function MessageList({
 }
 
 export type { MessageListProps }
+

@@ -1,345 +1,28 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ChatMessage, ChatGroup, UserProfile, ChatReaction } from '@/types'
+import { ChatMessage, UserProfile, ChatReaction } from '@/types'
 import { uploadFile } from '@/lib/storage/uploadFile'
 import { getPublicUrl } from '@/lib/storage/getFileUrl'
-
-// Fallback mock messages in case Supabase connection is down or tables are not created yet
-const MOCK_MESSAGES: Record<string, ChatMessage[]> = {
-  'default-group': [
-    {
-      id: 'm1',
-      group_id: 'default-group',
-      sender_id: 'sys',
-      message: 'Connection established. Welcome to Idiots Space (IS) group chat.',
-      type: 'text',
-      reply_to: null,
-      created_at: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
-      profiles: {
-        id: 'sys',
-        username: 'System Companion',
-        email: 'sys@idiots.space',
-        avatar: 'avatar-cyber-ghost',
-        created_at: new Date().toISOString()
-      },
-      reactions: []
-    },
-    {
-      id: 'm2',
-      group_id: 'default-group',
-      sender_id: 'np',
-      message: 'Check out the new features! We have collapsible sidebars, a modular layout, Pomodoro timers, and emoji reactions.',
-      type: 'text',
-      reply_to: null,
-      created_at: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-      profiles: {
-        id: 'np',
-        username: 'Neon Pulse',
-        email: 'neon@idiots.space',
-        avatar: 'avatar-neon-pulse',
-        created_at: new Date().toISOString()
-      },
-      reactions: [
-        { id: 'r1', message_id: 'm2', user_id: 'sys', emoji: '✨', created_at: new Date().toISOString() }
-      ]
-    }
-  ]
-}
+import { useRealtimeMessages } from '@/hooks/useRealtimeMessages'
+import { deleteMessageForMe as dbDeleteForMe } from '@/lib/chat/deleteMessageForMe'
+import { clearChatForMe as dbClearChat } from '@/lib/chat/clearChatForMe'
 
 export function useMessages(groupId: string, activeUser: UserProfile | null) {
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null)
-  const [isFallback, setIsFallback] = useState(false)
   
   const supabase = createClient()
-  const profileCache = useRef<Record<string, UserProfile>>({})
+  
+  // Delegate history, loading, fallback, and realtime sync to the specialized hook
+  const {
+    messages,
+    setMessages,
+    isLoading,
+    isFallback
+  } = useRealtimeMessages(groupId, activeUser)
 
-  // Fetch or cache profile details to populate realtime joins
-  const fetchProfile = useCallback(async (userId: string): Promise<UserProfile | undefined> => {
-    if (profileCache.current[userId]) {
-      return profileCache.current[userId]
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
-
-      if (data && !error) {
-        profileCache.current[userId] = data as UserProfile
-        return data as UserProfile
-      }
-    } catch (e) {
-      console.warn("Could not fetch profile for user:", userId)
-    }
-
-    return undefined
-  }, [supabase])
-
-  // 1. Fetch History
-  useEffect(() => {
-    let active = true
-    setIsLoading(true)
-    setReplyTo(null)
-
-    const fetchHistory = async () => {
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-      
-      // Fallback check
-      if (!uuidRegex.test(groupId)) {
-        if (active) {
-          setIsFallback(true)
-          
-          // Load messages from localStorage if exist
-          const localMsgsKey = `fallback_messages_${groupId}`
-          let localMsgs: ChatMessage[] = []
-          try {
-            const raw = localStorage.getItem(localMsgsKey)
-            if (raw) {
-              localMsgs = JSON.parse(raw)
-            } else {
-              localMsgs = MOCK_MESSAGES[groupId] || MOCK_MESSAGES['default-group']
-              localStorage.setItem(localMsgsKey, JSON.stringify(localMsgs))
-            }
-          } catch {
-            localMsgs = MOCK_MESSAGES[groupId] || MOCK_MESSAGES['default-group']
-          }
-
-          // Fetch local storage deletes & clears
-          let clearedAt: string | null = null
-          let deletedMsgIds: string[] = []
-          try {
-            clearedAt = localStorage.getItem(`clear_time_${groupId}`)
-            deletedMsgIds = JSON.parse(localStorage.getItem(`deleted_msgs_${groupId}`) || '[]')
-          } catch {}
-
-          let filtered = localMsgs
-          if (clearedAt) {
-            filtered = filtered.filter(m => m.created_at > (clearedAt as string))
-          }
-          filtered = filtered.filter(m => !deletedMsgIds.includes(m.id))
-
-          setMessages(filtered)
-          setIsLoading(false)
-        }
-        return
-      }
-
-      try {
-        // A. Fetch cleared_at timestamp for this user & group
-        let clearedAt: string | null = null
-        if (activeUser) {
-          const { data: clearData } = await supabase
-            .from('group_clears')
-            .select('cleared_at')
-            .eq('group_id', groupId)
-            .eq('user_id', activeUser.id)
-            .maybeSingle()
-          
-          if (clearData) {
-            clearedAt = clearData.cleared_at
-          }
-        }
-
-        // B. Fetch deleted message ids for this user
-        let deletedMsgIds: string[] = []
-        if (activeUser) {
-          const { data: deletedData } = await supabase
-            .from('deleted_messages')
-            .select('message_id')
-            .eq('user_id', activeUser.id)
-          
-          if (deletedData) {
-            deletedMsgIds = deletedData.map(d => d.message_id)
-          }
-        }
-
-        // C. Fetch main messages
-        let query = supabase
-          .from('messages')
-          .select('*, profiles(*), reactions(*, profiles(*))')
-          .eq('group_id', groupId)
-        
-        if (clearedAt) {
-          query = query.gt('created_at', clearedAt)
-        }
-
-        const { data, error } = await query.order('created_at', { ascending: true })
-
-        if (error) throw error
-
-        if (active) {
-          setIsFallback(false)
-          const dbMessages = (data || []) as ChatMessage[]
-          
-          // Filter out deleted messages
-          const filteredMessages = dbMessages.filter(msg => !deletedMsgIds.includes(msg.id))
-
-          // Populate profile cache
-          filteredMessages.forEach(msg => {
-            if (msg.profiles) {
-              profileCache.current[msg.sender_id] = msg.profiles
-            }
-          })
-
-          // Enrich replied_message pointers for existing history
-          const enrichedMessages = filteredMessages.map(msg => {
-            if (msg.reply_to) {
-              const parent = filteredMessages.find(m => m.id === msg.reply_to)
-              if (parent) {
-                return {
-                  ...msg,
-                  replied_message: {
-                    id: parent.id,
-                    message: parent.message,
-                    sender_name: parent.profiles?.username || 'Explorer'
-                  }
-                }
-              }
-            }
-            return msg
-          })
-
-          setMessages(enrichedMessages)
-          setIsLoading(false)
-        }
-      } catch (err) {
-        console.warn("Supabase messages query failed. Falling back to mock simulation.", err)
-        if (active) {
-          setIsFallback(true)
-          setMessages(MOCK_MESSAGES[groupId] || MOCK_MESSAGES['default-group'])
-          setIsLoading(false)
-        }
-      }
-    }
-
-    fetchHistory()
-
-    return () => { active = false }
-  }, [groupId, supabase, activeUser])
-
-  // 2. Realtime Subscriptions
-  useEffect(() => {
-    if (isFallback) return
-
-    const channel = supabase.channel(`realtime-chat:${groupId}`)
-      
-      // Listen to new messages
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `group_id=eq.${groupId}`,
-        },
-        async (payload) => {
-          const newMsg = payload.new as ChatMessage
-          
-          const senderProfile = await fetchProfile(newMsg.sender_id)
-          const messageWithProfile: ChatMessage = {
-            ...newMsg,
-            profiles: senderProfile,
-            reactions: []
-          }
- 
-          setMessages((prev) => {
-            // Deduplicate: check if this message id already exists and is finalized (not sending)
-            const existingIndex = prev.findIndex((m) => m.id === newMsg.id)
-            if (existingIndex !== -1 && !prev[existingIndex].sending) {
-              return prev
-            }
-
-            // Look up parent reply details if needed
-            if (newMsg.reply_to) {
-              const parent = prev.find((m) => m.id === newMsg.reply_to)
-              if (parent) {
-                messageWithProfile.replied_message = {
-                  id: parent.id,
-                  message: parent.message,
-                  sender_name: parent.profiles?.username || 'Explorer'
-                }
-              }
-            }
-
-            // Replace the sending/optimistic copy or append
-            const filtered = prev.filter((m) => m.id !== newMsg.id && !m.sending)
-            return [...filtered, messageWithProfile]
-          })
-        }
-      )
- 
-      // Listen to message updates
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages',
-          filter: `group_id=eq.${groupId}`,
-        },
-        (payload) => {
-          const updated = payload.new as ChatMessage
-          setMessages((prev) =>
-            prev.map((m) => (m.id === updated.id ? { ...m, ...updated } : m))
-          )
-        }
-      )
- 
-      // Listen to reactions modifications
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'reactions',
-        },
-        async (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const reaction = payload.new as ChatReaction
-            const rProfile = await fetchProfile(reaction.user_id)
-            const reactionWithProfile = { ...reaction, profiles: rProfile }
- 
-            setMessages((prev) =>
-              prev.map((msg) => {
-                if (msg.id === reaction.message_id) {
-                  const currentReactions = msg.reactions || []
-                  if (currentReactions.some(r => r.id === reaction.id)) return msg
-                  return { ...msg, reactions: [...currentReactions, reactionWithProfile] }
-                }
-                return msg
-              })
-            )
-          } else if (payload.eventType === 'DELETE') {
-            const oldReaction = payload.old as { id: string }
-            setMessages((prev) =>
-              prev.map((msg) => {
-                const currentReactions = msg.reactions || []
-                if (currentReactions.some((r) => r.id === oldReaction.id)) {
-                  return {
-                    ...msg,
-                    reactions: currentReactions.filter((r) => r.id !== oldReaction.id)
-                  }
-                }
-                return msg
-              })
-            )
-          }
-        }
-      )
-      .subscribe()
- 
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [groupId, supabase, fetchProfile, isFallback])
-
-  // 3. Send Message Action
+  // 1. Send Message Action (optimistic update + upload + insert)
   const sendMessage = async (
     text: string,
     fileInfo?: { file: File; type: string } | { stickerUrl: string; type: 'sticker' }
@@ -386,7 +69,7 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
     const activeReply = replyTo
     setReplyTo(null)
 
-    // Fallback branch
+    // Fallback branch (localStorage mock simulation)
     if (isFallback) {
       const finalMsg: ChatMessage = {
         ...optMessage,
@@ -494,7 +177,7 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
     }
   }
 
-  // 4. Delete Message for EVERYONE (soft-delete globally)
+  // 2. Delete Message for EVERYONE (soft-delete globally)
   const deleteMessage = async (messageId: string) => {
     if (!activeUser) return
 
@@ -532,7 +215,7 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
     }
   }
 
-  // 5. Delete Message for ME (hides locally only)
+  // 3. Delete Message for ME (hides locally only)
   const deleteMessageForMe = async (messageId: string) => {
     if (!activeUser) return
 
@@ -551,19 +234,10 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
       return
     }
 
-    try {
-      await supabase
-        .from('deleted_messages')
-        .insert({
-          user_id: activeUser.id,
-          message_id: messageId
-        })
-    } catch (e) {
-      console.error('Error deleting message for me:', e)
-    }
+    await dbDeleteForMe(supabase, activeUser.id, messageId)
   }
 
-  // 6. Clear Chat for ME (clears history locally)
+  // 4. Clear Chat for ME (clears history locally)
   const clearChatForMe = async () => {
     if (!activeUser) return
 
@@ -577,23 +251,10 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
       return
     }
 
-    try {
-      await supabase
-        .from('group_clears')
-        .upsert(
-          {
-            user_id: activeUser.id,
-            group_id: groupId,
-            cleared_at: nowStr
-          },
-          { onConflict: 'user_id,group_id' }
-        )
-    } catch (e) {
-      console.error('Error clearing chat:', e)
-    }
+    await dbClearChat(supabase, activeUser.id, groupId, nowStr)
   }
 
-  // 7. Toggle Emoji Reaction
+  // 5. Toggle Emoji Reaction
   const toggleReaction = async (messageId: string, emoji: string) => {
     if (!activeUser) return
 

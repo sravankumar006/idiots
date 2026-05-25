@@ -32,6 +32,7 @@ interface MessageBubbleProps {
   onReply: (message: ChatMessage) => void
   onDelete: (messageId: string) => void
   onDeleteForMe: (messageId: string) => void
+  onClearChat: () => void
 }
 
 export default function MessageBubble({
@@ -41,6 +42,7 @@ export default function MessageBubble({
   onReply,
   onDelete,
   onDeleteForMe,
+  onClearChat,
 }: MessageBubbleProps) {
   const isSelf = message.sender_id === activeUserId
   const isDeleted = message.type === 'deleted'
@@ -344,6 +346,7 @@ export default function MessageBubble({
           onCopy={handleCopy}
           onDeleteForMe={() => onDeleteForMe(message.id)}
           onDeleteForEveryone={() => onDelete(message.id)}
+          onClearChat={onClearChat}
         />
       )}
 
@@ -359,6 +362,7 @@ export default function MessageBubble({
           onCopy={handleCopy}
           onDeleteForMe={() => onDeleteForMe(message.id)}
           onDeleteForEveryone={() => onDelete(message.id)}
+          onClearChat={onClearChat}
           onClose={() => setReactionPickerPos(null)}
         />
       )}
