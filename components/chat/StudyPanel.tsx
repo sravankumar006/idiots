@@ -5,6 +5,7 @@ import {
   Play, Square, BookOpen, Brain, Flame, Volume2, Sparkles,
   Music, VolumeX, Moon, CloudRain, Wind, Radio, Info
 } from 'lucide-react'
+import Link from 'next/link'
 
 // Avatar palette for displaying study presence
 const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
@@ -308,9 +309,10 @@ export default function StudyPanel({
                 const avatar = AVATAR_MAP[buddy.avatar] || { gradient: 'from-slate-400 to-indigo-500', symbol: 'EX' }
                 const isDeep = !!buddy.isDeepFocus
                 return (
-                  <div
+                  <Link
                     key={buddy.userId}
-                    className={`flex items-center gap-3 p-3 rounded-2xl bg-white dark:bg-[#18181f] border border-black/5 dark:border-white/[0.05] shadow-sm transition-all duration-300 ${
+                    href={`/dashboard?userId=${buddy.userId}`}
+                    className={`flex items-center gap-3 p-3 rounded-2xl bg-white dark:bg-[#18181f] border border-black/5 dark:border-white/[0.05] shadow-sm transition-all duration-300 hover:border-violet-500/30 cursor-pointer ${
                       isDeep ? 'ring-1 ring-amber-500/20 bg-amber-500/[0.02] dark:bg-amber-500/[0.01]' : ''
                     }`}
                   >
@@ -339,7 +341,7 @@ export default function StudyPanel({
                         {isDeep ? '🤫 in deep focus' : buddy.focusStatus || 'focusing quietly'}
                       </p>
                     </div>
-                  </div>
+                  </Link>
                 )
               })
             )}

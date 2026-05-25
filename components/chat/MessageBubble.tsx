@@ -15,6 +15,7 @@ import AIPDFDownload from './AIPDFDownload'
 import { useSwipeGesture } from '@/hooks/useSwipeGesture'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import Link from 'next/link'
 
 // Emoji quick-access for hover bar
 const EMOJI_PICKER = ['👍', '❤️', '🔥', '😂', '😮', '✨']
@@ -398,12 +399,22 @@ export default function MessageBubble({
           {/* 1. Avatar (Only show on last or single message) */}
           <div className="w-8 shrink-0 flex items-end">
             {(groupPosition === 'last' || groupPosition === 'single') && !isSelf ? (
-              <div
-                className={`h-8 w-8 rounded-full bg-gradient-to-br ${avatar.gradient} flex items-center justify-center text-[10px] font-semibold text-white shadow-sm shrink-0 select-none`}
-                aria-hidden="true"
-              >
-                {avatar.symbol}
-              </div>
+              isAiMessage ? (
+                <div
+                  className={`h-8 w-8 rounded-full bg-gradient-to-br ${avatar.gradient} flex items-center justify-center text-[10px] font-semibold text-white shadow-sm shrink-0 select-none`}
+                  aria-hidden="true"
+                >
+                  {avatar.symbol}
+                </div>
+              ) : (
+                <Link
+                  href={`/dashboard?userId=${message.sender_id}`}
+                  className={`h-8 w-8 rounded-full bg-gradient-to-br ${avatar.gradient} flex items-center justify-center text-[10px] font-semibold text-white shadow-sm shrink-0 select-none hover:opacity-80 transition-opacity cursor-pointer`}
+                  aria-hidden="true"
+                >
+                  {avatar.symbol}
+                </Link>
+              )
             ) : null}
           </div>
 
@@ -414,9 +425,18 @@ export default function MessageBubble({
             {((groupPosition === 'first' || groupPosition === 'single') || isSelf) && (
               <div className={`flex items-center gap-2 select-none lowercase ${isSelf ? 'justify-end' : ''}`}>
                 {!isSelf && (
-                  <span className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">
-                    {isAiMessage ? 'idiot ai' : (message.profiles?.username || 'explorer')}
-                  </span>
+                  isAiMessage ? (
+                    <span className="text-[12px] font-semibold text-gray-700 dark:text-gray-300">
+                      idiot ai
+                    </span>
+                  ) : (
+                    <Link
+                      href={`/dashboard?userId=${message.sender_id}`}
+                      className="text-[12px] font-semibold text-gray-700 dark:text-gray-300 hover:text-violet-500 hover:underline cursor-pointer"
+                    >
+                      {message.profiles?.username || 'explorer'}
+                    </Link>
+                  )
                 )}
                 <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">{timeStr}</span>
                 {message.sending && (

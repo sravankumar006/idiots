@@ -107,44 +107,63 @@ const DEFAULT_ACTIVITIES = (userId: string): ActivityLog[] => [
   }
 ]
 
-export function useDashboardData(activeUser: UserProfile | null) {
+export function useDashboardData(activeUser: UserProfile | null, targetUserId?: string | null) {
   const [loading, setLoading] = useState(true)
   const [careerProfile, setCareerProfile] = useState<CareerProfile | null>(null)
   const [codingStats, setCodingStats] = useState<CodingStats | null>(null)
   const [studyStats, setStudyStats] = useState<StudyStats | null>(null)
   const [activities, setActivities] = useState<ActivityLog[]>([])
+  const [targetUser, setTargetUser] = useState<UserProfile | null>(null)
 
   const supabase = createClient()
   const userId = activeUser?.id
 
+  // Determine active query ID
+  const userIdToLoad = targetUserId || userId
+
   // 1. Fetch Dashboard Data
   const fetchData = useCallback(async () => {
-    if (!userId) return
+    if (!userIdToLoad) return
     setLoading(true)
 
     // Local Storage Mock Keys
-    const careerKey = `mock_career_profile_${userId}`
-    const codingKey = `mock_coding_stats_${userId}`
-    const studyKey = `mock_study_stats_${userId}`
-    const activitiesKey = `mock_activities_${userId}`
+    const careerKey = `mock_career_profile_${userIdToLoad}`
+    const codingKey = `mock_coding_stats_${userIdToLoad}`
+    const studyKey = `mock_study_stats_${userIdToLoad}`
+    const activitiesKey = `mock_activities_${userIdToLoad}`
 
     try {
-      // Parallel DB fetching
-      const [careerRes, codingRes, studyRes, activitiesRes] = await Promise.all([
-        supabase.from('career_profiles').select('*').eq('id', userId).maybeSingle(),
-        supabase.from('coding_stats').select('*').eq('user_id', userId).maybeSingle(),
-        supabase.from('study_stats').select('*').eq('user_id', userId).maybeSingle(),
-        supabase.from('activity_logs').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(20)
-      ])
+      const promises: any[] = [
+        supabase.from('career_profiles').select('*').eq('id', userIdToLoad).maybeSingle(),
+        supabase.from('coding_stats').select('*').eq('user_id', userIdToLoad).maybeSingle(),
+        supabase.from('study_stats').select('*').eq('user_id', userIdToLoad).maybeSingle(),
+        supabase.from('activity_logs').select('*').eq('user_id', userIdToLoad).order('created_at', { ascending: false }).limit(20)
+      ]
+
+      // Fetch target user profiles metadata if different
+      if (targetUserId && targetUserId !== userId) {
+        promises.push(supabase.from('profiles').select('*').eq('id', targetUserId).maybeSingle())
+      }
+
+      const [careerRes, codingRes, studyRes, activitiesRes, profileRes] = await Promise.all(promises)
+
+      // Set target user details
+      if (profileRes && profileRes.data) {
+        setTargetUser(profileRes.data as UserProfile)
+      } else {
+        setTargetUser(activeUser)
+      }
 
       // Profile handle
       if (careerRes.error) throw careerRes.error
       if (careerRes.data) {
         setCareerProfile(careerRes.data as CareerProfile)
       } else {
-        // Create initial record
-        const def = DEFAULT_CAREER_PROFILE(userId)
-        await supabase.from('career_profiles').insert(def)
+        // Create initial record (only if it is current user)
+        const def = DEFAULT_CAREER_PROFILE(userIdToLoad)
+        if (userIdToLoad === userId) {
+          await supabase.from('career_profiles').insert(def)
+        }
         setCareerProfile(def)
       }
 
@@ -153,8 +172,10 @@ export function useDashboardData(activeUser: UserProfile | null) {
       if (codingRes.data) {
         setCodingStats(codingRes.data as CodingStats)
       } else {
-        const def = DEFAULT_CODING_STATS(userId)
-        await supabase.from('coding_stats').insert({ user_id: userId, ...def })
+        const def = DEFAULT_CODING_STATS(userIdToLoad)
+        if (userIdToLoad === userId) {
+          await supabase.from('coding_stats').insert({ user_id: userIdToLoad, ...def })
+        }
         setCodingStats(def)
       }
 
@@ -163,8 +184,10 @@ export function useDashboardData(activeUser: UserProfile | null) {
       if (studyRes.data) {
         setStudyStats(studyRes.data as StudyStats)
       } else {
-        const def = DEFAULT_STUDY_STATS(userId)
-        await supabase.from('study_stats').insert({ user_id: userId, ...def })
+        const def = DEFAULT_STUDY_STATS(userIdToLoad)
+        if (userIdToLoad === userId) {
+          await supabase.from('study_stats').insert({ user_id: userIdToLoad, ...def })
+        }
         setStudyStats(def)
       }
 
@@ -173,21 +196,35 @@ export function useDashboardData(activeUser: UserProfile | null) {
       if (activitiesRes.data && activitiesRes.data.length > 0) {
         setActivities(activitiesRes.data as ActivityLog[])
       } else {
-        const def = DEFAULT_ACTIVITIES(userId)
-        // Batch insert default activities
-        await supabase.from('activity_logs').insert(def)
+        const def = DEFAULT_ACTIVITIES(userIdToLoad)
+        if (userIdToLoad === userId) {
+          await supabase.from('activity_logs').insert(def)
+        }
         setActivities(def)
       }
 
     } catch (err: any) {
       console.warn("DB Dashboard Fetch failed (switching to localStorage fallback):", err.message)
       
+      // Set fallback target user metadata
+      if (targetUserId && targetUserId !== userId) {
+        setTargetUser({
+          id: targetUserId,
+          username: `Explorer_${targetUserId.slice(0, 4)}`,
+          email: 'explorer@system.local',
+          avatar: 'avatar-neon-pulse',
+          created_at: new Date().toISOString()
+        })
+      } else {
+        setTargetUser(activeUser)
+      }
+
       // Load from LocalStorage or write defaults if empty
       let localCP = localStorage.getItem(careerKey)
       if (localCP) {
         setCareerProfile(JSON.parse(localCP))
       } else {
-        const def = DEFAULT_CAREER_PROFILE(userId)
+        const def = DEFAULT_CAREER_PROFILE(userIdToLoad)
         localStorage.setItem(careerKey, JSON.stringify(def))
         setCareerProfile(def)
       }
@@ -196,7 +233,7 @@ export function useDashboardData(activeUser: UserProfile | null) {
       if (localCS) {
         setCodingStats(JSON.parse(localCS))
       } else {
-        const def = DEFAULT_CODING_STATS(userId)
+        const def = DEFAULT_CODING_STATS(userIdToLoad)
         localStorage.setItem(codingKey, JSON.stringify(def))
         setCodingStats(def)
       }
@@ -205,7 +242,7 @@ export function useDashboardData(activeUser: UserProfile | null) {
       if (localSS) {
         setStudyStats(JSON.parse(localSS))
       } else {
-        const def = DEFAULT_STUDY_STATS(userId)
+        const def = DEFAULT_STUDY_STATS(userIdToLoad)
         localStorage.setItem(studyKey, JSON.stringify(def))
         setStudyStats(def)
       }
@@ -214,23 +251,24 @@ export function useDashboardData(activeUser: UserProfile | null) {
       if (localAct) {
         setActivities(JSON.parse(localAct))
       } else {
-        const def = DEFAULT_ACTIVITIES(userId)
+        const def = DEFAULT_ACTIVITIES(userIdToLoad)
         localStorage.setItem(activitiesKey, JSON.stringify(def))
         setActivities(def)
       }
     } finally {
       setLoading(false)
     }
-  }, [userId, supabase])
+  }, [userIdToLoad, userId, targetUserId, activeUser, supabase])
 
   useEffect(() => {
-    if (userId) {
+    if (userIdToLoad) {
       fetchData()
     }
-  }, [userId, fetchData])
+  }, [userIdToLoad, fetchData])
 
-  // 2. Update Career Profile
+  // 2. Update Career Profile (Disabled in Read-only)
   const updateCareerProfile = async (updates: Partial<CareerProfile>) => {
+    if (targetUserId && targetUserId !== userId) return
     if (!userId || !careerProfile) return
 
     const nextCP = { ...careerProfile, ...updates }
@@ -249,8 +287,9 @@ export function useDashboardData(activeUser: UserProfile | null) {
     }
   }
 
-  // 3. Sync/Simulate Coding Platform update
+  // 3. Sync/Simulate Coding Platform update (Disabled in Read-only)
   const syncCodingPlatform = async () => {
+    if (targetUserId && targetUserId !== userId) return
     if (!userId || !codingStats) return
 
     // Simulate solved problems & contributions addition
@@ -289,8 +328,9 @@ export function useDashboardData(activeUser: UserProfile | null) {
     }
   }
 
-  // 4. Add Activity Log
+  // 4. Add Activity Log (Disabled in Read-only)
   const addActivityLog = async (type: string, description: string) => {
+    if (targetUserId && targetUserId !== userId) return
     if (!userId) return
 
     const newLog: ActivityLog = {
@@ -328,6 +368,7 @@ export function useDashboardData(activeUser: UserProfile | null) {
     codingStats,
     studyStats,
     activities,
+    targetUser,
     updateCareerProfile,
     syncCodingPlatform,
     addActivityLog,

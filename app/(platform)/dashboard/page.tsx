@@ -10,7 +10,14 @@ export const metadata: Metadata = {
   description: 'Your growth workspace in Idiots Space.',
 }
 
-export default async function DashboardPage() {
+interface DashboardPageProps {
+  searchParams: Promise<{ userId?: string }>
+}
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+  const resolvedSearchParams = await searchParams
+  const targetUserId = resolvedSearchParams.userId || null
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -26,5 +33,5 @@ export default async function DashboardPage() {
     created_at: user.created_at,
   }
 
-  return <DashboardClient activeUser={profile} />
+  return <DashboardClient activeUser={profile} targetUserId={targetUserId} />
 }

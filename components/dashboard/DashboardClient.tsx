@@ -26,19 +26,23 @@ const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
 
 interface DashboardClientProps {
   activeUser: UserProfile | null
+  targetUserId?: string | null
 }
 
-export default function DashboardClient({ activeUser }: DashboardClientProps) {
+export default function DashboardClient({ activeUser, targetUserId }: DashboardClientProps) {
   const {
     loading: dashLoading,
     careerProfile,
     codingStats,
     studyStats,
     activities,
+    targetUser,
     updateCareerProfile,
     syncCodingPlatform,
     addActivityLog
-  } = useDashboardData(activeUser)
+  } = useDashboardData(activeUser, targetUserId)
+
+  const isReadOnly = targetUserId ? (targetUserId !== activeUser?.id) : false
 
   const {
     projects,
@@ -127,7 +131,7 @@ export default function DashboardClient({ activeUser }: DashboardClientProps) {
     )
   }
 
-  const userAvatar = AVATAR_MAP[activeUser?.avatar || ''] || { gradient: 'from-violet-400 to-indigo-500', symbol: 'EX' }
+  const userAvatar = AVATAR_MAP[targetUser?.avatar || ''] || { gradient: 'from-violet-400 to-indigo-500', symbol: 'EX' }
 
   // Simple statistics totals
   const totalSolved = codingStats.leetcode_solved + codingStats.hackerrank_solved + codingStats.codeforces_solved
@@ -156,16 +160,18 @@ export default function DashboardClient({ activeUser }: DashboardClientProps) {
 
       <div className="flex flex-col lg:flex-row justify-between items-start gap-5">
         <SectionHeader 
-          title="Growth Dashboard" 
-          description="Track progress, sync repositories, and build careers collaboratively."
+          title={isReadOnly ? `${targetUser?.username || 'Explorer'}'s Hub` : "Growth Dashboard"} 
+          description={isReadOnly ? `Overview of ${targetUser?.username || 'Explorer'}'s learning node and statistics.` : "Track progress, sync repositories, and build careers collaboratively."}
         />
-        <button
-          onClick={openEditModal}
-          className="glass-button py-2.5 px-4 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0 mt-2 lg:mt-0"
-        >
-          <Edit3 className="h-4 w-4" />
-          <span>Edit Profile Summary</span>
-        </button>
+        {!isReadOnly && (
+          <button
+            onClick={openEditModal}
+            className="glass-button py-2.5 px-4 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0 mt-2 lg:mt-0"
+          >
+            <Edit3 className="h-4 w-4" />
+            <span>Edit Profile Summary</span>
+          </button>
+        )}
       </div>
 
       {/* Grid: 3-column system */}
@@ -188,10 +194,10 @@ export default function DashboardClient({ activeUser }: DashboardClientProps) {
 
               <div>
                 <h3 className="text-lg font-black text-gray-900 dark:text-white lowercase">
-                  @{activeUser?.username || 'Explorer'}
+                  @{targetUser?.username || 'Explorer'}
                 </h3>
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                  Joined {new Date(activeUser?.created_at || '').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                  Joined {new Date(targetUser?.created_at || '').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                 </span>
               </div>
 
@@ -281,14 +287,16 @@ export default function DashboardClient({ activeUser }: DashboardClientProps) {
                 <GitBranch className="h-4 w-4 text-gray-700 dark:text-gray-300" />
                 Coding Platforms
               </h3>
-              <button
-                onClick={handleSyncStats}
-                disabled={isSyncing}
-                className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 transition-all cursor-pointer"
-                title="Sync Coding platforms"
-              >
-                <RefreshCw className={`h-4.5 w-4.5 ${isSyncing ? 'animate-spin text-amber-500' : ''}`} />
-              </button>
+              {!isReadOnly && (
+                <button
+                  onClick={handleSyncStats}
+                  disabled={isSyncing}
+                  className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 transition-all cursor-pointer"
+                  title="Sync Coding platforms"
+                >
+                  <RefreshCw className={`h-4.5 w-4.5 ${isSyncing ? 'animate-spin text-amber-500' : ''}`} />
+                </button>
+              )}
             </div>
 
             <div className="space-y-4 pt-2">
@@ -440,8 +448,9 @@ export default function DashboardClient({ activeUser }: DashboardClientProps) {
                     <input
                       type="checkbox"
                       checked={checked}
+                      disabled={isReadOnly}
                       onChange={(e) => handleRoadmapToggle(idx, line, e.target.checked)}
-                      className="mt-1 h-3.5 w-3.5 rounded border-black/10 text-violet-600 focus:ring-violet-500 cursor-pointer"
+                      className="mt-1 h-3.5 w-3.5 rounded border-black/10 text-violet-600 focus:ring-violet-500 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                       id={`roadmap-item-${idx}`}
                     />
                     <label
