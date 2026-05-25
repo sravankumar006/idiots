@@ -248,6 +248,13 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
           }
 
           // 4. Save final AI message to DB securely so it persists
+          if (!accumulatedText) {
+            setMessages((prev) => 
+              prev.map(m => m.id === aiMessageId ? { ...m, error: true, sending: false, message: '⚠️ **API Quota/Access Error**\n\nThe AI companion failed to respond. This is typically due to an API quota limit or key restriction.' } : m)
+            )
+            return
+          }
+
           const { data: finalDbMsg } = await supabase.from('messages').insert({
             id: aiMessageId,
             group_id: groupId,

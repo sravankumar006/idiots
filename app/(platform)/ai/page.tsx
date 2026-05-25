@@ -332,9 +332,15 @@ export default function AiPage() {
         )
       }
 
-      setPersonalMessages(prev => 
-        prev.map(m => m.id === aiMessageId ? { ...m, sending: false } : m)
-      )
+      if (!accumulatedText) {
+        setPersonalMessages(prev => 
+          prev.map(m => m.id === aiMessageId ? { ...m, error: true, sending: false, message: '⚠️ **API Quota/Access Error**\n\nThe AI provider failed to generate any response tokens. This typically means your Gemini API key has exceeded its free tier quota limits, or this model is not enabled for your key.' } : m)
+        )
+      } else {
+        setPersonalMessages(prev => 
+          prev.map(m => m.id === aiMessageId ? { ...m, sending: false } : m)
+        )
+      }
 
     } catch (err) {
       console.error('Personal Companion request failed:', err)
