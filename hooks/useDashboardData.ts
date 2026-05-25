@@ -1,0 +1,336 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { UserProfile } from '@/types'
+
+export interface CareerProfile {
+  id: string
+  resume_url: string | null
+  portfolio_url: string | null
+  certifications: string[]
+  internship_status: string
+  learning_roadmap: string
+  dream_company: string
+  target_goals: string[]
+  tech_stack: string[]
+  favorite_language: string
+}
+
+export interface CodingStats {
+  leetcode_username: string
+  leetcode_solved: number
+  leetcode_streak: number
+  hackerrank_username: string
+  hackerrank_solved: number
+  codeforces_username: string
+  codeforces_solved: number
+  github_username: string
+  github_contributions: number
+  languages_json: Record<string, number>
+}
+
+export interface StudyStats {
+  total_study_minutes: number
+  completed_pomodoros: number
+  pdfs_reviewed: number
+  ai_sessions_count: number
+  current_streak: number
+}
+
+export interface ActivityLog {
+  id: string
+  user_id: string
+  activity_type: string
+  description: string
+  created_at: string
+}
+
+const DEFAULT_CAREER_PROFILE = (userId: string): CareerProfile => ({
+  id: userId,
+  resume_url: '',
+  portfolio_url: '',
+  certifications: ['AWS Cloud Practitioner', 'Next.js Professional'],
+  internship_status: 'applying',
+  learning_roadmap: `- [x] Master basic JavaScript and TS
+- [/] Build collaborative hub with Supabase
+- [ ] Complete 150 LeetCode problems
+- [ ] Apply to 10 summer internships`,
+  dream_company: 'Google',
+  target_goals: ['Solve 200 DSA problems', 'Build 3 Fullstack projects', 'Resume review with crew'],
+  tech_stack: ['Next.js', 'TypeScript', 'Supabase', 'React', 'TailwindCSS'],
+  favorite_language: 'TypeScript'
+})
+
+const DEFAULT_CODING_STATS = (userId: string): CodingStats => ({
+  leetcode_username: 'idiot_dev',
+  leetcode_solved: 84,
+  leetcode_streak: 5,
+  hackerrank_username: 'idiot_hack',
+  hackerrank_solved: 25,
+  codeforces_username: 'idiot_cf',
+  codeforces_solved: 12,
+  github_username: 'idiot_coder',
+  github_contributions: 147,
+  languages_json: { 'TypeScript': 50, 'JavaScript': 30, 'C++': 15, 'Python': 5 }
+})
+
+const DEFAULT_STUDY_STATS = (userId: string): StudyStats => ({
+  total_study_minutes: 360,
+  completed_pomodoros: 12,
+  pdfs_reviewed: 3,
+  ai_sessions_count: 8,
+  current_streak: 4
+})
+
+const DEFAULT_ACTIVITIES = (userId: string): ActivityLog[] => [
+  {
+    id: 'act-1',
+    user_id: userId,
+    activity_type: 'study_session',
+    description: 'Completed a 45-minute focus study session',
+    created_at: new Date(Date.now() - 3600000 * 2).toISOString() // 2 hours ago
+  },
+  {
+    id: 'act-2',
+    user_id: userId,
+    activity_type: 'coding_solve',
+    description: 'Solved 3 LeetCode problems (TypeScript)',
+    created_at: new Date(Date.now() - 3600000 * 24).toISOString() // 1 day ago
+  },
+  {
+    id: 'act-3',
+    user_id: userId,
+    activity_type: 'career_update',
+    description: 'Updated learning roadmap and dream company',
+    created_at: new Date(Date.now() - 3600000 * 48).toISOString() // 2 days ago
+  }
+]
+
+export function useDashboardData(activeUser: UserProfile | null) {
+  const [loading, setLoading] = useState(true)
+  const [careerProfile, setCareerProfile] = useState<CareerProfile | null>(null)
+  const [codingStats, setCodingStats] = useState<CodingStats | null>(null)
+  const [studyStats, setStudyStats] = useState<StudyStats | null>(null)
+  const [activities, setActivities] = useState<ActivityLog[]>([])
+
+  const supabase = createClient()
+  const userId = activeUser?.id
+
+  // 1. Fetch Dashboard Data
+  const fetchData = useCallback(async () => {
+    if (!userId) return
+    setLoading(true)
+
+    // Local Storage Mock Keys
+    const careerKey = `mock_career_profile_${userId}`
+    const codingKey = `mock_coding_stats_${userId}`
+    const studyKey = `mock_study_stats_${userId}`
+    const activitiesKey = `mock_activities_${userId}`
+
+    try {
+      // Parallel DB fetching
+      const [careerRes, codingRes, studyRes, activitiesRes] = await Promise.all([
+        supabase.from('career_profiles').select('*').eq('id', userId).maybeSingle(),
+        supabase.from('coding_stats').select('*').eq('user_id', userId).maybeSingle(),
+        supabase.from('study_stats').select('*').eq('user_id', userId).maybeSingle(),
+        supabase.from('activity_logs').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(20)
+      ])
+
+      // Profile handle
+      if (careerRes.error) throw careerRes.error
+      if (careerRes.data) {
+        setCareerProfile(careerRes.data as CareerProfile)
+      } else {
+        // Create initial record
+        const def = DEFAULT_CAREER_PROFILE(userId)
+        await supabase.from('career_profiles').insert(def)
+        setCareerProfile(def)
+      }
+
+      // Coding Stats handle
+      if (codingRes.error) throw codingRes.error
+      if (codingRes.data) {
+        setCodingStats(codingRes.data as CodingStats)
+      } else {
+        const def = DEFAULT_CODING_STATS(userId)
+        await supabase.from('coding_stats').insert({ user_id: userId, ...def })
+        setCodingStats(def)
+      }
+
+      // Study Stats handle
+      if (studyRes.error) throw studyRes.error
+      if (studyRes.data) {
+        setStudyStats(studyRes.data as StudyStats)
+      } else {
+        const def = DEFAULT_STUDY_STATS(userId)
+        await supabase.from('study_stats').insert({ user_id: userId, ...def })
+        setStudyStats(def)
+      }
+
+      // Activities handle
+      if (activitiesRes.error) throw activitiesRes.error
+      if (activitiesRes.data && activitiesRes.data.length > 0) {
+        setActivities(activitiesRes.data as ActivityLog[])
+      } else {
+        const def = DEFAULT_ACTIVITIES(userId)
+        // Batch insert default activities
+        await supabase.from('activity_logs').insert(def)
+        setActivities(def)
+      }
+
+    } catch (err: any) {
+      console.warn("DB Dashboard Fetch failed (switching to localStorage fallback):", err.message)
+      
+      // Load from LocalStorage or write defaults if empty
+      let localCP = localStorage.getItem(careerKey)
+      if (localCP) {
+        setCareerProfile(JSON.parse(localCP))
+      } else {
+        const def = DEFAULT_CAREER_PROFILE(userId)
+        localStorage.setItem(careerKey, JSON.stringify(def))
+        setCareerProfile(def)
+      }
+
+      let localCS = localStorage.getItem(codingKey)
+      if (localCS) {
+        setCodingStats(JSON.parse(localCS))
+      } else {
+        const def = DEFAULT_CODING_STATS(userId)
+        localStorage.setItem(codingKey, JSON.stringify(def))
+        setCodingStats(def)
+      }
+
+      let localSS = localStorage.getItem(studyKey)
+      if (localSS) {
+        setStudyStats(JSON.parse(localSS))
+      } else {
+        const def = DEFAULT_STUDY_STATS(userId)
+        localStorage.setItem(studyKey, JSON.stringify(def))
+        setStudyStats(def)
+      }
+
+      let localAct = localStorage.getItem(activitiesKey)
+      if (localAct) {
+        setActivities(JSON.parse(localAct))
+      } else {
+        const def = DEFAULT_ACTIVITIES(userId)
+        localStorage.setItem(activitiesKey, JSON.stringify(def))
+        setActivities(def)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [userId, supabase])
+
+  useEffect(() => {
+    if (userId) {
+      fetchData()
+    }
+  }, [userId, fetchData])
+
+  // 2. Update Career Profile
+  const updateCareerProfile = async (updates: Partial<CareerProfile>) => {
+    if (!userId || !careerProfile) return
+
+    const nextCP = { ...careerProfile, ...updates }
+    setCareerProfile(nextCP)
+
+    // Sync to DB
+    try {
+      const { error } = await supabase
+        .from('career_profiles')
+        .update(updates)
+        .eq('id', userId)
+      if (error) throw error
+    } catch (err: any) {
+      console.warn("DB Update Career Profile failed, using localStorage fallback:", err.message)
+      localStorage.setItem(`mock_career_profile_${userId}`, JSON.stringify(nextCP))
+    }
+  }
+
+  // 3. Sync/Simulate Coding Platform update
+  const syncCodingPlatform = async () => {
+    if (!userId || !codingStats) return
+
+    // Simulate solved problems & contributions addition
+    const addedSolved = Math.floor(Math.random() * 3) + 1
+    const addedContrib = Math.floor(Math.random() * 5) + 1
+    
+    const nextCS: CodingStats = {
+      ...codingStats,
+      leetcode_solved: codingStats.leetcode_solved + addedSolved,
+      leetcode_streak: codingStats.leetcode_streak + 1,
+      github_contributions: codingStats.github_contributions + addedContrib
+    }
+    
+    setCodingStats(nextCS)
+    
+    // Add activity log
+    await addActivityLog(
+      'coding_solve',
+      `Synced coding progress: solved ${addedSolved} LeetCode problems & pushed ${addedContrib} GitHub contributions`
+    )
+
+    // Sync to DB
+    try {
+      const { error } = await supabase
+        .from('coding_stats')
+        .update({
+          leetcode_solved: nextCS.leetcode_solved,
+          leetcode_streak: nextCS.leetcode_streak,
+          github_contributions: nextCS.github_contributions
+        })
+        .eq('user_id', userId)
+      if (error) throw error
+    } catch (err: any) {
+      console.warn("DB Update Coding Stats failed, using localStorage fallback:", err.message)
+      localStorage.setItem(`mock_coding_stats_${userId}`, JSON.stringify(nextCS))
+    }
+  }
+
+  // 4. Add Activity Log
+  const addActivityLog = async (type: string, description: string) => {
+    if (!userId) return
+
+    const newLog: ActivityLog = {
+      id: `act-${Date.now()}`,
+      user_id: userId,
+      activity_type: type,
+      description,
+      created_at: new Date().toISOString()
+    }
+
+    setActivities((prev) => [newLog, ...prev])
+
+    // Save to DB
+    try {
+      const { error } = await supabase
+        .from('activity_logs')
+        .insert({
+          user_id: userId,
+          activity_type: type,
+          description
+        })
+      if (error) throw error
+    } catch (err: any) {
+      console.warn("DB Insert Activity Log failed, using localStorage fallback:", err.message)
+      const activitiesKey = `mock_activities_${userId}`
+      const current = JSON.parse(localStorage.getItem(activitiesKey) || '[]')
+      const updated = [newLog, ...current].slice(0, 30) // cap to 30
+      localStorage.setItem(activitiesKey, JSON.stringify(updated))
+    }
+  }
+
+  return {
+    loading,
+    careerProfile,
+    codingStats,
+    studyStats,
+    activities,
+    updateCareerProfile,
+    syncCodingPlatform,
+    addActivityLog,
+    refetch: fetchData
+  }
+}
