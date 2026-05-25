@@ -13,15 +13,19 @@ import {
   Brain, 
   FolderHeart, 
   Settings, 
-  LogOut 
+  LogOut,
+  Home,
+  History
 } from 'lucide-react'
 import { logout } from '@/app/auth/actions'
+import { UserProfile } from '@/types'
 
 interface MobileNavProps {
   onToggleMobileMenu?: () => void
+  profile?: UserProfile
 }
 
-export default function MobileNav({ onToggleMobileMenu }: MobileNavProps) {
+export default function MobileNav({ onToggleMobileMenu, profile }: MobileNavProps) {
   const pathname = usePathname()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [isLoggingOut, startLogoutTransition] = useTransition()
@@ -101,11 +105,29 @@ export default function MobileNav({ onToggleMobileMenu }: MobileNavProps) {
             {/* Nav Menu Lists */}
             <div className="grid grid-cols-2 gap-3">
               <Link
+                href={`/space/${profile?.username || 'me'}`}
+                onClick={() => setDrawerOpen(false)}
+                className="flex items-center gap-3 p-3.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+              >
+                <Home className="h-4.5 w-4.5 text-violet-400" />
+                <span>My Corner</span>
+              </Link>
+
+              <Link
+                href="/timeline"
+                onClick={() => setDrawerOpen(false)}
+                className="flex items-center gap-3 p-3.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+              >
+                <History className="h-4.5 w-4.5 text-rose-400" />
+                <span>Timeline</span>
+              </Link>
+
+              <Link
                 href="/memories"
                 onClick={() => setDrawerOpen(false)}
                 className="flex items-center gap-3 p-3.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
               >
-                <Brain className="h-4.5 w-4.5 text-violet-400" />
+                <Brain className="h-4.5 w-4.5 text-cyan-400" />
                 <span>Mind Logs</span>
               </Link>
               
@@ -114,7 +136,7 @@ export default function MobileNav({ onToggleMobileMenu }: MobileNavProps) {
                 onClick={() => setDrawerOpen(false)}
                 className="flex items-center gap-3 p-3.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
               >
-                <FolderHeart className="h-4.5 w-4.5 text-rose-400" />
+                <FolderHeart className="h-4.5 w-4.5 text-amber-500" />
                 <span>Creative Rooms</span>
               </Link>
 

@@ -12,27 +12,32 @@ import {
   FolderHeart, 
   Settings,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Home,
+  History
 } from 'lucide-react'
-
-// Define our navigation links
-const NAV_ITEMS = [
-  { href: '/dashboard', label: 'home', icon: LayoutDashboard },
-  { href: '/chat', label: 'chat lounge', icon: MessageSquare },
-  { href: '/ai', label: 'companion', icon: Sparkles },
-  { href: '/study', label: 'zen focus', icon: Clock },
-  { href: '/memories', label: 'memories', icon: Brain },
-  { href: '/projects', label: 'creative rooms', icon: FolderHeart },
-  { href: '/settings', label: 'settings', icon: Settings },
-]
+import { UserProfile } from '@/types'
 
 interface SidebarProps {
   isCollapsed: boolean
   setIsCollapsed: (collapsed: boolean) => void
+  profile?: UserProfile
 }
 
-export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
+export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: SidebarProps) {
   const pathname = usePathname()
+
+  const navItems = [
+    { href: '/dashboard', label: 'home', icon: LayoutDashboard },
+    { href: '/chat', label: 'chat lounge', icon: MessageSquare },
+    { href: '/ai', label: 'companion', icon: Sparkles },
+    { href: `/space/${profile?.username || 'me'}`, label: 'my corner', icon: Home },
+    { href: '/timeline', label: 'shared timeline', icon: History },
+    { href: '/study', label: 'zen focus', icon: Clock },
+    { href: '/memories', label: 'memories', icon: Brain },
+    { href: '/projects', label: 'creative rooms', icon: FolderHeart },
+    { href: '/settings', label: 'settings', icon: Settings },
+  ]
 
   return (
     <aside 
@@ -75,7 +80,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
 
       {/* Navigation Items */}
       <nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon
           const isActive = pathname === item.href
           

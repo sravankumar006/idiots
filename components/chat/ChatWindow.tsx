@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { ArrowLeft, Users, MoreVertical, Phone, Sun, Moon, Copy, BellOff, LogOut, Trash2, BookOpen, Sparkles, X, Flame } from 'lucide-react'
-import { UserProfile } from '@/types'
+import { UserProfile, ChatMessage } from '@/types'
 import { useTheme } from 'next-themes'
 import MessageList from './MessageList'
 import MessageInput from './MessageInput'
@@ -11,6 +11,7 @@ import StudyPanel from './StudyPanel'
 import useMessages from '@/hooks/useMessages'
 import useRealtimeChat from '@/hooks/useRealtimeChat'
 import useRealtimeGroupState from '@/hooks/useRealtimeGroupState'
+import { useMoodAndMemories } from '@/hooks/useMoodAndMemories'
 
 // Avatar palette — same as workspace (kept local to avoid coupling)
 const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
@@ -92,6 +93,23 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
     startTimer,
     stopTimer
   } = useRealtimeGroupState(groupId)
+
+  const { saveToVault } = useMoodAndMemories(activeUser?.id)
+
+  const handleSaveToVault = async (msg: ChatMessage) => {
+    try {
+      const isPhoto = msg.type === 'image' || (msg.file_url && (msg.file_url.includes('png') || msg.file_url.includes('jpg') || msg.file_url.includes('jpeg')))
+      const title = isPhoto ? 'saved image moment' : 'saved chat moment'
+      const notes = msg.message || ''
+      const fileUrl = msg.file_url || ''
+      const fileName = msg.file_name || ''
+      
+      await saveToVault(title, msg.id, fileUrl, fileName, notes, true)
+      alert('moment saved to your memory vault! you can manage it in the memories tab.')
+    } catch (err) {
+      console.error('Failed to save moment to vault:', err)
+    }
+  }
 
   // Local Study Panel Open state (default true on desktop, false on mobile)
   const [studyPanelOpen, setStudyPanelOpen] = useState(true)
@@ -350,6 +368,7 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
               studyModeActive={studyModeActive}
               studyFilterActive={studyFilterActive}
               isDeepFocusActive={myFocus.isDeepFocus}
+              onSaveToVault={handleSaveToVault}
             />
 
             <MessageInput

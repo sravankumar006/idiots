@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useCallback } from 'react'
-import { Reply, SmilePlus, Copy, Trash2, Share2, X, Eye } from 'lucide-react'
+import { Reply, SmilePlus, Copy, Trash2, Share2, X, Eye, Brain } from 'lucide-react'
 import { ChatMessage } from '@/types'
 
 const QUICK_EMOJIS = ['👍', '❤️', '🔥', '😂', '😮', '✨']
@@ -17,6 +17,7 @@ interface MessageActionSheetProps {
   onDeleteForEveryone: () => void
   onClearChat: () => void
   onShowSeenBy?: () => void
+  onSaveToVault?: () => void
 }
 
 /**
@@ -35,6 +36,7 @@ export default function MessageActionSheet({
   onDeleteForEveryone,
   onClearChat,
   onShowSeenBy,
+  onSaveToVault,
 }: MessageActionSheetProps) {
   // Close on Escape key
   useEffect(() => {
@@ -145,6 +147,15 @@ export default function MessageActionSheet({
                 icon={<Eye className="h-5 w-5 text-violet-500" />}
                 label="who saw this?"
                 onClick={() => handleAction(onShowSeenBy)}
+              />
+            )}
+
+            {/* Save to Memory Vault */}
+            {!isDeleted && onSaveToVault && (
+              <ActionItem
+                icon={<Brain className="h-5 w-5 text-amber-500" />}
+                label="save to vault"
+                onClick={() => handleAction(onSaveToVault)}
               />
             )}
 

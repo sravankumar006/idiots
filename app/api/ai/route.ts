@@ -103,6 +103,48 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Gemini API Key Missing', message: warningText }, { status: 400 })
     }
 
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    // ─── Query mood logs and visible AI memories for user context ────────────
+    let emotionalSupportInstructions = ''
+    let longTermMemoriesInstructions = ''
+
+    if (user) {
+      try {
+        // Load recent mood logs
+        const { data: moodLogs } = await supabase
+          .from('mood_logs')
+          .select('mood_rating, status_text')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(3)
+          
+        if (moodLogs && moodLogs.length > 0) {
+          const sum = moodLogs.reduce((acc, log) => acc + log.mood_rating, 0)
+          const avg = sum / moodLogs.length
+          if (avg <= 4) {
+            emotionalSupportInstructions = `\n\n[USER MOOD INSIGHT: The user has been feeling low recently (average mood rating: ${avg.toFixed(1)}/10, status: "${moodLogs[0].status_text || 'quiet'}"). Adjust your tone to be soft, companion-like, and comforting. Do not be overly corporate or robotic. Suggest a short break or breathing exercise, and offer warm encouragement gently.]`
+          }
+        }
+
+        // Load visible AI memories
+        const { data: memories } = await supabase
+          .from('ai_memories')
+          .select('memory_text')
+          .eq('user_id', user.id)
+          .eq('is_visible', true)
+          .limit(12)
+
+        if (memories && memories.length > 0) {
+          const factsList = memories.map(m => `- ${m.memory_text}`).join('\n')
+          longTermMemoriesInstructions = `\n\n[AI MEMORIES: You have remembered these facts/habits/inside jokes about the user, integrate them naturally if contextually relevant:\n${factsList}\n]`
+        }
+      } catch (err) {
+        console.warn("Failed to fetch mood logs or ai memories:", err)
+      }
+    }
+
     // ─── Detect intent ────────────────────────────────────────────────────────
     const isPDFGen   = promptRequestsPDFGeneration(prompt)
     const isImgRef   = !isPDFGen && attachedFile?.type === 'image' && promptReferencesImage(prompt)
@@ -115,7 +157,7 @@ export async function POST(req: Request) {
     else if (isPDFRef) aiMode = 'pdf-analyze'
 
     // ─── System prompt ─────────────────────────────────────────────────────
-    let systemPrompt = BASE_SYSTEM_PROMPT
+    let systemPrompt = BASE_SYSTEM_PROMPT + emotionalSupportInstructions + longTermMemoriesInstructions
     if (isPDFGen) systemPrompt += PDF_GENERATE_SUFFIX
     if (studyModeActive) systemPrompt += STUDY_MODE_SUFFIX
 
@@ -173,9 +215,8 @@ export async function POST(req: Request) {
       messages: coreMessages,
       onFinish: async ({ text }) => {
         try {
-          const supabase = await createClient()
-          const { data: { user } } = await supabase.auth.getUser()
           if (user) {
+            // 1. Insert execution log
             await supabase.from('ai_logs').insert({
               user_id: user.id,
               room_id: groupId || null,
@@ -183,9 +224,30 @@ export async function POST(req: Request) {
               response: text,
               model: 'gemini-2.5-flash'
             })
+
+            // 2. Perform AI memory extraction
+            // Look for patterns like "remember that X" or "inside joke: Y" or key user facts
+            const lowerPrompt = prompt.toLowerCase()
+            let extractedFact = ''
+
+            if (lowerPrompt.includes('remember that')) {
+              extractedFact = prompt.replace(/remember that/i, '').trim()
+            } else if (lowerPrompt.includes('inside joke:')) {
+              extractedFact = prompt.replace(/inside joke:/i, '').trim()
+            } else if (lowerPrompt.includes('favorite topic is') || lowerPrompt.includes('favorite language is')) {
+              extractedFact = prompt.trim()
+            }
+
+            if (extractedFact && extractedFact.length > 5 && extractedFact.length < 250) {
+              await supabase.from('ai_memories').insert({
+                user_id: user.id,
+                memory_text: extractedFact,
+                is_visible: true
+              })
+            }
           }
         } catch (dbErr) {
-          console.error('Database connection error in AI logging:', dbErr)
+          console.error('Database connection error in AI logging/memory:', dbErr)
         }
       }
     })

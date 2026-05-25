@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'
-import { Reply, Copy, Trash2, Eye } from 'lucide-react'
+import { Reply, Copy, Trash2, Eye, Brain } from 'lucide-react'
 import { ChatMessage } from '@/types'
 import ActionButton from './MessageActions'
 
@@ -18,6 +18,7 @@ interface ReactionPickerProps {
   onClearChat: () => void
   onClose: () => void
   onShowSeenBy?: () => void
+  onSaveToVault?: () => void
 }
 
 /**
@@ -38,6 +39,7 @@ export default function ReactionPicker({
   onClearChat,
   onClose,
   onShowSeenBy,
+  onSaveToVault,
 }: ReactionPickerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -137,6 +139,15 @@ export default function ReactionPicker({
               icon={<Eye className="h-4 w-4 text-violet-500 shrink-0" />}
               label="who saw this?"
               onClick={() => handleAction(onShowSeenBy)}
+            />
+          )}
+
+          {/* Save to Memory Vault */}
+          {!isDeleted && onSaveToVault && (
+            <ActionButton
+              icon={<Brain className="h-4 w-4 text-amber-500 shrink-0" />}
+              label="save to vault"
+              onClick={() => handleAction(onSaveToVault)}
             />
           )}
 

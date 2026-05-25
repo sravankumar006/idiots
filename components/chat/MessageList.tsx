@@ -21,6 +21,7 @@ interface MessageListProps {
   studyModeActive?: boolean
   studyFilterActive?: boolean
   isDeepFocusActive?: boolean
+  onSaveToVault?: (message: ChatMessage) => void
 }
 
 // Memoized bubble — prevents re-renders when only typing indicator changes
@@ -69,6 +70,7 @@ export default function MessageList({
   studyModeActive = false,
   studyFilterActive = false,
   isDeepFocusActive = false,
+  onSaveToVault,
 }: MessageListProps) {
   const { containerRef, handleScroll, adjustScroll } = useAutoScroll()
 
@@ -188,6 +190,7 @@ export default function MessageList({
                 // @ts-ignore
                 studyModeActive={studyModeActive}
                 studyFilterActive={studyFilterActive}
+                onSaveToVault={onSaveToVault}
               />
             </div>
           </React.Fragment>

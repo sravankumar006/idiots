@@ -42,6 +42,7 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
         <Sidebar 
           isCollapsed={isSidebarCollapsed} 
           setIsCollapsed={setIsSidebarCollapsed} 
+          profile={profile}
         />
       </div>
 
@@ -74,7 +75,7 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
 
             {/* Render Sidebar components directly */}
             <div className="flex-1 overflow-y-auto px-3 py-4" onClick={() => setMobileMenuOpen(false)}>
-              <Sidebar isCollapsed={false} setIsCollapsed={() => {}} />
+              <Sidebar isCollapsed={false} setIsCollapsed={() => {}} profile={profile} />
             </div>
           </div>
         </div>
@@ -108,7 +109,7 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
         </div>
 
         {/* Mobile Bottom Tab Navbar */}
-        <MobileNav />
+        <MobileNav profile={profile} />
 
       </div>
 

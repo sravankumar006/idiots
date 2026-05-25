@@ -48,6 +48,7 @@ interface MessageBubbleProps {
   onClearChat: () => void
   studyModeActive?: boolean
   studyFilterActive?: boolean
+  onSaveToVault?: (message: ChatMessage) => void
 }
 
 export default function MessageBubble({
@@ -63,6 +64,7 @@ export default function MessageBubble({
   onClearChat,
   studyModeActive = false,
   studyFilterActive = false,
+  onSaveToVault,
 }: MessageBubbleProps) {
   const isAiMessage = message.type === 'ai'
   // AI messages always render on the left (not self)
@@ -556,6 +558,7 @@ export default function MessageBubble({
           onDeleteForEveryone={() => onDelete(message.id)}
           onClearChat={onClearChat}
           onShowSeenBy={isSelf ? handleShowSeenBy : undefined}
+          onSaveToVault={() => onSaveToVault?.(message)}
         />
       )}
 
@@ -574,6 +577,7 @@ export default function MessageBubble({
           onClearChat={onClearChat}
           onClose={() => setReactionPickerPos(null)}
           onShowSeenBy={isSelf ? handleShowSeenBy : undefined}
+          onSaveToVault={() => onSaveToVault?.(message)}
         />
       )}
 
