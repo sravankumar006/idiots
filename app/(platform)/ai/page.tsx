@@ -301,7 +301,20 @@ export default function AiPage() {
         })
       })
 
-      if (!response.ok || !response.body) throw new Error('Private stream response failed')
+      if (!response.ok) {
+        try {
+          const errData = await response.json()
+          if (errData.message) {
+            setPersonalMessages(prev => 
+              prev.map(m => m.id === aiMessageId ? { ...m, message: errData.message, sending: false } : m)
+            )
+            return
+          }
+        } catch (_) {}
+        throw new Error('Private stream response failed')
+      }
+
+      if (!response.body) throw new Error('Private stream response failed')
 
       const reader = response.body.getReader()
       const decoder = new TextDecoder()

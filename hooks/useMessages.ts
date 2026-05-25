@@ -205,7 +205,20 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
             })
           })
 
-          if (!response.ok || !response.body) throw new Error('AI stream failed')
+          if (!response.ok) {
+            try {
+              const errData = await response.json()
+              if (errData.message) {
+                setMessages((prev) => 
+                  prev.map(m => m.id === aiMessageId ? { ...m, message: errData.message, sending: false } : m)
+                )
+                return
+              }
+            } catch (_) {}
+            throw new Error('AI stream failed')
+          }
+
+          if (!response.body) throw new Error('AI stream failed')
 
           const reader = response.body.getReader()
           const decoder = new TextDecoder()

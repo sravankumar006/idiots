@@ -27,9 +27,7 @@ To activate your AI Companion, please add \`GEMINI_API_KEY\` to your \`.env.loca
 GEMINI_API_KEY=your_actual_api_key_here
 \`\`\``;
       
-      return new Response(warningText, {
-        headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-      });
+      return NextResponse.json({ error: 'Gemini API Key Missing', message: warningText }, { status: 400 });
     }
 
     // Build the AI conversation history
