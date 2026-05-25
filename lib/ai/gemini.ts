@@ -8,5 +8,5 @@ export const googleProvider = createGoogleGenerativeAI({
   apiKey: apiKey,
 });
 
-// Export the default model we use throughout the app (gemini-1.5-flash)
-export const geminiModel = googleProvider('gemini-1.5-flash');
+// Export the default model we use throughout the app (gemini-2.5-flash)
+export const geminiModel = googleProvider('gemini-2.5-flash');

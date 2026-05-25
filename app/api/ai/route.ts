@@ -58,7 +58,7 @@ GEMINI_API_KEY=your_actual_api_key_here
               room_id: groupId || null,
               prompt: prompt,
               response: text,
-              model: 'gemini-1.5-flash'
+              model: 'gemini-2.5-flash'
             })
             
             if (logError) {
