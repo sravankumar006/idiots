@@ -133,14 +133,14 @@ export default function AiPage() {
             msgs.push({
               id: `${log.id}-ai`,
               group_id: '',
-              sender_id: 'ai-system',
+              sender_id: '00000000-0000-0000-0000-000000000000',
               message: log.response,
               type: 'ai',
               reply_to: null,
               created_at: log.created_at,
               profiles: {
-                id: 'ai-system',
-                username: 'companion',
+                id: '00000000-0000-0000-0000-000000000000',
+                username: 'IS AI',
                 email: 'ai@system.local',
                 avatar: 'avatar-cyber-ghost',
                 created_at: log.created_at
@@ -265,14 +265,14 @@ export default function AiPage() {
     const aiMsg: ChatMessage = {
       id: aiMessageId,
       group_id: '',
-      sender_id: 'ai-system',
+      sender_id: '00000000-0000-0000-0000-000000000000',
       message: '',
       type: 'ai',
       reply_to: null,
       created_at: new Date().toISOString(),
       profiles: {
-        id: 'ai-system',
-        username: 'companion',
+        id: '00000000-0000-0000-0000-000000000000',
+        username: 'IS AI',
         email: 'ai@system.local',
         avatar: 'avatar-cyber-ghost',
         created_at: new Date().toISOString()

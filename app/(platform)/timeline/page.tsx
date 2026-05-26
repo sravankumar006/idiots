@@ -23,49 +23,6 @@ interface TimelineItem {
   reactionsCount?: number
 }
 
-const SEED_TIMELINE_ITEMS: TimelineItem[] = [
-  {
-    id: 't-1',
-    title: 'the legendary 3AM debugging marathon 😭',
-    description: 'Bhanu, Sravan and Sree stayed awake debugging the Next.js named proxy functions inside proxy.ts. "named proxy exports are the future, guys" was said at 2:45 AM.',
-    date: '2026-05-24T02:45:00Z',
-    type: 'study_night',
-    author: 'Bhanu',
-    authorAvatar: 'avatar-neon-pulse',
-    reactionsCount: 5
-  },
-  {
-    id: 't-2',
-    title: 'completed idiots space initial launch!',
-    description: 'First version of the collaborative space deployed successfully on Supabase. Group chat lounge, profiles, and basic real-time state syncd.',
-    date: '2026-05-20T18:00:00Z',
-    type: 'milestone',
-    author: 'Sravan',
-    authorAvatar: 'avatar-cyber-ghost',
-    reactionsCount: 4
-  },
-  {
-    id: 't-3',
-    title: 'quote of the day: "C++ is just C with issues"',
-    description: 'Bhanu dropped this legendary line in the chat lounge during a debate about system programming languages.',
-    date: '2026-05-18T14:30:00Z',
-    type: 'quote',
-    author: 'Bhanu',
-    authorAvatar: 'avatar-neon-pulse',
-    reactionsCount: 6
-  },
-  {
-    id: 't-4',
-    title: 'cozy late-night study room session',
-    description: 'Total of 480 minutes studied together. The group completed 4 consecutive Pomodoros. Silent focus was absolute.',
-    date: '2026-05-15T23:00:00Z',
-    type: 'ai_recall',
-    author: 'idiot ai',
-    authorAvatar: 'avatar-cyber-ghost',
-    reactionsCount: 3
-  }
-]
-
 export default function TimelinePage() {
   const supabase = createClient()
   const [activeProfile, setActiveProfile] = useState<UserProfile | null>(null)
@@ -80,21 +37,22 @@ export default function TimelinePage() {
   const [newMediaUrl, setNewMediaUrl] = useState('')
 
   useEffect(() => {
+    let active = true
+
     const initData = async () => {
       setLoading(true)
       try {
         // Resolve active user profile
         const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
+        if (user && active) {
           const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
-          if (prof) setActiveProfile(prof as UserProfile)
+          if (prof && active) setActiveProfile(prof as UserProfile)
         }
 
-        // Fetch shared memory vault items
-        const { data: vaultRes } = await supabase
-          .from('memory_vault')
+        // Fetch shared memory nodes
+        const { data: memoriesRes } = await supabase
+          .from('memories')
           .select('*, profiles(*)')
-          .eq('is_shared', true)
           .order('created_at', { ascending: false })
 
         // Fetch projects to list milestones
@@ -103,20 +61,22 @@ export default function TimelinePage() {
           .select('*, profiles(*)')
           .order('created_at', { ascending: false })
 
+        if (!active) return
+
         const dbItems: TimelineItem[] = []
 
-        if (vaultRes) {
-          vaultRes.forEach((item: any) => {
+        if (memoriesRes) {
+          memoriesRes.forEach((item: any) => {
             dbItems.push({
               id: item.id,
               title: item.title,
-              description: item.notes || 'saved memory.',
+              description: item.description || 'saved memory.',
               date: item.created_at,
-              type: item.file_url ? 'photo' : 'quote',
+              type: item.type as any,
               author: item.profiles?.username || 'Explorer',
               authorAvatar: item.profiles?.avatar || 'avatar-cyber-ghost',
-              mediaUrl: item.file_url || undefined,
-              reactionsCount: 2
+              mediaUrl: item.media_url || undefined,
+              reactionsCount: 0
             })
           })
         }
@@ -132,44 +92,102 @@ export default function TimelinePage() {
                 type: 'milestone',
                 author: item.profiles?.username || 'Explorer',
                 authorAvatar: item.profiles?.avatar || 'avatar-cyber-ghost',
-                reactionsCount: 3
+                reactionsCount: 0
               })
             }
           })
         }
 
-        // Merge seed items with database items and sort chronologically descending
-        const merged = [...dbItems, ...SEED_TIMELINE_ITEMS].sort((a, b) => 
+        // Sort chronologically descending
+        const sorted = dbItems.sort((a, b) => 
           new Date(b.date).getTime() - new Date(a.date).getTime()
         )
 
-        setItems(merged)
+        setItems(sorted)
 
       } catch (err) {
-        console.warn("Timeline fetch failed, loading local/seed list:", err)
-        
-        // Localstorage fallback for custom additions
-        const localTimelineAdditions = localStorage.getItem('mock_timeline_additions')
-        const additions: TimelineItem[] = localTimelineAdditions ? JSON.parse(localTimelineAdditions) : []
-
-        const merged = [...additions, ...SEED_TIMELINE_ITEMS].sort((a, b) => 
-          new Date(b.date).getTime() - new Date(a.date).getTime()
-        )
-        setItems(merged)
+        console.error("Timeline fetch failed:", err)
       } finally {
-        setLoading(false)
+        if (active) setLoading(false)
       }
     }
 
     initData()
+
+    // Realtime subscription for live additions/updates/deletions on memories
+    const channel = supabase
+      .channel('timeline_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'memories' },
+        async (payload) => {
+          if (payload.eventType === 'INSERT') {
+            // Fetch the inserted memory with profiles join
+            const { data: newMem, error } = await supabase
+              .from('memories')
+              .select('*, profiles(*)')
+              .eq('id', payload.new.id)
+              .single()
+
+            if (newMem && !error && active) {
+              const formatted: TimelineItem = {
+                id: newMem.id,
+                title: newMem.title,
+                description: newMem.description || 'saved memory.',
+                date: newMem.created_at,
+                type: newMem.type as any,
+                author: newMem.profiles?.username || 'Explorer',
+                authorAvatar: newMem.profiles?.avatar || 'avatar-cyber-ghost',
+                mediaUrl: newMem.media_url || undefined,
+                reactionsCount: 0
+              }
+              setItems((prev) => {
+                if (prev.some(item => item.id === formatted.id)) return prev
+                const updated = [formatted, ...prev]
+                return updated.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              })
+            }
+          } else if (payload.eventType === 'DELETE' && active) {
+            setItems((prev) => prev.filter(item => item.id !== payload.old.id))
+          } else if (payload.eventType === 'UPDATE' && active) {
+            const { data: updatedMem, error } = await supabase
+              .from('memories')
+              .select('*, profiles(*)')
+              .eq('id', payload.new.id)
+              .single()
+
+            if (updatedMem && !error && active) {
+              const formatted: TimelineItem = {
+                id: updatedMem.id,
+                title: updatedMem.title,
+                description: updatedMem.description || 'saved memory.',
+                date: updatedMem.created_at,
+                type: updatedMem.type as any,
+                author: updatedMem.profiles?.username || 'Explorer',
+                authorAvatar: updatedMem.profiles?.avatar || 'avatar-cyber-ghost',
+                mediaUrl: updatedMem.media_url || undefined,
+                reactionsCount: 0
+              }
+              setItems((prev) => prev.map(item => item.id === formatted.id ? formatted : item))
+            }
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      active = false
+      supabase.removeChannel(channel)
+    }
   }, [supabase])
 
   const handleAddMemory = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newTitle.trim()) return
 
-    const newItem: TimelineItem = {
-      id: `time-${Date.now()}`,
+    const tempId = `temp-${Date.now()}`
+    const tempItem: TimelineItem = {
+      id: tempId,
       title: newTitle.trim(),
       description: newDesc.trim(),
       date: new Date().toISOString(),
@@ -180,24 +198,47 @@ export default function TimelinePage() {
       reactionsCount: 0
     }
 
-    setItems((prev) => [newItem, ...prev])
+    // Optimistic insert
+    setItems((prev) => [tempItem, ...prev])
     setShowAddModal(false)
 
-    // Save to DB via shared vault memory
+    // Save to DB
     try {
-      if (activeProfile) {
-        await supabase.from('memory_vault').insert({
+      if (!activeProfile) throw new Error("No active profile")
+
+      const { data, error } = await supabase
+        .from('memories')
+        .insert({
           user_id: activeProfile.id,
           title: newTitle.trim(),
-          notes: newDesc.trim(),
-          file_url: newMediaUrl.trim() || null,
-          is_shared: true
+          description: newDesc.trim(),
+          type: newType,
+          media_url: newMediaUrl.trim() || '',
+          visibility: 'public'
         })
+        .select('*, profiles(*)')
+        .single()
+
+      if (error) throw error
+
+      if (data) {
+        const dbFormatted: TimelineItem = {
+          id: data.id,
+          title: data.title,
+          description: data.description || 'saved memory.',
+          date: data.created_at,
+          type: data.type as any,
+          author: data.profiles?.username || 'Explorer',
+          authorAvatar: data.profiles?.avatar || 'avatar-cyber-ghost',
+          mediaUrl: data.media_url || undefined,
+          reactionsCount: 0
+        }
+        setItems((prev) => prev.map(item => item.id === tempId ? dbFormatted : item))
       }
     } catch (err) {
-      console.warn("Timeline insert failed, saving locally:", err)
-      const currentAdditions = JSON.parse(localStorage.getItem('mock_timeline_additions') || '[]')
-      localStorage.setItem('mock_timeline_additions', JSON.stringify([newItem, ...currentAdditions]))
+      console.error("Timeline insert failed:", err)
+      // Rollback optimistic insert on error
+      setItems((prev) => prev.filter(item => item.id !== tempId))
     }
 
     // Reset inputs

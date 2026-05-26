@@ -49,7 +49,7 @@ export function useRealtimeMessages(groupId: string, activeUser: UserProfile | n
     if (!activeUser || isFallback || list.length === 0) return
 
     const unseenIds = list
-      .filter(m => m.sender_id !== activeUser.id && m.sender_id !== 'ai-system' && !m.message_seen?.some(s => s.user_id === activeUser.id))
+      .filter(m => m.sender_id !== activeUser.id && m.sender_id !== '00000000-0000-0000-0000-000000000000' && !m.message_seen?.some(s => s.user_id === activeUser.id))
       .map(m => m.id)
 
     if (unseenIds.length > 0) {
@@ -316,14 +316,14 @@ export function useRealtimeMessages(groupId: string, activeUser: UserProfile | n
               const newAiMsg: ChatMessage = {
                 id: messageId,
                 group_id: groupId,
-                sender_id: 'ai-system-stub',
+                sender_id: '00000000-0000-0000-0000-000000000000',
                 message: text,
                 type: 'ai',
                 reply_to: null,
                 created_at: new Date().toISOString(),
                 profiles: {
-                  id: 'ai-system-stub',
-                  username: 'idiot ai',
+                  id: '00000000-0000-0000-0000-000000000000',
+                  username: 'IS AI',
                   email: 'ai@system.local',
                   avatar: 'avatar-cyber-ghost',
                   created_at: new Date().toISOString()

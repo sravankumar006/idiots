@@ -84,7 +84,7 @@ export default function MessageList({
     const ids = new Set<string>()
     if (activeUser) ids.add(activeUser.id)
     for (const msg of messages) {
-      if (msg.sender_id && msg.sender_id !== 'ai-system' && msg.sender_id !== 'ai-system-stub') {
+      if (msg.sender_id && msg.sender_id !== '00000000-0000-0000-0000-000000000000') {
         ids.add(msg.sender_id)
       }
       if (msg.message_seen) {

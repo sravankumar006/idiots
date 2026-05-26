@@ -201,14 +201,14 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
         const aiMessage: ChatMessage = {
           id: aiMessageId,
           group_id: groupId,
-          sender_id: activeUser.id,
+          sender_id: '00000000-0000-0000-0000-000000000000',
           message: '',
           type: 'ai',
           reply_to: null,
           created_at: new Date().toISOString(),
           profiles: {
-            id: 'ai-system',
-            username: 'idiot ai',
+            id: '00000000-0000-0000-0000-000000000000',
+            username: 'IS AI',
             email: 'ai@system.local',
             avatar: 'avatar-cyber-ghost',
             created_at: new Date().toISOString()
@@ -293,7 +293,7 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
           const { data: finalDbMsg, error: aiInsertError } = await supabase.from('messages').insert({
             id: aiMessageId,
             group_id: groupId,
-            sender_id: activeUser.id,
+            sender_id: '00000000-0000-0000-0000-000000000000',
             message: accumulatedText,
             type: 'ai',
             reply_to: data.id
