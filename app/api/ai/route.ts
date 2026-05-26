@@ -262,8 +262,16 @@ export async function POST(req: Request) {
       headers,
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in /api/ai:', error)
-    return NextResponse.json({ error: 'Failed to process AI request' }, { status: 500 })
+
+    const errString = String(error?.message || error || '').toLowerCase()
+    if (errString.includes('quota') || errString.includes('resource_exhausted') || errString.includes('429') || errString.includes('rate limit')) {
+      const quotaWarning = `⚠️ **Gemini API Quota Exhausted (Rate Limit)**\n\nRocky is currently out of tokens or has exceeded the free-tier rate limits:\n- **Minute-based limits (15 RPM / 1M TPM):** Resets automatically at the start of the next minute.\n- **Daily limits (1500 RPD):** Resets daily at 00:00 UTC.\n\nPlease wait a moment and try again.`
+      return NextResponse.json({ error: 'Quota Limit Exceeded', message: quotaWarning }, { status: 429 })
+    }
+
+    const defaultWarning = `⚠️ **AI Companion Connection Issue**\n\nRocky failed to respond due to an unexpected connection error: \`${error?.message || 'Unknown error'}\`.`
+    return NextResponse.json({ error: 'Failed to process AI request', message: defaultWarning }, { status: 500 })
   }
 }

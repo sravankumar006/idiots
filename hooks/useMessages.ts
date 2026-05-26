@@ -285,7 +285,7 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
           // 4. Save final AI message to DB so it persists for all users
           if (!accumulatedText) {
             setMessages((prev) =>
-              prev.map(m => m.id === aiMessageId ? { ...m, error: true, sending: false, message: '⚠️ **API Quota/Access Error**\n\nThe AI companion failed to respond. This is typically due to an API quota limit or key restriction.' } : m)
+              prev.map(m => m.id === aiMessageId ? { ...m, error: true, sending: false, message: '⚠️ **Gemini API Quota Exhausted (Rate Limit)**\n\nRocky is currently out of tokens or has exceeded the free-tier rate limits:\n- **Minute-based limits (15 RPM / 1M TPM):** Resets automatically at the start of the next minute.\n- **Daily limits (1500 RPD):** Resets daily at 00:00 UTC.\n\Please wait a moment and try again.' } : m)
             )
             return
           }
@@ -314,10 +314,10 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
             )
           }
 
-        } catch (err) {
+        } catch (err: any) {
           console.error('AI Streaming error:', err)
           setMessages((prev) =>
-            prev.map(m => m.id === aiMessageId ? { ...m, error: true, sending: false, message: 'I encountered an error trying to process that.' } : m)
+            prev.map(m => m.id === aiMessageId ? { ...m, error: true, sending: false, message: `⚠️ **AI Companion Error**\n\nRocky failed to process this request: \`${err?.message || 'Unexpected streaming error'}\`.\n- **Rate Limit Reset:** Minute-based limits reset in the next minute. Daily limits reset daily at 00:00 UTC.` } : m)
           )
         }
       }
