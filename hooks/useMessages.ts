@@ -168,8 +168,8 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
         prev.map((m) => (m.id === tempId ? { ...m, ...data, sending: false, uploadProgress: undefined } : m))
       )
 
-      // --- AI INTEGRATION: Detect @ai and trigger shared AI ---
-      if (text.includes('@ai')) {
+      // --- AI INTEGRATION: Detect @rocky and trigger shared AI ---
+      if (text.toLowerCase().includes('@rocky')) {
         const aiMessageId = crypto.randomUUID()
 
         // ── Find context file: check current uploaded file first, then fall back to recent history

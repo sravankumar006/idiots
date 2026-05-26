@@ -727,7 +727,7 @@ export default function AiPage() {
                 <p className="text-xs text-gray-500 max-w-sm font-semibold leading-relaxed">
                   {searchQuery || selectedGroup !== 'all' || selectedUser !== 'all'
                     ? "Try adjusting your query or filter parameters to locate the recorded items."
-                    : "Ask queries to the AI directly inside any room chat using @ai to populate the logs archive."
+                    : "Ask queries to the AI directly inside any room chat using @rocky to populate the logs archive."
                   }
                 </p>
               </Card>
