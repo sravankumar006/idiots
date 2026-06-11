@@ -46,16 +46,8 @@ export default function Topbar({
   return (
     <header className="glass-panel border-b border-black/5 dark:border-white/5 h-16 flex items-center justify-between px-6 shrink-0 sticky top-0 z-30 select-none">
       
-      {/* Left: Mobile Menu Trigger + Route Title */}
+      {/* Left: Route Title */}
       <div className="flex items-center gap-3">
-        <button 
-          onClick={onToggleMobileMenu}
-          className="md:hidden p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-950 dark:hover:text-white transition-all cursor-pointer"
-          title="Toggle Navigation"
-          suppressHydrationWarning
-        >
-          <Menu className="h-5 w-5" />
-        </button>
 
         <div className="flex items-center gap-2">
           <Sparkles className="h-4.5 w-4.5 text-violet-400 animate-pulse" />

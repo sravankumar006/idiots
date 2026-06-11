@@ -77,6 +77,7 @@ export default function MobileNav({ onToggleMobileMenu, profile, drawerOpen: par
           className={`flex flex-col items-center gap-1 py-1 text-[10px] font-bold tracking-wider transition-all cursor-pointer ${
             drawerOpen ? 'text-violet-600 dark:text-violet-400' : 'text-gray-500 dark:text-gray-400'
           }`}
+          suppressHydrationWarning
         >
           <Menu className="h-5 w-5" />
           <span>Menu</span>
