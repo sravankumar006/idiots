@@ -16,7 +16,9 @@ import {
   Activity,
   CornerDownLeft,
   Settings,
-  Heart
+  Heart,
+  Database,
+  Trash2
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { ChatMessage, UserProfile } from '@/types'
@@ -54,7 +56,7 @@ const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
 }
 
 export default function AiPage() {
-  const [activeTab, setActiveTab] = useState<'consultant' | 'logs'>('consultant')
+  const [activeTab, setActiveTab] = useState<'consultant' | 'logs' | 'memory'>('consultant')
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null)
   
   // Tab 1: Personal AI Consultant States
@@ -71,6 +73,11 @@ export default function AiPage() {
   const [selectedUser, setSelectedUser] = useState<string>('all')
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [expandedLogs, setExpandedLogs] = useState<Record<string, boolean>>({})
+
+  // Tab 3: Memory Center States
+  const [memories, setMemories] = useState<any[]>([])
+  const [summaries, setSummaries] = useState<any[]>([])
+  const [loadingMemory, setLoadingMemory] = useState(false)
 
   const supabase = createClient()
 
@@ -237,6 +244,36 @@ export default function AiPage() {
     }
   }, [])
 
+  // Fetch Memories when Memory tab is active
+  useEffect(() => {
+    if (activeTab !== 'memory' || !currentUser) return
+
+    async function fetchMemories() {
+      setLoadingMemory(true)
+      try {
+        const { data: mems } = await supabase
+          .from('ai_memories')
+          .select('*')
+          .eq('created_by', currentUser!.id)
+          .order('updated_at', { ascending: false })
+
+        const { data: sums } = await supabase
+          .from('memory_summaries')
+          .select('*')
+          .order('created_at', { ascending: false })
+
+        setMemories(mems || [])
+        setSummaries(sums || [])
+      } catch (err) {
+        console.error('Failed to load memory center:', err)
+      } finally {
+        setLoadingMemory(false)
+      }
+    }
+
+    fetchMemories()
+  }, [activeTab, currentUser])
+
   // Action: Send Private Message in Personal Consultant
   const handleSendPersonal = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -290,14 +327,17 @@ export default function AiPage() {
         message: m.message
       }))
 
+      const providerPref = typeof window !== 'undefined' ? localStorage.getItem('selected_ai_provider') || 'auto' : 'auto';
+
       // Call route
-      const response = await fetch('/api/ai', {
+      const response = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: text,
           groupId: null, // Indicates private/personal consultant
-          contextMessages: context
+          contextMessages: context,
+          providerPreference: providerPref
         })
       })
 
@@ -453,6 +493,17 @@ export default function AiPage() {
           >
             <MessageSquare className="h-3.5 w-3.5" />
             #ai logs
+          </button>
+          <button
+            onClick={() => setActiveTab('memory')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'memory'
+                ? 'bg-violet-500/10 text-violet-600 dark:text-white border-l-2 border-violet-400'
+                : 'text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            <Database className="h-3.5 w-3.5" />
+            Memory Center
           </button>
         </div>
       </div>
@@ -832,6 +883,79 @@ export default function AiPage() {
           </div>
         </div>
       )}
+
+      {/* ============================================================== */}
+      {/* TAB 3: MEMORY CENTER                                           */}
+      {/* ============================================================== */}
+      {activeTab === 'memory' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-4">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <Database className="h-4 w-4 text-violet-400" />
+                Contextual Memories
+              </h3>
+              
+              {loadingMemory ? (
+                <div className="h-40 flex items-center justify-center text-xs text-gray-500 font-semibold">Indexing memories...</div>
+              ) : memories.length === 0 ? (
+                <Card className="p-10 text-center text-xs text-gray-500 font-semibold border border-white/5">
+                  Rocky hasn't learned anything specific about you yet. Talk to Rocky more to generate memories!
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {memories.map((mem) => (
+                    <Card key={mem.id} className="p-5 space-y-3 border border-white/5 hover:border-violet-500/20 transition-all">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                          {mem.memory_type}
+                        </span>
+                        <span className="text-[10px] text-gray-500 font-semibold">
+                          {new Date(mem.updated_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-gray-200">{mem.title}</h4>
+                        <p className="text-xs text-gray-400 mt-1 leading-relaxed">{mem.content}</p>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <Activity className="h-4 w-4 text-emerald-400" />
+                Conversation Summaries
+              </h3>
+              
+              {loadingMemory ? (
+                <div className="h-40 flex items-center justify-center text-xs text-gray-500 font-semibold">Loading summaries...</div>
+              ) : summaries.length === 0 ? (
+                <Card className="p-10 text-center text-xs text-gray-500 font-semibold border border-white/5">
+                  No lengthy conversations have been summarized yet.
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {summaries.map((sum) => (
+                    <Card key={sum.id} className="p-5 space-y-2 border border-white/5">
+                      <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                        <span className="text-[10px] font-bold text-gray-500 uppercase">Context Sync</span>
+                        <span className="text-[10px] text-gray-500">{new Date(sum.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <p className="text-xs text-gray-300 leading-relaxed font-medium">
+                        {sum.summary}
+                      </p>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </PageContainer>
   )
 }

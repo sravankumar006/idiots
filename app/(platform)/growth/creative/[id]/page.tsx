@@ -124,7 +124,7 @@ export default function ProjectDetailPage({ params }: ParamsProps) {
           <p className="text-xs text-gray-500 leading-relaxed mb-6">
             The workspace room you are trying to reach does not exist or has been deleted from this node.
           </p>
-          <Link href="/projects" className="glass-button text-xs py-2 px-4 rounded-xl font-bold">
+          <Link href="/growth/creative" className="glass-button text-xs py-2 px-4 rounded-xl font-bold">
             Back to Creative Rooms
           </Link>
         </div>
@@ -137,7 +137,7 @@ export default function ProjectDetailPage({ params }: ParamsProps) {
       
       {/* Back button header */}
       <div className="mb-4">
-        <Link href="/projects" className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white transition-all font-semibold">
+        <Link href="/growth/creative" className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white transition-all font-semibold">
           <ArrowLeft className="h-4 w-4" />
           <span>back to rooms</span>
         </Link>

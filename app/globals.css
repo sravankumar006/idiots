@@ -3,46 +3,74 @@
 @variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #f4f3ef; /* Comfortable warm cream-gray light theme background */
-  --foreground: #1c1917; /* Dark stone charcoal text */
+  --background: #F8FAFC;
+  --foreground: #0F172A;
   
-  --color-glow-blue: #4f46e5; /* Indigo */
-  --color-glow-purple: #7c3aed; /* Violet/Lavender */
-  --color-glow-cyan: #db2777; /* Rose/Pink */
+  --card-bg: #FFFFFF;
+  --primary-text: #0F172A;
+  --secondary-text: #475569;
+  --active-color: #38BDF8;
+  --inactive-color: #E2E8F0;
   
-  --glass-bg: rgba(250, 249, 246, 0.65); /* Warm white translucent */
-  --glass-border: rgba(0, 0, 0, 0.05);
+  --logo-gradient-start: #38BDF8;
+  --logo-gradient-end: #34D399;
+  
+  --border-color: rgba(15, 23, 42, 0.06);
+  --shadow-color: rgba(15, 23, 42, 0.02);
+  
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(15, 23, 42, 0.06);
   --glass-highlight: rgba(255, 255, 255, 0.4);
-  --glass-shadow: rgba(0, 0, 0, 0.04);
-  --scrollbar-thumb: rgba(0, 0, 0, 0.12);
-  --scrollbar-track: rgba(0, 0, 0, 0.02);
+  --glass-shadow: rgba(15, 23, 42, 0.02);
+  --scrollbar-thumb: rgba(15, 23, 42, 0.12);
+  --scrollbar-track: rgba(15, 23, 42, 0.02);
 }
 
 .dark {
-  --background: #0f0f12; /* Sleek comfortable dark mode background */
-  --foreground: #f5f5f4; /* Softer white text */
+  --background: #120E1E;
+  --foreground: #E2E8F0;
   
-  --color-glow-blue: #6366f1; /* Soothing calm indigo */
-  --color-glow-purple: #ab9df2; /* Muted lavender */
-  --color-glow-cyan: #f272a1; /* Sweet rose/pink */
+  --card-bg: #1A142A;
+  --primary-text: #E2E8F0;
+  --secondary-text: #94A3B8;
+  --active-color: #FFAA80;
+  --inactive-color: #251E38;
   
-  --glass-bg: rgba(28, 31, 38, 0.65); /* Modern slate/black translucent */
+  --logo-gradient-start: #FFAA80;
+  --logo-gradient-end: #D8B4F8;
+  
+  --border-color: rgba(255, 255, 255, 0.04);
+  --shadow-color: rgba(0, 0, 0, 0.25);
+  
+  --glass-bg: rgba(26, 20, 42, 0.85);
   --glass-border: rgba(255, 255, 255, 0.04);
   --glass-highlight: rgba(255, 255, 255, 0.01);
-  --glass-shadow: rgba(0, 0, 0, 0.4);
-  --scrollbar-thumb: rgba(255, 255, 255, 0.08);
-  --scrollbar-track: rgba(0, 0, 0, 0.25);
+  --glass-shadow: rgba(0, 0, 0, 0.25);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.06);
+  --scrollbar-track: rgba(0, 0, 0, 0.15);
 }
 
 @theme {
-  --color-dark-bg: var(--background);
-  --color-dark-card: var(--glass-bg);
-  --color-glow-blue: var(--color-glow-blue);
-  --color-glow-purple: var(--color-glow-purple);
-  --color-glow-cyan: var(--color-glow-cyan);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card-bg);
+  --color-primary-text: var(--primary-text);
+  --color-secondary-text: var(--secondary-text);
+  --color-active: var(--active-color);
+  --color-inactive: var(--inactive-color);
   
+  --color-violet-400: var(--active-color);
+  --color-violet-500: var(--active-color);
+  --color-violet-600: var(--active-color);
+  
+  --color-gray-400: var(--secondary-text);
+  --color-gray-500: var(--secondary-text);
+  --color-gray-900: var(--primary-text);
+  
+  --color-logo-start: var(--logo-gradient-start);
+  --color-logo-end: var(--logo-gradient-end);
+
   --animate-pulse-slow: pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  --animate-glow: glow 2.5s ease-in-out infinite alternate;
 }
 
 @keyframes glow {
@@ -57,10 +85,17 @@
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, sans-serif;
+  font-family: var(--font-plus-jakarta-sans), var(--font-geist-sans), Arial, sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
   position: relative;
+}
+
+.logo-gradient {
+  background: linear-gradient(135deg, var(--logo-gradient-start) 0%, var(--logo-gradient-end) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 /* Glassmorphism utility classes */

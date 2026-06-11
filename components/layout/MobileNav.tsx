@@ -7,7 +7,7 @@ import {
   LayoutDashboard, 
   MessageSquare, 
   Sparkles, 
-  Clock, 
+  Compass, 
   Menu, 
   X, 
   Brain, 
@@ -15,7 +15,9 @@ import {
   Settings, 
   LogOut,
   Home,
-  History
+  History,
+  Archive,
+  Users
 } from 'lucide-react'
 import { logout } from '@/app/auth/actions'
 import { UserProfile } from '@/types'
@@ -34,7 +36,7 @@ export default function MobileNav({ onToggleMobileMenu, profile }: MobileNavProp
     { href: '/dashboard', label: 'Hub', icon: LayoutDashboard },
     { href: '/chat', label: 'Chat', icon: MessageSquare },
     { href: '/ai', label: 'AI', icon: Sparkles },
-    { href: '/study', label: 'Focus', icon: Clock },
+    { href: '/growth', label: 'Growth', icon: Compass },
   ]
 
   const handleLogoutClick = () => {
@@ -45,11 +47,11 @@ export default function MobileNav({ onToggleMobileMenu, profile }: MobileNavProp
 
   return (
     <>
-      {/* 1. Glassmorphic Bottom Tab Navbar */}
+      {/* 1. Bottom Tab Navbar */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 h-16 bg-[#faf9f6]/80 dark:bg-[#16181d]/85 backdrop-blur-xl border-t border-black/5 dark:border-white/5 px-6 flex items-center justify-between select-none">
         {tabs.map((tab) => {
           const Icon = tab.icon
-          const isActive = pathname === tab.href
+          const isActive = pathname === tab.href || (tab.href !== '/dashboard' && pathname.startsWith(tab.href))
           
           return (
             <Link
@@ -114,36 +116,45 @@ export default function MobileNav({ onToggleMobileMenu, profile }: MobileNavProp
               </Link>
 
               <Link
-                href="/timeline"
+                href="/us"
                 onClick={() => setDrawerOpen(false)}
                 className="flex items-center gap-3 p-3.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
               >
-                <History className="h-4.5 w-4.5 text-rose-400" />
+                <Users className="h-4.5 w-4.5 text-rose-400" />
+                <span>Us Hub</span>
+              </Link>
+
+              <Link
+                href="/us/timeline"
+                onClick={() => setDrawerOpen(false)}
+                className="flex items-center gap-3 p-3.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+              >
+                <History className="h-4.5 w-4.5 text-amber-500" />
                 <span>Timeline</span>
               </Link>
 
               <Link
-                href="/memories"
+                href="/us/vault"
                 onClick={() => setDrawerOpen(false)}
                 className="flex items-center gap-3 p-3.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
               >
-                <Brain className="h-4.5 w-4.5 text-cyan-400" />
-                <span>Mind Logs</span>
+                <Archive className="h-4.5 w-4.5 text-emerald-400" />
+                <span>Scrapbook</span>
               </Link>
-              
+
               <Link
-                href="/projects"
+                href="/growth"
                 onClick={() => setDrawerOpen(false)}
                 className="flex items-center gap-3 p-3.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
               >
-                <FolderHeart className="h-4.5 w-4.5 text-amber-500" />
-                <span>Creative Rooms</span>
+                <Compass className="h-4.5 w-4.5 text-cyan-400" />
+                <span>Growth Hub</span>
               </Link>
 
               <Link
                 href="/settings"
                 onClick={() => setDrawerOpen(false)}
-                className="flex items-center gap-3 p-3.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white col-span-2 transition-colors"
+                className="flex items-center gap-3 p-3.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
               >
                 <Settings className="h-4.5 w-4.5 text-gray-400" />
                 <span>Preferences</span>

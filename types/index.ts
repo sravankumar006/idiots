@@ -42,6 +42,7 @@ export interface ChatMessage {
   sender_id: string
   message: string
   type: string // e.g., 'text', 'ai', 'media'
+  category?: string // 'Study', 'Coding', 'Research', 'Projects', 'General'
   reply_to: string | null // parent message ID for replies
   created_at: string
   profiles?: UserProfile // Joined sender profile

@@ -272,15 +272,15 @@ export default function MessageBubble({
             className={`p-3.5 text-[13px] leading-relaxed border transition-all duration-500 ${
               message.type === 'ai'
                 ? studyModeActive
-                  ? 'bg-[#18181f] text-gray-300 border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.02)] dark:bg-[#121216] dark:border-amber-500/10'
-                  : 'bg-[#1c1f26] text-gray-200 border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.1)] dark:bg-[#16181d] dark:border-indigo-400/20'
+                  ? 'bg-[#f3f0e8] text-gray-800 border-amber-500/20 dark:bg-[#201c18] dark:text-gray-300 dark:border-amber-500/10'
+                  : 'bg-[#f0edf5] text-gray-800 border-black/5 dark:bg-[#201833] dark:text-gray-200 dark:border-white/5'
                 : isSelf
                 ? studyModeActive
                   ? 'bg-[#d97706] text-white border-transparent dark:bg-[#b45309]'
-                  : `bg-[#6366f1] text-white border-black/5 dark:bg-[#5b5fcf] dark:text-white dark:border-white/5`
+                  : `bg-violet-600 text-white dark:text-[#120E1E] border-transparent`
                 : studyModeActive
-                ? 'bg-white text-gray-800 border-amber-500/10 dark:bg-[#16181d] dark:text-gray-200 dark:border-white/5'
-                : `bg-white text-gray-800 border-black/5 dark:bg-[#1c1f26] dark:text-gray-200 dark:border-white/5 shadow-sm`
+                ? 'bg-white text-gray-800 border-amber-500/10 dark:bg-[#1A142A] dark:text-gray-200 dark:border-white/5'
+                : `bg-white text-gray-800 border-black/5 dark:bg-[#1A142A] dark:text-gray-200 dark:border-white/5 shadow-sm`
             } ${
               // Dynamic border radius for grouping
               isSelf

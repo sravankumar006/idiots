@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
@@ -13,8 +13,12 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Home,
-  History
+  History,
+  Archive,
+  Users,
+  Compass
 } from 'lucide-react'
 import { UserProfile } from '@/types'
 
@@ -26,46 +30,99 @@ interface SidebarProps {
 
 export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: SidebarProps) {
   const pathname = usePathname()
+  
+  // Collapsible states
+  const [usExpanded, setUsExpanded] = useState(false)
+  const [growthExpanded, setGrowthExpanded] = useState(false)
 
-  const navItems = [
+  // Auto-expand sections based on the current active route
+  useEffect(() => {
+    if (pathname.startsWith('/us')) {
+      setUsExpanded(true)
+    }
+    if (pathname.startsWith('/growth')) {
+      setGrowthExpanded(true)
+    }
+  }, [pathname])
+
+  const mainNavItems = [
     { href: '/dashboard', label: 'home', icon: LayoutDashboard },
     { href: '/chat', label: 'chat lounge', icon: MessageSquare },
     { href: '/ai', label: 'companion', icon: Sparkles },
     { href: `/space/${profile?.username || 'me'}`, label: 'my corner', icon: Home },
-    { href: '/timeline', label: 'shared timeline', icon: History },
-    { href: '/study', label: 'zen focus', icon: Clock },
-    { href: '/memories', label: 'memories', icon: Brain },
-    { href: '/projects', label: 'creative rooms', icon: FolderHeart },
-    { href: '/settings', label: 'settings', icon: Settings },
   ]
+
+  const usSubItems = [
+    { href: '/us/timeline', label: 'timeline', icon: History },
+    { href: '/us/vault', label: 'scrapbook vault', icon: Archive },
+  ]
+
+  const growthSubItems = [
+    { href: '/growth/focus', label: 'zen focus', icon: Clock },
+    { href: '/growth/creative', label: 'creative room', icon: FolderHeart },
+    { href: '/growth/memories', label: 'memories', icon: Brain },
+  ]
+
+  // Render a single navigation link
+  const renderLink = (item: { href: string; label: string; icon: any }, isSubItem = false) => {
+    const Icon = item.icon
+    const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+    
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={`flex items-center gap-3 py-2.5 px-3.5 rounded-xl text-xs font-bold tracking-wide transition-all relative group cursor-pointer ${
+          isSubItem ? 'pl-8' : ''
+        } ${
+          isActive 
+            ? 'text-violet-600 dark:text-violet-400 bg-violet-500/5 dark:bg-violet-500/10' 
+            : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5'
+        }`}
+      >
+        <Icon className={`h-4.5 w-4.5 shrink-0 transition-transform duration-300 group-hover:scale-105 ${
+          isActive ? 'text-violet-500 dark:text-violet-400' : 'text-gray-400 dark:text-gray-500 group-hover:text-violet-600 dark:group-hover:text-violet-300'
+        }`} />
+        
+        {!isCollapsed && (
+          <span className="animate-fadeIn truncate">{item.label}</span>
+        )}
+
+        {isCollapsed && (
+          <div className="absolute left-16 scale-0 group-hover:scale-100 transition-all duration-200 z-50 py-1.5 px-3 rounded-lg bg-[#faf9f6] dark:bg-[#141520] border border-black/5 dark:border-white/10 text-xs font-bold text-gray-800 dark:text-white whitespace-nowrap shadow-lg">
+            {item.label}
+          </div>
+        )}
+      </Link>
+    )
+  }
 
   return (
     <aside 
-      className={`flex flex-col h-full glass-panel border-r border-black/5 dark:border-white/5 transition-all duration-500 ease-in-out select-none shrink-0 ${
+      className={`flex flex-col h-full bg-[#faf9f6] dark:bg-[#141520] border-r border-black/5 dark:border-white/5 transition-all duration-500 ease-in-out select-none shrink-0 ${
         isCollapsed ? 'w-20' : 'w-64'
       }`}
     >
-      {/* Top Branding Section */}
+      {/* Branding */}
       <div className={`flex items-center h-16 px-5 border-b border-black/5 dark:border-white/5 ${
         isCollapsed ? 'justify-center' : 'justify-between'
       }`}>
         {!isCollapsed && (
           <div className="flex items-center gap-2.5 animate-fadeIn">
-            <div className="h-7 w-7 rounded-xl bg-gradient-to-tr from-violet-500 to-rose-400 flex items-center justify-center shadow-[0_0_10px_rgba(139,92,246,0.2)]">
+            <div className="h-7 w-7 rounded-xl bg-gradient-to-tr from-logo-start to-logo-end flex items-center justify-center shadow-md">
               <span className="text-black font-extrabold text-[10px]">IS</span>
             </div>
-            <span className="font-extrabold tracking-wider text-sm text-transparent bg-clip-text bg-gradient-to-r from-gray-900 via-violet-600 to-rose-500 dark:from-white dark:via-violet-200 dark:to-rose-200 lowercase">
+            <span className="font-extrabold tracking-wider text-xs logo-gradient lowercase">
               idiots space
             </span>
           </div>
         )}
         {isCollapsed && (
-          <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-violet-500 to-rose-400 flex items-center justify-center shadow-[0_0_10px_rgba(139,92,246,0.3)]">
+          <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-logo-start to-logo-end flex items-center justify-center shadow-md">
             <span className="text-black font-extrabold text-xs">IS</span>
           </div>
         )}
 
-        {/* Collapse Button */}
         {!isCollapsed && (
           <button 
             onClick={() => setIsCollapsed(true)}
@@ -78,42 +135,85 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: Sideba
         )}
       </div>
 
-      {/* Navigation Items */}
-      <nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto">
-        {navItems.map((item) => {
-          const Icon = item.icon
-          const isActive = pathname === item.href
-          
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3.5 py-3 px-3.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 relative group cursor-pointer ${
-                isActive 
-                  ? 'text-violet-600 dark:text-white bg-gradient-to-r from-violet-500/10 via-rose-500/5 to-transparent border-l-2 border-violet-400' 
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-black/3 dark:hover:bg-white/3'
-              }`}
-            >
-              <Icon className={`h-5 w-5 shrink-0 transition-transform duration-300 group-hover:scale-110 ${
-                isActive ? 'text-violet-500 dark:text-violet-400' : 'text-gray-400 group-hover:text-violet-600 dark:group-hover:text-violet-300'
-              }`} />
-              
-              {!isCollapsed && (
-                <span className="animate-fadeIn">{item.label}</span>
-              )}
+      {/* Navigation Links */}
+      <nav className="flex-1 px-3 py-6 space-y-1.5 overflow-y-auto scrollbar-none">
+        
+        {/* Main Items */}
+        {mainNavItems.map(item => renderLink(item))}
 
-              {/* Tooltip for collapsed state */}
-              {isCollapsed && (
-                <div className="absolute left-16 scale-0 group-hover:scale-100 transition-all duration-200 z-50 py-1.5 px-3 rounded-lg bg-[#fefdfb] dark:bg-[#1c1f26] border border-black/5 dark:border-white/10 text-xs font-semibold text-gray-800 dark:text-white whitespace-nowrap shadow-lg">
-                  {item.label}
+        {/* Us Group Section */}
+        <div className="space-y-1">
+          {isCollapsed ? (
+            renderLink({ href: '/us', label: 'us hub', icon: Users })
+          ) : (
+            <>
+              <button
+                onClick={() => setUsExpanded(!usExpanded)}
+                className={`w-full flex items-center justify-between py-2.5 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  pathname.startsWith('/us')
+                    ? 'text-violet-600 dark:text-violet-400 bg-violet-500/5 dark:bg-violet-500/5'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-black/3 dark:hover:bg-white/3'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Users className={`h-4.5 w-4.5 ${pathname.startsWith('/us') ? 'text-violet-500' : 'text-gray-400 dark:text-gray-500'}`} />
+                  <span className="lowercase">Us</span>
                 </div>
-              )}
-            </Link>
-          )
-        })}
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-300 ${usExpanded ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {/* Us Submenus */}
+              <div 
+                className={`transition-all duration-300 ease-in-out overflow-hidden space-y-1 pl-1 ${
+                  usExpanded ? 'max-h-32 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'
+                }`}
+              >
+                {usSubItems.map(item => renderLink(item, true))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Growth Group Section */}
+        <div className="space-y-1">
+          {isCollapsed ? (
+            renderLink({ href: '/growth', label: 'growth dashboard', icon: Compass })
+          ) : (
+            <>
+              <button
+                onClick={() => setGrowthExpanded(!growthExpanded)}
+                className={`w-full flex items-center justify-between py-2.5 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  pathname.startsWith('/growth')
+                    ? 'text-violet-600 dark:text-violet-400 bg-violet-500/5 dark:bg-violet-500/5'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-black/3 dark:hover:bg-white/3'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Compass className={`h-4.5 w-4.5 ${pathname.startsWith('/growth') ? 'text-violet-500' : 'text-gray-400 dark:text-gray-500'}`} />
+                  <span className="lowercase">Growth</span>
+                </div>
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-300 ${growthExpanded ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {/* Growth Submenus */}
+              <div 
+                className={`transition-all duration-300 ease-in-out overflow-hidden space-y-1 pl-1 ${
+                  growthExpanded ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'
+                }`}
+              >
+                {growthSubItems.map(item => renderLink(item, true))}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="border-t border-black/5 dark:border-white/5 my-4" />
+
+        {/* Settings */}
+        {renderLink({ href: '/settings', label: 'settings', icon: Settings })}
       </nav>
 
-      {/* Bottom Actions Area */}
+      {/* Collapse / Expand Switcher */}
       <div className="p-3 border-t border-black/5 dark:border-white/5">
         {isCollapsed ? (
           <button 

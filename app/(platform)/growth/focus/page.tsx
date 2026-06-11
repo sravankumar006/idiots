@@ -1,18 +1,128 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Play, Pause, RotateCcw, Clock, ShieldCheck, Zap, Award } from 'lucide-react'
+import { Play, Pause, RotateCcw, Clock, ShieldCheck, Zap, Award, Flame } from 'lucide-react'
 import PageContainer from '@/components/layout/PageContainer'
 import SectionHeader from '@/components/layout/SectionHeader'
 import { Card } from '@/components/ui/Card'
+import { createClient } from '@/lib/supabase/client'
+import { UserProfile } from '@/types'
 
 export default function StudyPage() {
+  const supabase = createClient()
+  const [activeProfile, setActiveProfile] = useState<UserProfile | null>(null)
+  const [studyStats, setStudyStats] = useState<any>(null)
+
   const [minutes, setMinutes] = useState(25)
   const [seconds, setSeconds] = useState(0)
   const [isActive, setIsActive] = useState(false)
   const [preset, setPreset] = useState(25)
   
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Fetch user profile & study stats
+  useEffect(() => {
+    const fetchUserAndStats = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
+          if (prof) {
+            setActiveProfile(prof as UserProfile)
+            
+            const { data: stats } = await supabase.from('study_stats').select('*').eq('user_id', user.id).maybeSingle()
+            if (stats) {
+              setStudyStats(stats)
+            } else {
+              const def = {
+                user_id: user.id,
+                total_study_minutes: 0,
+                completed_pomodoros: 0,
+                pdfs_reviewed: 0,
+                ai_sessions_count: 0,
+                current_streak: 1
+              }
+              await supabase.from('study_stats').insert(def)
+              setStudyStats(def)
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load study profile or stats:", err)
+      }
+    }
+    fetchUserAndStats()
+  }, [supabase])
+
+  const handleSessionComplete = async (sessionMinutes: number) => {
+    if (!activeProfile) return
+
+    const nextMinutes = (studyStats?.total_study_minutes || 0) + sessionMinutes
+    const nextPomodoros = (studyStats?.completed_pomodoros || 0) + 1
+    const nextStreak = studyStats?.current_streak || 1
+
+    setStudyStats((prev: any) => ({
+      ...prev,
+      total_study_minutes: nextMinutes,
+      completed_pomodoros: nextPomodoros
+    }))
+
+    try {
+      await supabase.from('study_stats').update({
+        total_study_minutes: nextMinutes,
+        completed_pomodoros: nextPomodoros,
+        updated_at: new Date().toISOString()
+      }).eq('user_id', activeProfile.id)
+
+      // Automatic study milestone checks
+      // 1. 50 focus sessions completed
+      if (nextPomodoros === 50) {
+        await supabase.from('memories').insert({
+          created_by: activeProfile.id,
+          user_id: activeProfile.id,
+          title: `Focus Milestone: 50 Study Sessions Completed! 🕯️`,
+          description: `@${activeProfile.username} has logged 50 focus Pomodoros inside the Zen Focus space! Outstanding commitment.`,
+          memory_type: 'study',
+          type: 'milestone',
+          visibility: 'public',
+          related_users: [activeProfile.username]
+        })
+      }
+
+      // 2. 100 study hours (6000 minutes)
+      const prevHours = Math.floor((studyStats?.total_study_minutes || 0) / 60)
+      const nextHours = Math.floor(nextMinutes / 60)
+      if (prevHours < 100 && nextHours >= 100) {
+        await supabase.from('memories').insert({
+          created_by: activeProfile.id,
+          user_id: activeProfile.id,
+          title: `Focus Milestone: 100 Study Hours Surpassed! 🏆`,
+          description: `A monument of focus! @${activeProfile.username} reached 100 hours of total study focus time.`,
+          memory_type: 'study',
+          type: 'milestone',
+          visibility: 'public',
+          related_users: [activeProfile.username]
+        })
+      }
+
+      // 3. Study streak milestone (e.g. 5 days)
+      if (nextStreak > 0 && nextStreak % 5 === 0 && nextPomodoros % 5 === 0) {
+        await supabase.from('memories').insert({
+          created_by: activeProfile.id,
+          user_id: activeProfile.id,
+          title: `Focus Streak Achieved: ${nextStreak} Days! 🔥`,
+          description: `@${activeProfile.username} is keeping the flame alive with a ${nextStreak}-day study focus streak!`,
+          memory_type: 'study',
+          type: 'milestone',
+          visibility: 'public',
+          related_users: [activeProfile.username]
+        })
+      }
+
+    } catch (err) {
+      console.warn("Failed to update study stats in DB:", err)
+    }
+  }
 
   useEffect(() => {
     if (isActive) {
@@ -21,10 +131,10 @@ export default function StudyPage() {
           setSeconds(seconds - 1)
         } else if (seconds === 0) {
           if (minutes === 0) {
-            // Timer finished
             setIsActive(false)
             if (timerRef.current) clearInterval(timerRef.current)
             alert('Focus session completed! Take a short break.')
+            handleSessionComplete(preset)
             resetTimer()
           } else {
             setMinutes(minutes - 1)
@@ -39,7 +149,7 @@ export default function StudyPage() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
     }
-  }, [isActive, minutes, seconds])
+  }, [isActive, minutes, seconds, preset])
 
   const toggleTimer = () => {
     setIsActive(!isActive)
@@ -148,12 +258,18 @@ export default function StudyPage() {
             
             <div className="space-y-3.5 text-xs">
               <div className="flex justify-between">
-                <span className="text-gray-500 font-semibold">Today's Focus</span>
-                <span className="text-white font-bold">120 Minutes</span>
+                <span className="text-gray-500 font-semibold">Total Focus Minutes</span>
+                <span className="text-white font-bold">{studyStats?.total_study_minutes || 0} Minutes</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500 font-semibold">Weekly Target</span>
-                <span className="text-gray-300 font-bold">420 / 600m</span>
+                <span className="text-gray-500 font-semibold">Completed Pomodoros</span>
+                <span className="text-gray-300 font-bold">{studyStats?.completed_pomodoros || 0} sessions</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500 font-semibold">Active Streak</span>
+                <span className="text-orange-400 font-bold flex items-center gap-1">
+                  <Flame className="h-4 w-4 fill-orange-500/20" /> {studyStats?.current_streak || 1} Days
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500 font-semibold">Rank Status</span>

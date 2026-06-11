@@ -11,9 +11,12 @@ const PATH_TITLES: Record<string, string> = {
   '/dashboard': 'home',
   '/chat': 'chat lounge',
   '/ai': 'companion',
-  '/study': 'zen focus',
-  '/memories': 'memories',
-  '/projects': 'creative rooms',
+  '/us': 'us hub',
+  '/us/timeline': 'shared timeline',
+  '/us/vault': 'scrapbook vault',
+  '/growth': 'growth dashboard',
+  '/growth/focus': 'zen focus',
+  '/growth/creative': 'creative rooms',
   '/settings': 'settings',
 }
 
@@ -122,7 +125,7 @@ export default function Topbar({
 
         {/* User Quick Profile Icon */}
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-rose-400 flex items-center justify-center text-xs font-bold text-black border border-white/10 shadow-md">
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-logo-start to-logo-end flex items-center justify-center text-xs font-bold text-black border border-white/10 shadow-md">
             {profile.username.substring(0, 2).toUpperCase()}
           </div>
         </div>

@@ -1,10 +1,11 @@
 'use client'
 
-import React, { use, useState, useEffect, useRef } from 'react'
+import React, { use, useState, useEffect, useRef, useMemo } from 'react'
 import {
   Volume2, VolumeX, Play, Pause, Music, Flame, Quote, Save,
   Settings2, Heart, Coffee, CloudRain, Waves, Trees, ArrowRight,
-  Sparkles, Award, User, RefreshCw, BarChart2, ChevronUp, ChevronDown, CheckCircle2
+  Sparkles, Award, User, RefreshCw, BarChart2, ChevronUp, ChevronDown, CheckCircle2,
+  Lock, Eye, ImageIcon, Code
 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -17,19 +18,19 @@ import { useDashboardData } from '@/hooks/useDashboardData'
 
 // presets
 const WALLPAPERS = [
-  { id: 'starry-night', name: 'starry night 🌌', css: 'bg-gradient-to-b from-[#0b0c15] via-[#111324] to-[#07080f]' },
-  { id: 'cozy-study', name: 'warm study room 🕯️', css: 'bg-gradient-to-b from-[#1c1815] via-[#241e1a] to-[#141210]' },
-  { id: 'rainy-window', name: 'rainy window 🌧️', css: 'bg-gradient-to-b from-[#0f121d] via-[#181d2f] to-[#0c0e17]' },
-  { id: 'forest-cabin', name: 'forest cabin 🌲', css: 'bg-gradient-to-b from-[#0a1410] via-[#10221a] to-[#060c09]' },
-  { id: 'sunset-vibe', name: 'neon sunset 🌇', css: 'bg-gradient-to-b from-[#1b0d21] via-[#2f132e] to-[#120716]' },
+  { id: 'starry-night', name: 'starry night 🌌', css: 'bg-gradient-to-b from-slate-50 via-sky-50 to-white dark:from-[#0b0c15] dark:via-[#111324] dark:to-[#07080f]' },
+  { id: 'cozy-study', name: 'warm study room 🕯️', css: 'bg-gradient-to-b from-orange-50 via-amber-50 to-white dark:from-[#1c1815] dark:via-[#241e1a] dark:to-[#141210]' },
+  { id: 'rainy-window', name: 'rainy window 🌧️', css: 'bg-gradient-to-b from-slate-100 via-blue-50 to-white dark:from-[#0f121d] dark:via-[#181d2f] dark:to-[#0c0e17]' },
+  { id: 'forest-cabin', name: 'forest cabin 🌲', css: 'bg-gradient-to-b from-emerald-50 via-teal-50 to-white dark:from-[#0a1410] dark:via-[#10221a] dark:to-[#060c09]' },
+  { id: 'sunset-vibe', name: 'neon sunset 🌇', css: 'bg-gradient-to-b from-rose-50 via-orange-50 to-white dark:from-[#1b0d21] dark:via-[#2f132e] dark:to-[#120716]' },
 ]
 
 const THEMES: Record<string, { label: string; glow: string; text: string; bg: string; button: string }> = {
-  violet: { label: 'violet dream', glow: 'shadow-[0_0_15px_rgba(139,92,246,0.2)] border-violet-500/20', text: 'text-violet-400', bg: 'bg-violet-500/10', button: 'bg-violet-600 hover:bg-violet-500' },
-  emerald: { label: 'forest zen', glow: 'shadow-[0_0_15px_rgba(16,185,129,0.2)] border-emerald-500/20', text: 'text-emerald-400', bg: 'bg-emerald-500/10', button: 'bg-emerald-600 hover:bg-emerald-500' },
-  rose: { label: 'warm rose', glow: 'shadow-[0_0_15px_rgba(244,63,94,0.2)] border-rose-500/20', text: 'text-rose-400', bg: 'bg-rose-500/10', button: 'bg-rose-600 hover:bg-rose-500' },
-  amber: { label: 'cozy amber', glow: 'shadow-[0_0_15px_rgba(245,158,11,0.2)] border-amber-500/20', text: 'text-amber-400', bg: 'bg-amber-500/10', button: 'bg-amber-600 hover:bg-amber-500' },
-  sky: { label: 'cloud sky', glow: 'shadow-[0_0_15px_rgba(14,165,233,0.2)] border-sky-500/20', text: 'text-sky-400', bg: 'bg-sky-500/10', button: 'bg-sky-600 hover:bg-sky-500' },
+  violet: { label: 'violet dream', glow: 'shadow-[0_0_15px_rgba(139,92,246,0.2)] border-violet-500/20', text: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10', button: 'bg-violet-600 hover:bg-violet-500' },
+  emerald: { label: 'forest zen', glow: 'shadow-[0_0_15px_rgba(16,185,129,0.2)] border-emerald-500/20', text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10', button: 'bg-emerald-600 hover:bg-emerald-500' },
+  rose: { label: 'warm rose', glow: 'shadow-[0_0_15px_rgba(244,63,94,0.2)] border-rose-500/20', text: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-500/10', button: 'bg-rose-600 hover:bg-rose-500' },
+  amber: { label: 'cozy amber', glow: 'shadow-[0_0_15px_rgba(245,158,11,0.2)] border-amber-500/20', text: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10', button: 'bg-amber-600 hover:bg-amber-500' },
+  sky: { label: 'cloud sky', glow: 'shadow-[0_0_15px_rgba(14,165,233,0.2)] border-sky-500/20', text: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-500/10', button: 'bg-sky-600 hover:bg-sky-500' },
 }
 
 const AMBIENT_SOUNDS = [
@@ -66,10 +67,14 @@ export default function SpacePage({ params }: SpacePageProps) {
 
   // Edit Space modal state
   const [showConfig, setShowConfig] = useState(false)
+  const [editingBanner, setEditingBanner] = useState('')
   const [editingQuote, setEditingQuote] = useState('')
   const [editingSongTitle, setEditingSongTitle] = useState('')
   const [editingSongUrl, setEditingSongUrl] = useState('')
   const [editingPlaylistUrl, setEditingPlaylistUrl] = useState('')
+  const [editingCodingGoals, setEditingCodingGoals] = useState('')
+  const [editingStudyGoals, setEditingStudyGoals] = useState('')
+  const [editingStatus, setEditingStatus] = useState('')
 
   // Edit Mood state
   const [showMoodLog, setShowMoodLog] = useState(false)
@@ -96,7 +101,7 @@ export default function SpacePage({ params }: SpacePageProps) {
         }
 
         // 2. Resolve target space username
-        const { data: target, error } = await supabase
+        const { data: target } = await supabase
           .from('profiles')
           .select('*')
           .eq('username', username)
@@ -107,8 +112,7 @@ export default function SpacePage({ params }: SpacePageProps) {
         } else if (currentProfile && currentProfile.username.toLowerCase() === username.toLowerCase()) {
           setTargetProfile(currentProfile)
         } else {
-          // If not found in DB, search locally scoped simulated fallback or return 404
-          console.warn("User space profile not found in DB, using mock search fallback.")
+          console.warn("User space profile not found in DB, using fallback.")
           setTargetProfile({
             id: currentProfile?.id || 'mock-id',
             username: username,
@@ -195,7 +199,6 @@ export default function SpacePage({ params }: SpacePageProps) {
 
     // Handle initial autoplays
     if (spaceData.music_autoplay && spaceData.song_url && !songPlaying) {
-      // Browsers often block autoplay without user interaction, so we catch silently
       setTimeout(() => {
         if (songAudioRef.current) {
           songAudioRef.current.play()
@@ -258,10 +261,14 @@ export default function SpacePage({ params }: SpacePageProps) {
   // Open config modal with current values
   const openConfigModal = () => {
     if (!spaceData) return
-    setEditingQuote(spaceData.pinned_quote)
+    setEditingBanner(spaceData.profile_banner)
+    setEditingQuote(spaceData.favorite_quote)
     setEditingSongTitle(spaceData.song_title)
     setEditingSongUrl(spaceData.song_url)
     setEditingPlaylistUrl(spaceData.study_playlist_url)
+    setEditingCodingGoals(spaceData.coding_goals?.join(', ') || '')
+    setEditingStudyGoals(spaceData.study_goals?.join(', ') || '')
+    setEditingStatus(spaceData.current_status)
     setShowConfig(true)
   }
 
@@ -269,17 +276,22 @@ export default function SpacePage({ params }: SpacePageProps) {
     e.preventDefault()
     setShowConfig(false)
     await updateSpaceData({
-      pinned_quote: editingQuote,
+      profile_banner: editingBanner,
+      favorite_quote: editingQuote,
+      pinned_quote: editingQuote, // compatibility
       song_title: editingSongTitle,
       song_url: editingSongUrl,
-      study_playlist_url: editingPlaylistUrl
+      study_playlist_url: editingPlaylistUrl,
+      coding_goals: editingCodingGoals.split(',').map(s => s.trim()).filter(Boolean),
+      study_goals: editingStudyGoals.split(',').map(s => s.trim()).filter(Boolean),
+      current_status: editingStatus
     })
   }
 
   const handleSaveMood = async (e: React.FormEvent) => {
     e.preventDefault()
     setShowMoodLog(false)
-    await logMood(newMood, newEnergy, newFocus, newStatus)
+    await logMood(newMood, newEnergy, newFocus, newStatus, 'public')
     setNewStatus('')
   }
 
@@ -297,6 +309,30 @@ export default function SpacePage({ params }: SpacePageProps) {
     await updateSpaceData({ widgets_layout: layout })
   }
 
+  // Mood Trend SVG sparkline generator
+  const moodTrendSvg = useMemo(() => {
+    const publicLogs = moodLogs.filter(log => log.visibility !== 'private' || !isReadOnly)
+    if (publicLogs.length < 2) return null
+    const logs = [...publicLogs].reverse().slice(-7) // Show last 7 check-ins
+    const width = 340
+    const height = 90
+    const padding = 15
+
+    const xStep = (width - padding * 2) / (logs.length - 1)
+    const points = logs.map((log, index) => {
+      const x = padding + index * xStep
+      const val = log.mood_value !== undefined ? log.mood_value : (log.mood_rating * 10)
+      const y = height - padding - (val / 100) * (height - padding * 2)
+      return { x, y, label: log.mood_label || '😐', value: val }
+    })
+
+    const pathD = points.reduce((acc, p, i) => {
+      return i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`
+    }, '')
+
+    return { points, pathD, width, height }
+  }, [moodLogs, isReadOnly])
+
   if (loadingProfile || loadingSpace || !spaceData) {
     return (
       <PageContainer>
@@ -308,22 +344,23 @@ export default function SpacePage({ params }: SpacePageProps) {
     )
   }
 
-  const activeWallpaper = WALLPAPERS.find(w => w.id === spaceData.wallpaper_url) || WALLPAPERS[0]
-  const activeTheme = THEMES[spaceData.theme_color] || THEMES.violet
+  const activeWallpaper = WALLPAPERS.find(w => w.id === spaceData.profile_wallpaper) || WALLPAPERS[0]
+  const activeTheme = THEMES[spaceData.theme_colors] || THEMES.violet
 
   // Calculate statistics totals
   const totalSolved = codingStats ? (codingStats.leetcode_solved + codingStats.hackerrank_solved + codingStats.codeforces_solved) : 0
-  const latestMood = moodLogs[0]
+  const publicMoodLogs = moodLogs.filter(log => log.visibility !== 'private' || !isReadOnly)
+  const latestMood = publicMoodLogs[0]
 
   return (
     <div className={`min-h-screen relative overflow-hidden transition-all duration-700 p-6 ${activeWallpaper.css}`}>
       
-      {/* ── presetting effects ── */}
+      {/* ── Visual effects overlays ── */}
       {spaceData.profile_accents === 'stars' && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-10 left-[20%] h-1 w-1 rounded-full bg-white animate-pulse-slow shadow-[0_0_8px_white]" />
+          <div className="absolute top-10 left-[20%] h-1 w-1 rounded-full bg-white animate-pulse shadow-[0_0_8px_white]" />
           <div className="absolute top-[30%] left-[75%] h-1 w-1 bg-white animate-pulse shadow-[0_0_8px_white]" />
-          <div className="absolute top-[60%] left-[10%] h-1.5 w-1.5 rounded-full bg-white animate-pulse-slow shadow-[0_0_12px_white] delay-300" />
+          <div className="absolute top-[60%] left-[10%] h-1.5 w-1.5 rounded-full bg-white animate-pulse shadow-[0_0_12px_white] delay-300" />
           <div className="absolute top-[80%] left-[60%] h-1 w-1 bg-white animate-pulse shadow-[0_0_6px_white] delay-700" />
         </div>
       )}
@@ -341,18 +378,37 @@ export default function SpacePage({ params }: SpacePageProps) {
       )}
 
       <PageContainer>
+        {/* Banner Graphic Header */}
+        {spaceData.profile_banner && (
+          <div className="w-full h-32 md:h-44 rounded-3xl overflow-hidden border border-white/10 mb-6 relative">
+            <img src={spaceData.profile_banner} alt="space header banner" className="w-full h-full object-cover opacity-80" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          </div>
+        )}
         
-        {/* Dynamic header / navigation banner */}
-        <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/2 border border-white/5 p-4 rounded-3xl backdrop-blur-xl">
+        {/* Navigation / space information header */}
+        <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/60 dark:bg-white/5 border border-black/5 dark:border-white/5 shadow-sm dark:shadow-none p-4 rounded-3xl backdrop-blur-xl">
           <div className="flex items-center gap-3">
             <div className={`h-11 w-11 rounded-full bg-gradient-to-tr from-violet-500 to-rose-400 flex items-center justify-center shadow-lg font-bold text-black text-sm`}>
               {targetProfile?.username.slice(0, 2).toUpperCase()}
             </div>
             <div>
-              <h2 className="text-sm font-black text-white lowercase">
-                {targetProfile?.username}'s corner
-              </h2>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-black text-gray-900 dark:text-white lowercase">
+                  {targetProfile?.username}'s corner
+                </h2>
+                {spaceData.current_status && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 border border-white/5 text-gray-500 dark:text-gray-400 font-bold">
+                    💬 {spaceData.current_status}
+                  </span>
+                )}
+                {latestMood && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-300 font-bold">
+                    mood: {latestMood.mood_label}
+                  </span>
+                )}
+              </div>
+              <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-0.5">
                 personal digital room • {activeWallpaper.name}
               </p>
             </div>
@@ -361,7 +417,7 @@ export default function SpacePage({ params }: SpacePageProps) {
           <div className="flex items-center gap-2 flex-wrap">
             <Link 
               href={`/dashboard?userId=${targetProfile?.id}`}
-              className="py-2 px-3.5 rounded-xl bg-white/5 border border-white/5 text-[11px] font-bold text-gray-300 hover:text-white hover:bg-white/10 transition-all flex items-center gap-1.5 cursor-pointer"
+              className="py-2 px-3.5 rounded-xl bg-white/5 border border-white/5 text-[11px] font-bold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:text-white hover:bg-white/10 transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <span>View Career Hub</span>
               <ArrowRight className="h-3.5 w-3.5" />
@@ -382,12 +438,12 @@ export default function SpacePage({ params }: SpacePageProps) {
         {/* Outer widget grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* Main Space Vibe Deck - Col 1 & 2 */}
+          {/* Left Columns - Rearrangeable widgets */}
           <div className="lg:col-span-2 space-y-6">
             
-            {/* Ambient Sound Controller */}
-            <Card className="p-6 relative overflow-hidden backdrop-blur-md bg-black/25 border-white/5">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+            {/* Ambient sound deck */}
+            <Card className="p-6 relative overflow-hidden backdrop-blur-md bg-white/60 dark:bg-black/25 border-black/5 dark:border-white/5 shadow-sm dark:shadow-none">
+              <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
                 <Volume2 className="h-4 w-4 text-violet-400" />
                 room ambience generator
               </h3>
@@ -407,7 +463,7 @@ export default function SpacePage({ params }: SpacePageProps) {
                       } ${
                         isActive
                           ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 shadow-md'
-                          : 'bg-white/3 border-white/5 text-gray-400 hover:text-white hover:bg-white/8'
+                          : 'bg-white/3 border-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-white hover:bg-white/8'
                       }`}
                     >
                       <IconObj className={`h-4.5 w-4.5 shrink-0 ${isActive && ambientPlaying ? 'animate-pulse text-violet-400' : ''}`} />
@@ -422,20 +478,20 @@ export default function SpacePage({ params }: SpacePageProps) {
                   <div className="flex items-center gap-3">
                     <button
                       onClick={toggleAmbientPlaying}
-                      className="h-9 w-9 rounded-full bg-violet-600 hover:bg-violet-500 text-white flex items-center justify-center cursor-pointer shadow-md"
+                      className="h-9 w-9 rounded-full bg-violet-600 hover:bg-violet-500 text-gray-900 dark:text-white flex items-center justify-center cursor-pointer shadow-md"
                     >
                       {ambientPlaying ? <Pause className="h-4 w-4 fill-white" /> : <Play className="h-4 w-4 fill-white ml-0.5" />}
                     </button>
                     <div>
-                      <span className="text-[10px] text-gray-400 block font-bold uppercase">ambient state</span>
-                      <span className="text-xs font-semibold text-white">
+                      <span className="text-[10px] text-gray-500 dark:text-gray-400 block font-bold uppercase">ambient state</span>
+                      <span className="text-xs font-semibold text-gray-900 dark:text-white">
                         {ambientPlaying ? 'Synthesizing frequencies...' : 'Ambient paused'}
                       </span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Volume2 className="h-3.5 w-3.5 text-gray-400" />
+                    <Volume2 className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
                     <input
                       type="range"
                       min="0"
@@ -450,64 +506,113 @@ export default function SpacePage({ params }: SpacePageProps) {
               )}
             </Card>
 
-            {/* Rearrangeable widgets container */}
+            {/* Sorted widgets stack */}
             <div className="space-y-6">
               {spaceData.widgets_layout.map((widgetKey, idx) => {
                 
-                // Widget 1: Personal mood widget
+                // 1. Mood Widget
                 if (widgetKey === 'mood') {
                   return (
-                    <Card key="mood" className="p-6 relative overflow-hidden backdrop-blur-md bg-black/25 border-white/5 group">
-                      
-                      {/* Widget Sorting Accents */}
+                    <Card key="mood" className="p-6 relative overflow-hidden backdrop-blur-md bg-white/60 dark:bg-black/25 border-black/5 dark:border-white/5 shadow-sm dark:shadow-none group">
                       {!isReadOnly && (
                         <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => moveWidget(idx, 'up')} className="p-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer"><ChevronUp className="h-3.5 w-3.5" /></button>
-                          <button onClick={() => moveWidget(idx, 'down')} className="p-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer"><ChevronDown className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => moveWidget(idx, 'up')} className="p-1 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-white cursor-pointer"><ChevronUp className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => moveWidget(idx, 'down')} className="p-1 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-white cursor-pointer"><ChevronDown className="h-3.5 w-3.5" /></button>
                         </div>
                       )}
 
-                      <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
                         <Heart className="h-4 w-4 text-rose-400" />
-                        emotional status & energy
+                        emotional status & mood trends
                       </h3>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-3.5">
                           <div>
-                            <span className="text-[10px] text-gray-400 block uppercase font-bold">current status</span>
-                            <p className="text-sm font-semibold text-white mt-1 italic">
-                              "{latestMood?.status_text || 'just taking it one step at a time.'}"
-                            </p>
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400 block uppercase font-bold">latest checkin</span>
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <span className="text-xl">{latestMood?.mood_label?.split(' ')[0] || '😐'}</span>
+                              <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                                "{latestMood?.status_text || 'stable state.'}"
+                              </span>
+                            </div>
                           </div>
 
                           <div className="flex gap-4">
-                            <div className="bg-white/3 border border-white/5 p-3 rounded-2xl flex-1 text-center">
-                              <span className="text-[9px] text-gray-400 uppercase block font-bold">mood rating</span>
-                              <span className="text-lg font-black text-rose-400">{latestMood?.mood_rating || 5}/10</span>
+                            <div className="bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-3 rounded-2xl flex-1 text-center">
+                              <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase block font-bold">mood</span>
+                              <span className="text-lg font-black text-rose-400">
+                                {latestMood ? (latestMood.mood_value !== undefined ? latestMood.mood_value : latestMood.mood_rating * 10) : 50}/100
+                              </span>
                             </div>
-                            <div className="bg-white/3 border border-white/5 p-3 rounded-2xl flex-1 text-center">
-                              <span className="text-[9px] text-gray-400 uppercase block font-bold">energy level</span>
+                            <div className="bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-3 rounded-2xl flex-1 text-center">
+                              <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase block font-bold">energy</span>
                               <span className="text-lg font-black text-amber-400">{latestMood?.energy_level || 5}/10</span>
                             </div>
-                            <div className="bg-white/3 border border-white/5 p-3 rounded-2xl flex-1 text-center">
-                              <span className="text-[9px] text-gray-400 uppercase block font-bold">focus index</span>
+                            <div className="bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-3 rounded-2xl flex-1 text-center">
+                              <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase block font-bold">focus</span>
                               <span className="text-lg font-black text-violet-400">{latestMood?.focus_level || 5}/10</span>
                             </div>
                           </div>
-                        </div>
 
-                        <div className="flex flex-col justify-center items-stretch space-y-3">
                           {!isReadOnly ? (
                             <button
                               onClick={() => setShowMoodLog(true)}
-                              className="py-2.5 px-4 rounded-xl border border-white/5 bg-white/5 text-xs font-bold text-white hover:bg-white/10 transition-all cursor-pointer text-center"
+                              className="w-full py-2.5 px-4 rounded-xl border border-white/5 bg-white/5 text-xs font-bold text-gray-900 dark:text-white hover:bg-white/10 transition-all cursor-pointer text-center"
                             >
                               Log New Mood Check-in
                             </button>
                           ) : (
-                            <div className="text-xs text-gray-400 leading-relaxed font-semibold bg-white/3 p-3 rounded-2xl border border-white/5">
-                              ❤️ Supporting their journey. Respecting their space and emotional privacy.
+                            <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-semibold bg-white/3 p-3 rounded-2xl border border-white/5 flex items-center gap-1.5 justify-center">
+                              <Heart className="h-3.5 w-3.5 text-rose-500 fill-rose-500" />
+                              <span>sharing their coding journey with friends.</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Mood trend graph visualizer */}
+                        <div className="flex flex-col justify-center items-center">
+                          <span className="text-[9px] text-gray-500 block uppercase font-bold mb-2 tracking-wider">Mood index chart</span>
+                          {moodTrendSvg ? (
+                            <div className="relative">
+                              <svg width={moodTrendSvg.width} height={moodTrendSvg.height} className="overflow-visible">
+                                <defs>
+                                  <linearGradient id="moodGlow" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.4" />
+                                    <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.0" />
+                                  </linearGradient>
+                                </defs>
+                                {/* Area block */}
+                                <path 
+                                  d={`${moodTrendSvg.pathD} L ${moodTrendSvg.points[moodTrendSvg.points.length - 1].x} ${moodTrendSvg.height - 15} L ${moodTrendSvg.points[0].x} ${moodTrendSvg.height - 15} Z`} 
+                                  fill="url(#moodGlow)" 
+                                />
+                                {/* Sparkline path */}
+                                <path 
+                                  d={moodTrendSvg.pathD} 
+                                  fill="none" 
+                                  stroke="#f43f5e" 
+                                  strokeWidth="2.5" 
+                                  className="drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]"
+                                />
+                                {/* Grid reference lines */}
+                                <line x1="15" y1="15" x2="325" y2="15" stroke="white" strokeOpacity="0.05" strokeDasharray="3" />
+                                <line x1="15" y1="75" x2="325" y2="75" stroke="white" strokeOpacity="0.05" strokeDasharray="3" />
+                                
+                                {/* Nodes */}
+                                {moodTrendSvg.points.map((p, idx) => (
+                                  <g key={idx} className="group/node">
+                                    <circle cx={p.x} cy={p.y} r="4" fill="#141520" stroke="#f43f5e" strokeWidth="2" />
+                                    <text x={p.x} y={p.y - 8} textAnchor="middle" fontSize="10" className="opacity-70 fill-white select-none pointer-events-none">
+                                      {p.label.split(' ')[0]}
+                                    </text>
+                                  </g>
+                                ))}
+                              </svg>
+                            </div>
+                          ) : (
+                            <div className="text-center py-6 text-xs text-gray-500 font-semibold border border-dashed border-white/5 rounded-2xl w-full">
+                              need at least 2 logs to trace trend.
                             </div>
                           )}
                         </div>
@@ -516,56 +621,56 @@ export default function SpacePage({ params }: SpacePageProps) {
                   )
                 }
 
-                // Widget 2: Favorite quote
+                // 2. Favorite Quote
                 if (widgetKey === 'quote') {
                   return (
-                    <Card key="quote" className="p-6 relative overflow-hidden backdrop-blur-md bg-black/25 border-white/5 group">
+                    <Card key="quote" className="p-6 relative overflow-hidden backdrop-blur-md bg-white/60 dark:bg-black/25 border-black/5 dark:border-white/5 shadow-sm dark:shadow-none group">
                       {!isReadOnly && (
                         <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => moveWidget(idx, 'up')} className="p-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer"><ChevronUp className="h-3.5 w-3.5" /></button>
-                          <button onClick={() => moveWidget(idx, 'down')} className="p-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer"><ChevronDown className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => moveWidget(idx, 'up')} className="p-1 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-white cursor-pointer"><ChevronUp className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => moveWidget(idx, 'down')} className="p-1 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-white cursor-pointer"><ChevronDown className="h-3.5 w-3.5" /></button>
                         </div>
                       )}
 
-                      <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-3 flex items-center gap-2">
                         <Quote className="h-4 w-4 text-amber-400" />
                         favorite quote
                       </h3>
                       
                       <div className="py-2 pl-4 border-l-2 border-amber-400/40">
-                        <p className="text-sm font-semibold text-gray-200 leading-relaxed italic">
-                          "{spaceData.pinned_quote}"
+                        <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 leading-relaxed italic">
+                          "{spaceData.favorite_quote || 'stay warm, stay coding.'}"
                         </p>
                       </div>
                     </Card>
                   )
                 }
 
-                // Widget 3: Music player vibe check
+                // 3. Music player
                 if (widgetKey === 'music') {
                   return (
-                    <Card key="music" className="p-6 relative overflow-hidden backdrop-blur-md bg-black/25 border-white/5 group">
+                    <Card key="music" className="p-6 relative overflow-hidden backdrop-blur-md bg-white/60 dark:bg-black/25 border-black/5 dark:border-white/5 shadow-sm dark:shadow-none group">
                       {!isReadOnly && (
                         <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => moveWidget(idx, 'up')} className="p-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer"><ChevronUp className="h-3.5 w-3.5" /></button>
-                          <button onClick={() => moveWidget(idx, 'down')} className="p-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer"><ChevronDown className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => moveWidget(idx, 'up')} className="p-1 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-white cursor-pointer"><ChevronUp className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => moveWidget(idx, 'down')} className="p-1 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-white cursor-pointer"><ChevronDown className="h-3.5 w-3.5" /></button>
                         </div>
                       )}
 
-                      <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
                         <Music className="h-4 w-4 text-emerald-400" />
                         favorite profile vibe track
                       </h3>
 
                       {spaceData.song_url ? (
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/3 border border-white/5 p-4 rounded-2xl">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-4 rounded-2xl">
                           <div className="flex items-center gap-3">
                             <div className={`h-11 w-11 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg font-bold text-black ${songPlaying ? 'animate-spin-slow' : ''}`}>
                               <Music className="h-5 w-5" />
                             </div>
                             <div>
-                              <span className="text-[10px] text-gray-400 block font-bold uppercase">now playing</span>
-                              <span className="text-xs font-bold text-white">{spaceData.song_title || 'unnamed track'}</span>
+                              <span className="text-[10px] text-gray-500 dark:text-gray-400 block font-bold uppercase">now playing</span>
+                              <span className="text-xs font-bold text-gray-900 dark:text-white">{spaceData.song_title || 'unnamed track'}</span>
                             </div>
                           </div>
 
@@ -578,7 +683,7 @@ export default function SpacePage({ params }: SpacePageProps) {
                             </button>
                             
                             <div className="flex items-center gap-2">
-                              <Volume2 className="h-3.5 w-3.5 text-gray-400" />
+                              <Volume2 className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
                               <input
                                 type="range"
                                 min="0"
@@ -600,61 +705,85 @@ export default function SpacePage({ params }: SpacePageProps) {
                   )
                 }
 
-                // Widget 4: Career Goals overview
-                if (widgetKey === 'goals' && codingStats) {
+                // 4. Personal Goals
+                if (widgetKey === 'goals') {
                   return (
-                    <Card key="goals" className="p-6 relative overflow-hidden backdrop-blur-md bg-black/25 border-white/5 group">
+                    <Card key="goals" className="p-6 relative overflow-hidden backdrop-blur-md bg-white/60 dark:bg-black/25 border-black/5 dark:border-white/5 shadow-sm dark:shadow-none group">
                       {!isReadOnly && (
                         <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => moveWidget(idx, 'up')} className="p-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer"><ChevronUp className="h-3.5 w-3.5" /></button>
-                          <button onClick={() => moveWidget(idx, 'down')} className="p-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer"><ChevronDown className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => moveWidget(idx, 'up')} className="p-1 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-white cursor-pointer"><ChevronUp className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => moveWidget(idx, 'down')} className="p-1 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-white cursor-pointer"><ChevronDown className="h-3.5 w-3.5" /></button>
                         </div>
                       )}
 
-                      <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <Award className="h-4 w-4 text-sky-400" />
-                        target study goals
-                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs font-semibold">
+                        {/* Coding goals list */}
+                        <div className="space-y-4">
+                          <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                            <Code className="h-4 w-4 text-sky-400" />
+                            coding goals
+                          </h3>
+                          <div className="space-y-2.5">
+                            {spaceData.coding_goals && spaceData.coding_goals.length > 0 ? (
+                              spaceData.coding_goals.map((g, i) => (
+                                <div key={i} className="flex items-center gap-2.5 bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-2.5 rounded-xl">
+                                  <CheckCircle2 className="h-4 w-4 text-sky-400 shrink-0" />
+                                  <span className="text-gray-800 dark:text-gray-200">{g}</span>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-gray-500 italic">No coding goals set yet.</div>
+                            )}
+                          </div>
+                        </div>
 
-                      <div className="space-y-2.5 text-xs font-semibold">
-                        {careerProfile?.target_goals && careerProfile.target_goals.length > 0 ? (
-                          careerProfile.target_goals.map((g: string, i: number) => (
-                            <div key={i} className="flex items-center gap-2.5 bg-white/3 border border-white/5 p-2.5 rounded-xl">
-                              <CheckCircle2 className="h-4 w-4 text-sky-400 shrink-0" />
-                              <span className="text-gray-200">{g}</span>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-gray-500 italic">No goals defined yet in their hub.</div>
-                        )}
+                        {/* Study goals list */}
+                        <div className="space-y-4">
+                          <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                            <Award className="h-4 w-4 text-violet-400" />
+                            study goals
+                          </h3>
+                          <div className="space-y-2.5">
+                            {spaceData.study_goals && spaceData.study_goals.length > 0 ? (
+                              spaceData.study_goals.map((g, i) => (
+                                <div key={i} className="flex items-center gap-2.5 bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-2.5 rounded-xl">
+                                  <CheckCircle2 className="h-4 w-4 text-violet-400 shrink-0" />
+                                  <span className="text-gray-800 dark:text-gray-200">{g}</span>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-gray-500 italic">No study goals set yet.</div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </Card>
                   )
                 }
 
-                // Widget 5: Study Streak & Hours
+                // 5. Study Streaks
                 if (widgetKey === 'streak' && studyStats) {
                   return (
-                    <Card key="streak" className="p-6 relative overflow-hidden backdrop-blur-md bg-black/25 border-white/5 group">
+                    <Card key="streak" className="p-6 relative overflow-hidden backdrop-blur-md bg-white/60 dark:bg-black/25 border-black/5 dark:border-white/5 shadow-sm dark:shadow-none group">
                       {!isReadOnly && (
                         <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => moveWidget(idx, 'up')} className="p-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer"><ChevronUp className="h-3.5 w-3.5" /></button>
-                          <button onClick={() => moveWidget(idx, 'down')} className="p-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer"><ChevronDown className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => moveWidget(idx, 'up')} className="p-1 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-white cursor-pointer"><ChevronUp className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => moveWidget(idx, 'down')} className="p-1 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-white cursor-pointer"><ChevronDown className="h-3.5 w-3.5" /></button>
                         </div>
                       )}
 
-                      <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
                         <Flame className="h-4 w-4 text-orange-400" />
-                        zen study indicators
+                        cozy study stats
                       </h3>
 
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-white/3 border border-white/5 p-3 rounded-2xl text-center">
-                          <span className="text-[9px] text-gray-400 uppercase block font-bold">active streak</span>
+                        <div className="bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-3 rounded-2xl text-center">
+                          <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase block font-bold">active streak</span>
                           <span className="text-xl font-black text-orange-400">{studyStats.current_streak} days 🔥</span>
                         </div>
-                        <div className="bg-white/3 border border-white/5 p-3 rounded-2xl text-center">
-                          <span className="text-[9px] text-gray-400 uppercase block font-bold">study total</span>
+                        <div className="bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-3 rounded-2xl text-center">
+                          <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase block font-bold">study total</span>
                           <span className="text-xl font-black text-emerald-400">{(studyStats.total_study_minutes / 60).toFixed(1)} hrs</span>
                         </div>
                       </div>
@@ -662,29 +791,29 @@ export default function SpacePage({ params }: SpacePageProps) {
                   )
                 }
 
-                // Widget 6: Coding progress
+                // 6. Coding contributions Solved
                 if (widgetKey === 'contributions' && codingStats) {
                   return (
-                    <Card key="contributions" className="p-6 relative overflow-hidden backdrop-blur-md bg-black/25 border-white/5 group">
+                    <Card key="contributions" className="p-6 relative overflow-hidden backdrop-blur-md bg-white/60 dark:bg-black/25 border-black/5 dark:border-white/5 shadow-sm dark:shadow-none group">
                       {!isReadOnly && (
                         <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => moveWidget(idx, 'up')} className="p-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer"><ChevronUp className="h-3.5 w-3.5" /></button>
-                          <button onClick={() => moveWidget(idx, 'down')} className="p-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer"><ChevronDown className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => moveWidget(idx, 'up')} className="p-1 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-white cursor-pointer"><ChevronUp className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => moveWidget(idx, 'down')} className="p-1 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-white cursor-pointer"><ChevronDown className="h-3.5 w-3.5" /></button>
                         </div>
                       )}
 
-                      <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
                         <BarChart2 className="h-4 w-4 text-violet-400" />
                         coding progress
                       </h3>
 
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-white/3 border border-white/5 p-3 rounded-2xl text-center">
-                          <span className="text-[9px] text-gray-400 uppercase block font-bold">DSA Solved</span>
+                        <div className="bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-3 rounded-2xl text-center">
+                          <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase block font-bold">DSA Solved</span>
                           <span className="text-xl font-black text-violet-400">{totalSolved}</span>
                         </div>
-                        <div className="bg-white/3 border border-white/5 p-3 rounded-2xl text-center">
-                          <span className="text-[9px] text-gray-400 uppercase block font-bold">Commits</span>
+                        <div className="bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-3 rounded-2xl text-center">
+                          <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase block font-bold">Commits</span>
                           <span className="text-xl font-black text-cyan-400">{codingStats.github_contributions}</span>
                         </div>
                       </div>
@@ -698,54 +827,60 @@ export default function SpacePage({ params }: SpacePageProps) {
 
           </div>
 
-          {/* Right sidebar - Col 3 */}
+          {/* Right sidebar */}
           <div className="space-y-6">
             
-            {/* Cozy PRESENCE card */}
-            <Card className="p-6 backdrop-blur-md bg-black/25 border-white/5 text-center flex flex-col items-center">
+            {/* Presence user detail card */}
+            <Card className="p-6 backdrop-blur-md bg-white/60 dark:bg-black/25 border-black/5 dark:border-white/5 shadow-sm dark:shadow-none text-center flex flex-col items-center">
               <div className="relative mb-3.5">
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-violet-500/20 to-rose-500/20 blur-md opacity-70" />
                 <div className={`h-16 w-16 rounded-2xl bg-gradient-to-tr from-violet-500 to-rose-400 flex items-center justify-center text-xl font-black text-black border border-white/10 relative z-10 shadow-lg`}>
                   {targetProfile?.username.slice(0, 2).toUpperCase()}
                 </div>
               </div>
-              <h3 className="text-sm font-bold text-white lowercase">@{targetProfile?.username}</h3>
-              <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-widest font-black">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white lowercase">@{targetProfile?.username}</h3>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-widest font-black">
                 {isReadOnly ? 'linking coordinate' : 'your digital home corner'}
               </p>
 
               <div className="w-full mt-4 pt-4 border-t border-white/5 text-left text-xs font-semibold space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Class:</span>
+                  <span className="text-gray-500 dark:text-gray-400">Class:</span>
                   <span className="text-violet-400">{activeTheme.label}</span>
                 </div>
+                {latestMood && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">Mood Vibe:</span>
+                    <span className="text-rose-400">{latestMood.mood_label}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Ambient Vibe:</span>
+                  <span className="text-gray-500 dark:text-gray-400">Ambient Vibe:</span>
                   <span className="text-emerald-400">{spaceData.ambient_sound}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Accents:</span>
+                  <span className="text-gray-500 dark:text-gray-400">Visuals:</span>
                   <span className="text-sky-400">{spaceData.profile_accents}</span>
                 </div>
               </div>
             </Card>
 
-            {/* Pinned Moments / Vault Summary */}
-            <Card className="p-6 backdrop-blur-md bg-black/25 border-white/5 space-y-4">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            {/* Pinned moments scrapbook preview */}
+            <Card className="p-6 backdrop-blur-md bg-white/60 dark:bg-black/25 border-black/5 dark:border-white/5 shadow-sm dark:shadow-none space-y-4">
+              <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                 <Award className="h-4 w-4 text-violet-400" />
-                pinned moments
+                recent vault entries
               </h3>
 
               <div className="space-y-3">
                 {vaultItems && vaultItems.length > 0 ? (
                   vaultItems.slice(0, 3).map((item) => (
-                    <div key={item.id} className="bg-white/3 border border-white/5 p-3 rounded-2xl text-xs space-y-1">
+                    <div key={item.id} className="bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-3 rounded-2xl text-xs space-y-1">
                       <span className="text-[9px] text-gray-500 font-bold block">
                         {new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </span>
-                      <p className="font-bold text-white lowercase">{item.title}</p>
-                      {item.notes && <p className="text-[10px] text-gray-400 leading-relaxed font-semibold">"{item.notes}"</p>}
+                      <p className="font-bold text-gray-900 dark:text-white lowercase">{item.title}</p>
+                      {item.notes && <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed font-semibold">"{item.notes}"</p>}
                     </div>
                   ))
                 ) : (
@@ -756,10 +891,10 @@ export default function SpacePage({ params }: SpacePageProps) {
               </div>
               
               <Link 
-                href="/memories" 
+                href="/us/vault" 
                 className="block text-center py-2 border border-white/5 rounded-xl text-xs text-violet-400 font-bold hover:bg-white/3 transition-all"
               >
-                Go to Memory Vault
+                Open Scrapbook Vault
               </Link>
             </Card>
 
@@ -767,39 +902,39 @@ export default function SpacePage({ params }: SpacePageProps) {
 
         </div>
 
-        {/* Modal: Configure Space Room */}
+        {/* Modal: Customize Room Settings */}
         {showConfig && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadeIn">
             <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setShowConfig(false)} />
             
-            <div className="relative w-full max-w-lg bg-[#141520] border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 animate-scaleIn text-xs font-bold">
-              <h3 className="text-sm font-extrabold text-white lowercase border-b border-white/5 pb-3">
+            <div className="relative w-full max-w-lg bg-white dark:bg-white dark:bg-[#141520] border border-black/10 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 animate-scaleIn text-xs font-bold max-h-[90vh] overflow-y-auto">
+              <h3 className="text-sm font-extrabold text-gray-900 dark:text-white lowercase border-b border-white/5 pb-3">
                 configure digital room settings
               </h3>
 
-              <form onSubmit={handleSaveConfig} className="space-y-4 mt-4 text-gray-300">
+              <form onSubmit={handleSaveConfig} className="space-y-4 mt-4 text-gray-700 dark:text-gray-300">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-gray-400 block mb-1">Theme Accent Color</label>
+                    <label className="text-gray-500 dark:text-gray-400 block mb-1">Theme Accent Color</label>
                     <select
-                      value={spaceData.theme_color}
-                      onChange={(e) => updateSpaceData({ theme_color: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-white focus:outline-none"
+                      value={spaceData.theme_colors}
+                      onChange={(e) => updateSpaceData({ theme_colors: e.target.value })}
+                      className="w-full bg-white/80 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white focus:outline-none"
                     >
                       {Object.keys(THEMES).map(k => (
-                        <option key={k} value={k} className="bg-[#141520]">{THEMES[k].label}</option>
+                        <option key={k} value={k} className="bg-white dark:bg-[#141520]">{THEMES[k].label}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="text-gray-400 block mb-1">Preset Wallpaper</label>
+                    <label className="text-gray-500 dark:text-gray-400 block mb-1">Preset Wallpaper</label>
                     <select
-                      value={spaceData.wallpaper_url}
-                      onChange={(e) => updateSpaceData({ wallpaper_url: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-white focus:outline-none"
+                      value={spaceData.profile_wallpaper}
+                      onChange={(e) => updateSpaceData({ profile_wallpaper: e.target.value })}
+                      className="w-full bg-white/80 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white focus:outline-none"
                     >
                       {WALLPAPERS.map(w => (
-                        <option key={w.id} value={w.id} className="bg-[#141520]">{w.name}</option>
+                        <option key={w.id} value={w.id} className="bg-white dark:bg-[#141520]">{w.name}</option>
                       ))}
                     </select>
                   </div>
@@ -807,77 +942,122 @@ export default function SpacePage({ params }: SpacePageProps) {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-gray-400 block mb-1">Profile Accents (Visual Effects)</label>
+                    <label className="text-gray-500 dark:text-gray-400 block mb-1">Profile Accents (Visual Effects)</label>
                     <select
                       value={spaceData.profile_accents}
                       onChange={(e) => updateSpaceData({ profile_accents: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-white focus:outline-none"
+                      className="w-full bg-white/80 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white focus:outline-none"
                     >
-                      <option value="none" className="bg-[#141520]">None</option>
-                      <option value="stars" className="bg-[#141520]">Star Sparkles 🌌</option>
-                      <option value="bubbles" className="bg-[#141520]">Floating Bubbles 🫧</option>
-                      <option value="neon" className="bg-[#141520]">Neon Pulsing Border ⚡</option>
+                      <option value="none" className="bg-white dark:bg-[#141520]">None</option>
+                      <option value="stars" className="bg-white dark:bg-[#141520]">Star Sparkles 🌌</option>
+                      <option value="bubbles" className="bg-white dark:bg-[#141520]">Floating Bubbles 🫧</option>
+                      <option value="neon" className="bg-white dark:bg-[#141520]">Neon Pulsing Border ⚡</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-gray-400 block mb-1">Autoplay Profile Vibe Song</label>
+                    <label className="text-gray-500 dark:text-gray-400 block mb-1">Autoplay Profile Vibe Song</label>
                     <div className="flex items-center mt-2.5">
                       <input
                         type="checkbox"
                         checked={spaceData.music_autoplay}
                         onChange={(e) => updateSpaceData({ music_autoplay: e.target.checked })}
-                        className="h-4.5 w-4.5 rounded border-white/10 text-violet-500 cursor-pointer"
+                        className="h-4.5 w-4.5 rounded border-black/10 dark:border-white/10 text-violet-500 cursor-pointer"
                         id="autoplay-chk"
                       />
-                      <label htmlFor="autoplay-chk" className="ml-2 cursor-pointer text-gray-300 font-semibold">Enable autoplay on visit</label>
+                      <label htmlFor="autoplay-chk" className="ml-2 cursor-pointer text-gray-700 dark:text-gray-300 font-semibold">Enable autoplay on visit</label>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-gray-400 block mb-1">Favorite Quote / Vibe Status</label>
-                  <textarea
-                    value={editingQuote}
-                    onChange={(e) => setEditingQuote(e.target.value)}
-                    rows={2}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-violet-500/50"
+                  <label className="text-gray-500 dark:text-gray-400 block mb-1">Profile Banner Image URL (Optional)</label>
+                  <input
+                    type="url"
+                    value={editingBanner}
+                    onChange={(e) => setEditingBanner(e.target.value)}
+                    placeholder="https://images.unsplash.com/..."
+                    className="w-full bg-white/80 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:border-violet-500/50"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-gray-400 block mb-1">Vibe Song Title</label>
+                    <label className="text-gray-500 dark:text-gray-400 block mb-1">Current status text</label>
+                    <input
+                      type="text"
+                      value={editingStatus}
+                      onChange={(e) => setEditingStatus(e.target.value)}
+                      placeholder="e.g. coding 3am..."
+                      className="w-full bg-white/80 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:border-violet-500/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-gray-500 dark:text-gray-400 block mb-1">Favorite Quote / Vibe Quote</label>
+                    <input
+                      type="text"
+                      value={editingQuote}
+                      onChange={(e) => setEditingQuote(e.target.value)}
+                      className="w-full bg-white/80 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:border-violet-500/50"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-gray-500 dark:text-gray-400 block mb-1">Vibe Song Title</label>
                     <input
                       type="text"
                       value={editingSongTitle}
                       onChange={(e) => setEditingSongTitle(e.target.value)}
-                      placeholder="e.g. Lo-Fi Autumn Beats"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-violet-500/50"
+                      placeholder="e.g. Lo-Fi Beats"
+                      className="w-full bg-white/80 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:border-violet-500/50"
                     />
                   </div>
                   <div>
-                    <label className="text-gray-400 block mb-1">Vibe Song Audio Link (MP3)</label>
+                    <label className="text-gray-500 dark:text-gray-400 block mb-1">Vibe Song MP3 URL</label>
                     <input
                       type="url"
                       value={editingSongUrl}
                       onChange={(e) => setEditingSongUrl(e.target.value)}
-                      placeholder="https://example.com/audio.mp3"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-violet-500/50"
+                      placeholder="https://..."
+                      className="w-full bg-white/80 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:border-violet-500/50"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="text-gray-500 dark:text-gray-400 block mb-1">Coding Goals (comma-separated list)</label>
+                  <input
+                    type="text"
+                    value={editingCodingGoals}
+                    onChange={(e) => setEditingCodingGoals(e.target.value)}
+                    placeholder="Goal 1, Goal 2, Goal 3"
+                    className="w-full bg-white/80 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:border-violet-500/50"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-gray-500 dark:text-gray-400 block mb-1">Study Goals (comma-separated list)</label>
+                  <input
+                    type="text"
+                    value={editingStudyGoals}
+                    onChange={(e) => setEditingStudyGoals(e.target.value)}
+                    placeholder="Goal 1, Goal 2, Goal 3"
+                    className="w-full bg-white/80 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:border-violet-500/50"
+                  />
                 </div>
 
                 <div className="pt-3 border-t border-white/5 flex justify-end gap-2.5">
                   <button
                     type="button"
                     onClick={() => setShowConfig(false)}
-                    className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:bg-white/10 cursor-pointer"
+                    className="px-4 py-2 bg-white/80 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-white/10 cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 bg-violet-600 hover:bg-violet-500 text-white border-transparent rounded-xl shadow-md cursor-pointer"
+                    className="px-5 py-2 bg-violet-600 hover:bg-violet-500 text-gray-900 dark:text-white border-transparent rounded-xl shadow-md cursor-pointer"
                   >
                     Save Space Vibe
                   </button>
@@ -887,21 +1067,23 @@ export default function SpacePage({ params }: SpacePageProps) {
           </div>
         )}
 
-        {/* Modal: Log Mood checkin */}
+        {/* Modal: Log Mood check-in */}
         {showMoodLog && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadeIn">
             <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setShowMoodLog(false)} />
             
-            <div className="relative w-full max-w-lg bg-[#141520] border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 animate-scaleIn text-xs font-bold text-gray-300">
-              <h3 className="text-sm font-extrabold text-white lowercase border-b border-white/5 pb-3">
+            <div className="relative w-full max-w-lg bg-white dark:bg-white dark:bg-[#141520] border border-black/10 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 animate-scaleIn text-xs font-bold text-gray-700 dark:text-gray-300">
+              <h3 className="text-sm font-extrabold text-gray-900 dark:text-white lowercase border-b border-white/5 pb-3">
                 how are you feeling? check in with the node.
               </h3>
 
               <form onSubmit={handleSaveMood} className="space-y-5 mt-5">
                 <div className="space-y-1">
                   <div className="flex justify-between text-[11px]">
-                    <label className="text-gray-400">Mood Index: {newMood}/10</label>
-                    <span className="text-rose-400 font-semibold">{newMood <= 4 ? 'Low / Stressed ☕' : newMood <= 7 ? 'Stable / Calm 🧘' : 'Locked In / Happy 🚀'}</span>
+                    <label className="text-gray-500 dark:text-gray-400">Mood Index: {newMood * 10}/100</label>
+                    <span className="text-rose-400 font-semibold">
+                      {newMood <= 3 ? '😔 Low' : newMood <= 5 ? '😕 Tired' : newMood <= 7 ? '😐 Okay' : newMood <= 9 ? '🙂 Good' : '😀 Great'}
+                    </span>
                   </div>
                   <input
                     type="range"
@@ -915,7 +1097,7 @@ export default function SpacePage({ params }: SpacePageProps) {
 
                 <div className="space-y-1">
                   <div className="flex justify-between text-[11px]">
-                    <label className="text-gray-400">Energy Level: {newEnergy}/10</label>
+                    <label className="text-gray-500 dark:text-gray-400">Energy Level: {newEnergy}/10</label>
                     <span className="text-amber-400 font-semibold">{newEnergy <= 4 ? 'Tired / Drained' : newEnergy <= 7 ? 'Balanced' : 'Energized'}</span>
                   </div>
                   <input
@@ -930,7 +1112,7 @@ export default function SpacePage({ params }: SpacePageProps) {
 
                 <div className="space-y-1">
                   <div className="flex justify-between text-[11px]">
-                    <label className="text-gray-400">Focus Index: {newFocus}/10</label>
+                    <label className="text-gray-500 dark:text-gray-400">Focus Index: {newFocus}/10</label>
                     <span className="text-violet-400 font-semibold">{newFocus <= 4 ? 'Distracted' : newFocus <= 7 ? 'Studying / Flow' : 'Absolute Deep Focus'}</span>
                   </div>
                   <input
@@ -944,13 +1126,13 @@ export default function SpacePage({ params }: SpacePageProps) {
                 </div>
 
                 <div>
-                  <label className="text-gray-400 block mb-1.5">What is on your mind? (Status description)</label>
+                  <label className="text-gray-500 dark:text-gray-400 block mb-1.5">What is on your mind? (Status description)</label>
                   <input
                     type="text"
                     value={newStatus}
                     onChange={(e) => setNewStatus(e.target.value)}
                     placeholder="e.g. debugging Next.js middlewares until midnight..."
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-violet-500/50"
+                    className="w-full bg-white/80 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:border-violet-500/50 font-semibold"
                   />
                 </div>
 
@@ -958,13 +1140,13 @@ export default function SpacePage({ params }: SpacePageProps) {
                   <button
                     type="button"
                     onClick={() => setShowMoodLog(false)}
-                    className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:bg-white/10 cursor-pointer"
+                    className="px-4 py-2 bg-white/80 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-white/10 cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white border-transparent rounded-xl shadow-md cursor-pointer"
+                    className="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-gray-900 dark:text-white border-transparent rounded-xl shadow-md cursor-pointer"
                   >
                     Record Log checkin
                   </button>

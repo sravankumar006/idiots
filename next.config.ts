@@ -18,6 +18,46 @@ const nextConfig: NextConfig = {
     formats: ['image/avif', 'image/webp'],
   },
 
+  async redirects() {
+    return [
+      {
+        source: '/timeline',
+        destination: '/us/timeline',
+        permanent: true,
+      },
+      {
+        source: '/vault',
+        destination: '/us/vault',
+        permanent: true,
+      },
+      {
+        source: '/study',
+        destination: '/growth/focus',
+        permanent: true,
+      },
+      {
+        source: '/projects',
+        destination: '/growth/creative',
+        permanent: true,
+      },
+      {
+        source: '/projects/:id',
+        destination: '/growth/creative/:id',
+        permanent: true,
+      },
+      {
+        source: '/memories',
+        destination: '/us/vault',
+        permanent: true,
+      },
+      {
+        source: '/growth/memories',
+        destination: '/us/vault',
+        permanent: true,
+      },
+    ];
+  },
+
   async headers() {
     return [
       {

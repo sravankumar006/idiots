@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useTheme } from 'next-themes'
 import Link from 'next/link'
 import ChatWindow from './ChatWindow'
+import SharedAILogsRoom from './SharedAILogsRoom'
 import EmptyState from './EmptyState'
 import { Button } from '@/components/ui/Button'
 
@@ -336,13 +337,22 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
         className={`flex-1 min-w-0 min-h-0 h-full ${mobileView === 'chat' ? 'flex' : 'hidden md:flex'} flex-col`}
       >
         {selectedGroup ? (
-          <ChatWindow
-            key={selectedGroup.id}
-            groupId={selectedGroup.id}
-            groupName={selectedGroup.group_name}
-            activeUser={activeProfile}
-            onBack={() => setMobileView('sidebar')}
-          />
+          selectedGroup.group_name === 'ai logs' ? (
+            <SharedAILogsRoom
+              key={selectedGroup.id}
+              groupId={selectedGroup.id}
+              activeUser={activeProfile}
+              onBack={() => setMobileView('sidebar')}
+            />
+          ) : (
+            <ChatWindow
+              key={selectedGroup.id}
+              groupId={selectedGroup.id}
+              groupName={selectedGroup.group_name}
+              activeUser={activeProfile}
+              onBack={() => setMobileView('sidebar')}
+            />
+          )
         ) : (
           <div className="flex-1 flex items-center justify-center bg-[#f0ede8] dark:bg-[#0f0f12]">
             <EmptyState />

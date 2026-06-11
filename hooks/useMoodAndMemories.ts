@@ -7,9 +7,12 @@ export interface MoodLog {
   id: string
   user_id: string
   mood_rating: number
+  mood_value: number
+  mood_label: string
   energy_level: number
   focus_level: number
   status_text: string
+  visibility: string
   created_at: string
 }
 
@@ -22,6 +25,8 @@ export interface MemoryVaultItem {
   file_name: string
   notes: string
   is_shared: boolean
+  category: string
+  tags: string[]
   created_at: string
 }
 
@@ -53,7 +58,7 @@ export function useMoodAndMemories(userId: string | null | undefined) {
     try {
       const [moodRes, vaultRes, aiRes] = await Promise.all([
         supabase.from('mood_logs').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(30),
-        supabase.from('memory_vault').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+        supabase.from('vault_entries').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
         supabase.from('ai_memories').select('*').eq('user_id', userId).order('created_at', { ascending: false })
       ])
 
@@ -89,16 +94,23 @@ export function useMoodAndMemories(userId: string | null | undefined) {
   }, [userId, fetchData])
 
   // 2. Log a Mood
-  const logMood = async (rating: number, energy: number, focus: number, text: string) => {
+  const logMood = async (rating: number, energy: number, focus: number, text: string, visibility = 'public') => {
     if (!userId) return
+
+    const moodValue = rating * 10
+    const moodLabels = ['😔 Low', '😔 Low', '😔 Low', '😕 Tired', '😕 Tired', '😐 Okay', '😐 Okay', '🙂 Good', '🙂 Good', '😀 Great', '😀 Great']
+    const moodLabel = moodLabels[Math.min(10, Math.max(1, rating))]
 
     const newLog: MoodLog = {
       id: `mood-${Date.now()}`,
       user_id: userId,
       mood_rating: rating,
+      mood_value: moodValue,
+      mood_label: moodLabel,
       energy_level: energy,
       focus_level: focus,
       status_text: text,
+      visibility,
       created_at: new Date().toISOString()
     }
 
@@ -108,9 +120,12 @@ export function useMoodAndMemories(userId: string | null | undefined) {
       const { error } = await supabase.from('mood_logs').insert({
         user_id: userId,
         mood_rating: rating,
+        mood_value: moodValue,
+        mood_label: moodLabel,
         energy_level: energy,
         focus_level: focus,
-        status_text: text
+        status_text: text,
+        visibility
       })
       if (error) throw error
     } catch (err: any) {
@@ -122,7 +137,16 @@ export function useMoodAndMemories(userId: string | null | undefined) {
   }
 
   // 3. Save to Vault
-  const saveToVault = async (title: string, messageId: string | null, fileUrl: string, fileName: string, notes: string, isShared = true) => {
+  const saveToVault = async (
+    title: string,
+    messageId: string | null,
+    fileUrl: string,
+    fileName: string,
+    notes: string,
+    isShared = true,
+    category = 'chats',
+    tags: string[] = []
+  ) => {
     if (!userId) return
 
     const newItem: MemoryVaultItem = {
@@ -134,20 +158,24 @@ export function useMoodAndMemories(userId: string | null | undefined) {
       file_name: fileName,
       notes,
       is_shared: isShared,
+      category,
+      tags,
       created_at: new Date().toISOString()
     }
 
     setVaultItems((prev) => [newItem, ...prev])
 
     try {
-      const { error } = await supabase.from('memory_vault').insert({
+      const { error } = await supabase.from('vault_entries').insert({
         user_id: userId,
         title,
         message_id: messageId,
         file_url: fileUrl,
         file_name: fileName,
         notes,
-        is_shared: isShared
+        is_shared: isShared,
+        category,
+        tags
       })
       if (error) throw error
     } catch (err: any) {
@@ -165,7 +193,7 @@ export function useMoodAndMemories(userId: string | null | undefined) {
     setVaultItems((prev) => prev.filter(item => item.id !== id))
 
     try {
-      const { error } = await supabase.from('memory_vault').delete().eq('id', id)
+      const { error } = await supabase.from('vault_entries').delete().eq('id', id)
       if (error) throw error
     } catch (err: any) {
       console.warn("DB vault deletion failed, using localStorage fallback:", err.message)
@@ -215,7 +243,7 @@ export function useMoodAndMemories(userId: string | null | undefined) {
     if (moodLogs.length === 0) return false
     // take average of last 3 logs
     const slice = moodLogs.slice(0, 3)
-    const sum = slice.reduce((acc, log) => acc + log.mood_rating, 0)
+    const sum = slice.reduce((acc, log) => acc + (log.mood_value / 10), 0)
     const avg = sum / slice.length
     return avg <= 4
   }, [moodLogs])

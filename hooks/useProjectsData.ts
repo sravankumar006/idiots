@@ -151,6 +151,23 @@ export function useProjectsData(activeUser: UserProfile | null) {
           created_by: userId
         })
       if (error) throw error
+
+      // Automatic milestone log: project created
+      const projectCount = projects.length
+      const isFirst = projectCount === 0
+      await supabase.from('memories').insert({
+        created_by: userId,
+        user_id: userId,
+        title: isFirst ? `First Crew Project Created: ${name} 🚀` : `New Project Launched: ${name} 💻`,
+        description: isFirst
+          ? `We kicked off our very first collaborative project workspace: ${name}! Let's build something epic.`
+          : `A new creative space for ${name} was initialized with tech stack: ${techStack.join(', ')}.`,
+        memory_type: 'project',
+        type: 'milestone',
+        visibility: 'public',
+        related_users: [activeUser?.username || 'crew']
+      })
+
     } catch (err: any) {
       console.warn("DB Create Project failed, using localStorage fallback:", err.message)
       const storageKey = `mock_projects_${userId}`
@@ -166,6 +183,9 @@ export function useProjectsData(activeUser: UserProfile | null) {
   const updateProject = async (id: string, updates: Partial<Project>) => {
     if (!userId) return
 
+    const currentProj = projects.find((p) => p.id === id)
+    const prevProgress = currentProj?.progress || 0
+
     setProjects((prev) =>
       prev.map((proj) => (proj.id === id ? { ...proj, ...updates } : proj))
     )
@@ -177,6 +197,36 @@ export function useProjectsData(activeUser: UserProfile | null) {
         .update(updates)
         .eq('id', id)
       if (error) throw error
+
+      // Automatic milestone log: progress benchmarks
+      if (updates.progress !== undefined) {
+        const nextProgress = updates.progress
+        const name = currentProj?.name || 'project'
+
+        if (prevProgress < 100 && nextProgress === 100) {
+          await supabase.from('memories').insert({
+            created_by: userId,
+            user_id: userId,
+            title: `Mission Accomplished: ${name} Completed! 🏆`,
+            description: `We fully completed the project "${name}" and reached 100% progress! Outstanding effort from the crew.`,
+            memory_type: 'project',
+            type: 'milestone',
+            visibility: 'public',
+            related_users: [activeUser?.username || 'crew']
+          })
+        } else if (prevProgress < 50 && nextProgress >= 50 && nextProgress < 100) {
+          await supabase.from('memories').insert({
+            created_by: userId,
+            user_id: userId,
+            title: `Project Milestone: ${name} at 50% 📈`,
+            description: `The project "${name}" is halfway done! Pushing ahead to the finish line.`,
+            memory_type: 'project',
+            type: 'milestone',
+            visibility: 'public',
+            related_users: [activeUser?.username || 'crew']
+          })
+        }
+      }
     } catch (err: any) {
       console.warn("DB Update Project failed, using localStorage fallback:", err.message)
       const storageKey = `mock_projects_${userId}`

@@ -26,10 +26,12 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
   const sendMessage = async (
     text: string,
     fileInfo?: { file: File; type: string } | { stickerUrl: string; type: 'sticker' },
+    isAI?: boolean,
+    category?: string,
     studyModeActive: boolean = false
   ) => {
-    if (!text.trim() && !fileInfo && !activeUser) return
-    if (!activeUser) return
+    if (!groupId || !activeUser) return
+    if (!text.trim() && !fileInfo) return
 
     const tempId = `opt-${Date.now()}`
     const isSticker = fileInfo && fileInfo.type === 'sticker'
@@ -52,6 +54,7 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
       sender_id: activeUser.id,
       message: text.trim() || (isSticker ? 'Sent a sticker' : (file_name || '')),
       type: message_type,
+      category: category,
       file_url: localBlobUrl,
       file_name: file_name,
       file_size: file_size,
@@ -154,6 +157,7 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
           sender_id: activeUser.id,
           message: text.trim() || (isSticker ? 'Sent a sticker' : (file_name || '')),
           type: message_type,
+          category: category,
           file_url: finalFileUrl,
           file_name: file_name,
           file_size: file_size,
@@ -169,7 +173,7 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
       )
 
       // --- AI INTEGRATION: Detect @rocky and trigger shared AI ---
-      if (text.toLowerCase().includes('@rocky')) {
+      if (isAI || text.toLowerCase().includes('@rocky')) {
         const aiMessageId = crypto.randomUUID()
 
         // ── Find context file: check current uploaded file first, then fall back to recent history
@@ -204,12 +208,13 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
           sender_id: '00000000-0000-0000-0000-000000000000',
           message: '',
           type: 'ai',
+          category: category,
           reply_to: null,
           created_at: new Date().toISOString(),
           profiles: {
             id: '00000000-0000-0000-0000-000000000000',
-            username: 'IS AI',
-            email: 'ai@system.local',
+            username: 'Rocky',
+            email: 'rocky@idiots.local',
             avatar: 'avatar-cyber-ghost',
             created_at: new Date().toISOString()
           },
@@ -219,17 +224,24 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
         setMessages((prev) => [...prev, aiMessage])
 
         try {
+          const providerPref = typeof window !== 'undefined' ? localStorage.getItem('selected_ai_provider') || 'auto' : 'auto';
+
           // 2. Fetch the stream from the API
-          const response = await fetch('/api/ai', {
+          const response = await fetch('/api/ai/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               prompt: text,
-              groupId,
-              aiMessageId,
-              contextMessages: messages.slice(-15),
+              groupId: groupId,
+              aiMessageId: aiMessageId,
+              category: category,
+              contextMessages: messages.slice(-15).map((m) => ({
+                role: m.sender_id === '00000000-0000-0000-0000-000000000000' ? 'assistant' : 'user',
+                content: m.message,
+              })),
               attachedFile, // pass context file info to route
               studyModeActive,
+              providerPreference: providerPref,
             })
           })
 
@@ -282,37 +294,18 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
             })
           }
 
-          // 4. Save final AI message to DB so it persists for all users
+          // 4. Server handles persisting the message to the DB in the onFinish callback.
+          // We just need to mark the message as no longer sending locally.
           if (!accumulatedText) {
             setMessages((prev) =>
-              prev.map(m => m.id === aiMessageId ? { ...m, error: true, sending: false, message: '⚠️ **Gemini API Quota Exhausted (Rate Limit)**\n\nRocky is currently out of tokens or has exceeded the free-tier rate limits:\n- **Minute-based limits (15 RPM / 1M TPM):** Resets automatically at the start of the next minute.\n- **Daily limits (1500 RPD):** Resets daily at 00:00 UTC.\n\Please wait a moment and try again.' } : m)
+              prev.map(m => m.id === aiMessageId ? { ...m, error: true, sending: false, message: '⚠️ **Rocky Quota Exhausted**\n\nRocky is currently out of tokens or has exceeded the free-tier rate limits:\n- **Minute-based limits:** Resets automatically at the start of the next minute.\n- **Daily limits:** Resets daily at 00:00 UTC.\n\nPlease wait a moment and try again.' } : m)
             )
             return
           }
 
-          const { data: finalDbMsg, error: aiInsertError } = await supabase.from('messages').insert({
-            id: aiMessageId,
-            group_id: groupId,
-            sender_id: '00000000-0000-0000-0000-000000000000',
-            message: accumulatedText,
-            type: 'ai',
-            reply_to: data.id
-          }).select('*, profiles(*)').single()
-
-          if (aiInsertError) {
-            console.error('AI message insertion failed:', aiInsertError)
-          }
-
-          if (finalDbMsg) {
-            setMessages((prev) =>
-              prev.map(m => m.id === aiMessageId ? { ...m, ...finalDbMsg, sending: false, aiMode: resolvedAiMode } : m)
-            )
-          } else {
-            // Fallback: set sending to false locally so the client doesn't hang in "sending" stage
-            setMessages((prev) =>
-              prev.map(m => m.id === aiMessageId ? { ...m, sending: false, aiMode: resolvedAiMode } : m)
-            )
-          }
+          setMessages((prev) =>
+            prev.map(m => m.id === aiMessageId ? { ...m, sending: false, aiMode: resolvedAiMode } : m)
+          )
 
         } catch (err: any) {
           console.error('AI Streaming error:', err)

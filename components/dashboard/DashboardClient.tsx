@@ -395,7 +395,7 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
                 <FolderHeart className="h-4 w-4 text-amber-500" />
                 Active Projects
               </h3>
-              <Link href="/projects" className="text-[10px] text-violet-500 font-bold hover:underline">
+              <Link href="/growth/creative" className="text-[10px] text-violet-500 font-bold hover:underline">
                 View All
               </Link>
             </div>
@@ -407,7 +407,7 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
                 <p className="text-xs text-gray-400 font-medium text-center py-2">no projects established yet.</p>
               ) : (
                 projects.slice(0, 2).map((proj) => (
-                  <Link key={proj.id} href={`/projects/${proj.id}`} className="block bg-[#faf8f5] dark:bg-[#121216] border border-black/5 dark:border-white/5 p-3 rounded-2xl hover:border-violet-500/30 transition-all group">
+                  <Link key={proj.id} href={`/growth/creative/${proj.id}`} className="block bg-[#faf8f5] dark:bg-[#121216] border border-black/5 dark:border-white/5 p-3 rounded-2xl hover:border-violet-500/30 transition-all group">
                     <div className="flex items-center justify-between text-xs mb-1.5">
                       <span className="font-bold text-gray-800 dark:text-gray-200 group-hover:text-violet-500 transition-colors lowercase">{proj.name}</span>
                       <span className="text-[9px] text-gray-400 font-semibold">{proj.progress}%</span>

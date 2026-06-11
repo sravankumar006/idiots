@@ -102,7 +102,7 @@ export default function ProjectsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-6">
           {projects.map((project) => (
-            <Link key={project.id} href={`/projects/${project.id}`} className="block">
+            <Link key={project.id} href={`/growth/creative/${project.id}`} className="block">
               <Card className="p-6 flex flex-col justify-between h-56 relative overflow-hidden group hover:border-violet-500/30 transition-all">
                 {/* Ambient hover glow */}
                 <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-violet-500/5 blur-3xl opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none" />
