@@ -10,7 +10,10 @@ import PageContainer from '@/components/layout/PageContainer'
 import SectionHeader from '@/components/layout/SectionHeader'
 import { Card } from '@/components/ui/Card'
 import { createClient } from '@/lib/supabase/client'
+import { uploadFile } from '@/lib/storage/uploadFile'
+import { getPublicUrl } from '@/lib/storage/getFileUrl'
 import { UserProfile } from '@/types'
+import TimelineSkeleton from '@/components/timeline/TimelineSkeleton'
 
 interface TimelineItem {
   id: string
@@ -58,6 +61,8 @@ export default function TimelinePage() {
   const [newDesc, setNewDesc] = useState('')
   const [newType, setNewType] = useState<'manual' | 'friendship' | 'chaos'>('manual')
   const [newMediaUrl, setNewMediaUrl] = useState('')
+  const [mediaFile, setMediaFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
   const [relatedMembers, setRelatedMembers] = useState<string>('')
 
   useEffect(() => {
@@ -76,7 +81,7 @@ export default function TimelinePage() {
         // 2. Fetch memories from DB
         const { data: memoriesRes, error } = await supabase
           .from('memories')
-          .select('*, profiles!created_by(*)')
+          .select('*, profiles(*)')
           .order('created_at', { ascending: false })
 
         if (error) throw error
@@ -103,8 +108,8 @@ export default function TimelinePage() {
 
         setItems(dbItems)
 
-      } catch (err) {
-        console.error("Timeline fetch failed:", err)
+      } catch (err: any) {
+        console.error("Timeline fetch failed:", err?.message || err)
       } finally {
         if (active) setLoading(false)
       }
@@ -122,7 +127,7 @@ export default function TimelinePage() {
           if (payload.eventType === 'INSERT') {
             const { data: newMem, error } = await supabase
               .from('memories')
-              .select('*, profiles!created_by(*)')
+              .select('*, profiles(*)')
               .eq('id', payload.new.id)
               .single()
 
@@ -149,7 +154,7 @@ export default function TimelinePage() {
           } else if (payload.eventType === 'UPDATE' && active) {
             const { data: updatedMem, error } = await supabase
               .from('memories')
-              .select('*, profiles!created_by(*)')
+              .select('*, profiles(*)')
               .eq('id', payload.new.id)
               .single()
 
@@ -205,41 +210,79 @@ export default function TimelinePage() {
     e.preventDefault()
     if (!newTitle.trim()) return
 
+    setIsUploading(true)
+    let finalMediaUrl = newMediaUrl.trim()
     const tempId = `temp-${Date.now()}`
-    const tempItem: TimelineItem = {
-      id: tempId,
-      title: newTitle.trim(),
-      description: newDesc.trim(),
-      date: new Date().toISOString(),
-      memory_type: newType,
-      author: activeProfile?.username || 'You',
-      authorAvatar: activeProfile?.avatar || 'avatar-cyber-ghost',
-      mediaUrl: newMediaUrl.trim() || undefined,
-      reactionsCount: 0,
-      relatedUsers: relatedMembers ? relatedMembers.split(',').map(s => s.trim()) : []
-    }
-
-    setItems((prev) => [tempItem, ...prev])
-    setShowAddModal(false)
 
     try {
       if (!activeProfile) throw new Error("No active profile")
 
-      const { data, error } = await supabase
+      if (mediaFile) {
+        const fileExt = mediaFile.name.split('.').pop()
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
+        const filePath = `${activeProfile.id}/${fileName}`
+        
+        const path = await uploadFile({
+          bucket: 'chat-media',
+          path: filePath,
+          file: mediaFile,
+        })
+        
+        finalMediaUrl = getPublicUrl('chat-media', path)
+      }
+
+      const tempItem: TimelineItem = {
+        id: tempId,
+        title: newTitle.trim(),
+        description: newDesc.trim(),
+        date: new Date().toISOString(),
+        memory_type: newType,
+        author: activeProfile?.username || 'You',
+        authorAvatar: activeProfile?.avatar || 'avatar-cyber-ghost',
+        mediaUrl: finalMediaUrl || undefined,
+        reactionsCount: 0,
+        relatedUsers: relatedMembers ? relatedMembers.split(',').map(s => s.trim()) : []
+      }
+
+      setItems((prev) => [tempItem, ...prev])
+      setShowAddModal(false)
+
+      let insertPayload: any = {
+        created_by: activeProfile.id,
+        user_id: activeProfile.id,
+        title: newTitle.trim(),
+        description: newDesc.trim(),
+        memory_type: newType,
+        type: newType,
+        media_url: finalMediaUrl || '',
+        visibility: 'public',
+        related_users: tempItem.relatedUsers
+      }
+
+      let { data, error } = await supabase
         .from('memories')
-        .insert({
-          created_by: activeProfile.id,
+        .insert(insertPayload)
+        .select('*, profiles(*)')
+        .single()
+
+      // Fallback for older schemas (migration_part10) that lack created_by, memory_type, related_users
+      if (error && error.message?.includes('schema cache')) {
+        insertPayload = {
           user_id: activeProfile.id,
           title: newTitle.trim(),
-          description: newDesc.trim(),
-          memory_type: newType,
+          description: newDesc.trim() + (relatedMembers ? `\n(With: ${relatedMembers})` : ''),
           type: newType,
-          media_url: newMediaUrl.trim() || '',
-          visibility: 'public',
-          related_users: tempItem.relatedUsers
-        })
-        .select('*, profiles!created_by(*)')
-        .single()
+          media_url: finalMediaUrl || '',
+          visibility: 'public'
+        }
+        const fallbackRes = await supabase
+          .from('memories')
+          .insert(insertPayload)
+          .select('*, profiles(*)')
+          .single()
+        data = fallbackRes.data
+        error = fallbackRes.error
+      }
 
       if (error) throw error
 
@@ -256,18 +299,19 @@ export default function TimelinePage() {
           reactionsCount: 0,
           relatedUsers: data.related_users || []
         }
-        setItems((prev) => prev.map(item => item.id === tempId ? dbFormatted : item))
+        setItems((prev) => prev.map(i => i.id === tempId ? dbFormatted : i))
       }
-    } catch (err) {
-      console.error("Timeline insert failed:", err)
-      setItems((prev) => prev.filter(item => item.id !== tempId))
+    } catch (error: any) {
+      console.error('Failed to add memory:', error?.message || error)
+      setItems((prev) => prev.filter(i => i.id !== tempId)) // Revert optimistic UI on fail
+    } finally {
+      setIsUploading(false)
+      setNewTitle('')
+      setNewDesc('')
+      setNewMediaUrl('')
+      setMediaFile(null)
+      setRelatedMembers('')
     }
-
-    // Reset inputs
-    setNewTitle('')
-    setNewDesc('')
-    setNewMediaUrl('')
-    setRelatedMembers('')
   }
 
   const handleLike = (id: string) => {
@@ -313,10 +357,7 @@ export default function TimelinePage() {
   if (loading) {
     return (
       <PageContainer>
-        <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
-          <div className="h-8 w-8 rounded-full border-4 border-violet-500/20 border-t-violet-500 animate-spin" />
-          <p className="text-xs font-semibold text-gray-500 lowercase">retracing group story timeline...</p>
-        </div>
+        <TimelineSkeleton />
       </PageContainer>
     )
   }
@@ -643,14 +684,36 @@ export default function TimelinePage() {
               </div>
 
               <div>
-                <label className="text-gray-400 block mb-1">Attachment / Image URL (Optional)</label>
-                <input
-                  type="url"
-                  value={newMediaUrl}
-                  onChange={(e) => setNewMediaUrl(e.target.value)}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-violet-500/50"
-                />
+                <label className="text-gray-400 block mb-1">Attachment (Image/Video) or URL (Optional)</label>
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="file"
+                      accept="image/*,video/*"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setMediaFile(e.target.files[0])
+                          setNewMediaUrl('')
+                        }
+                      }}
+                      className="w-full text-xs text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-violet-500/10 file:text-violet-400 hover:file:bg-violet-500/20 bg-white/5 border border-white/10 rounded-xl focus:outline-none"
+                    />
+                    <span className="text-xs text-gray-500 font-bold">OR</span>
+                    <input
+                      type="url"
+                      value={newMediaUrl}
+                      onChange={(e) => {
+                        setNewMediaUrl(e.target.value)
+                        setMediaFile(null)
+                      }}
+                      placeholder="https://images.unsplash.com/..."
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-violet-500/50"
+                    />
+                  </div>
+                  {mediaFile && (
+                    <p className="text-[10px] text-emerald-400 font-medium">Selected file: {mediaFile.name}</p>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -674,9 +737,10 @@ export default function TimelinePage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-violet-600 hover:bg-violet-500 text-white border-transparent rounded-xl shadow-md cursor-pointer"
+                  disabled={isUploading}
+                  className="px-5 py-2 bg-violet-600 hover:bg-violet-500 text-white border-transparent rounded-xl shadow-md cursor-pointer disabled:opacity-50"
                 >
-                  Log Memory
+                  {isUploading ? 'Uploading...' : 'Log Memory'}
                 </button>
               </div>
             </form>

@@ -11,6 +11,7 @@ import { Card } from '@/components/ui/Card'
 import DragDropZone from './DragDropZone'
 import UploadButton from './UploadButton'
 import FilePreview from './FilePreview'
+import AiMessageSkeleton from './AiMessageSkeleton'
 
 // Avatar palette
 const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
@@ -152,12 +153,7 @@ export default function SharedAILogsRoom({ groupId, activeUser, onBack }: Shared
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 relative">
           <div className="max-w-4xl mx-auto space-y-6">
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                <div className="h-10 w-10 rounded-xl bg-violet-500/10 flex items-center justify-center animate-spin">
-                  <Sparkles className="h-5 w-5 text-violet-400" />
-                </div>
-                <span className="text-xs font-semibold text-gray-500">Syncing shared intelligence...</span>
-              </div>
+              <AiMessageSkeleton />
             ) : filteredMessages.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <div className="h-16 w-16 rounded-3xl bg-gradient-to-tr from-violet-500/10 to-rose-500/10 flex items-center justify-center mb-6">

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useCallback } from 'react'
-import { Reply, SmilePlus, Copy, Trash2, Share2, X, Eye, Brain } from 'lucide-react'
+import { Reply, SmilePlus, Copy, Trash2, Share2, X, Eye, Brain, Database, FileText, Save } from 'lucide-react'
 import { ChatMessage } from '@/types'
 
 const QUICK_EMOJIS = ['👍', '❤️', '🔥', '😂', '😮', '✨']
@@ -18,6 +18,7 @@ interface MessageActionSheetProps {
   onClearChat: () => void
   onShowSeenBy?: () => void
   onSaveToVault?: () => void
+  onSaveItem?: (target: 'saved_response' | 'vault' | 'note' | 'memory', content: string) => void
 }
 
 /**
@@ -37,6 +38,7 @@ export default function MessageActionSheet({
   onClearChat,
   onShowSeenBy,
   onSaveToVault,
+  onSaveItem,
 }: MessageActionSheetProps) {
   // Close on Escape key
   useEffect(() => {
@@ -150,13 +152,39 @@ export default function MessageActionSheet({
               />
             )}
 
-            {/* Save to Memory Vault */}
-            {!isDeleted && onSaveToVault && (
+            {/* Save to Memory Vault (Legacy or existing behavior) */}
+            {!isDeleted && onSaveToVault && !message.type.includes('ai') && (
               <ActionItem
                 icon={<Brain className="h-5 w-5 text-amber-500" />}
                 label="save to vault"
                 onClick={() => handleAction(onSaveToVault)}
               />
+            )}
+
+            {/* AI Specific Save Actions */}
+            {message.type === 'ai' && onSaveItem && (
+              <>
+                <ActionItem
+                  icon={<Save className="h-5 w-5 text-indigo-500" />}
+                  label="save response"
+                  onClick={() => handleAction(() => onSaveItem('saved_response', message.message || ''))}
+                />
+                <ActionItem
+                  icon={<Brain className="h-5 w-5 text-amber-500" />}
+                  label="add to memories"
+                  onClick={() => handleAction(() => onSaveItem('memory', message.message || ''))}
+                />
+                <ActionItem
+                  icon={<Database className="h-5 w-5 text-emerald-500" />}
+                  label="add to vault"
+                  onClick={() => handleAction(() => onSaveItem('vault', message.message || ''))}
+                />
+                <ActionItem
+                  icon={<FileText className="h-5 w-5 text-blue-500" />}
+                  label="extract to notes"
+                  onClick={() => handleAction(() => onSaveItem('note', message.message || ''))}
+                />
+              </>
             )}
 
             {/* Delete for Me */}

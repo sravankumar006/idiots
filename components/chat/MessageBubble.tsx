@@ -15,7 +15,11 @@ import AIPDFDownload from './AIPDFDownload'
 import { useSwipeGesture } from '@/hooks/useSwipeGesture'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import Link from 'next/link'
+import MessageToolbar from './MessageToolbar'
+import { Copy } from 'lucide-react'
 
 // Emoji quick-access for hover bar
 const EMOJI_PICKER = ['👍', '❤️', '🔥', '😂', '😮', '✨']
@@ -180,6 +184,27 @@ export default function MessageBubble({
     }
   }, [message.message])
 
+  // ——— Save Item (Vault, Notes, etc) ———
+  const handleSaveItem = useCallback(async (target: 'saved_response' | 'vault' | 'note' | 'memory', content: string) => {
+    try {
+      const response = await fetch('/api/user/save-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target,
+          content,
+          title: `Saved from ${isAiMessage ? 'IS AI' : 'Chat'}`,
+          sourceId: message.id
+        })
+      });
+      if (!response.ok) {
+        console.error('Failed to save item');
+      }
+    } catch (err) {
+      console.error('Error saving item:', err);
+    }
+  }, [message.id, isAiMessage])
+
   // ——— Keyboard interactions ———
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (isDeleted) return
@@ -311,7 +336,41 @@ export default function MessageBubble({
                     <span>reading pdf from chat</span>
                   </div>
                 )}
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                <ReactMarkdown 
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    code({node, inline, className, children, ...props}: any) {
+                      const match = /language-(\w+)/.exec(className || '')
+                      return !inline && match ? (
+                        <div className="relative group/code mt-4 mb-4 overflow-hidden rounded-xl border border-white/10 bg-[#1d1f27]">
+                          <div className="flex items-center justify-between px-4 py-2 bg-black/40 border-b border-white/10">
+                            <span className="text-xs text-gray-400 font-mono">{match[1]}</span>
+                            <button
+                              onClick={() => navigator.clipboard.writeText(String(children).replace(/\n$/, ''))}
+                              className="p-1.5 rounded-lg bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-all focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                              title="Copy Code"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          <SyntaxHighlighter
+                            style={atomDark}
+                            language={match[1]}
+                            PreTag="div"
+                            customStyle={{ margin: 0, background: 'transparent', padding: '1rem' }}
+                            {...props}
+                          >
+                            {String(children).replace(/\n$/, '')}
+                          </SyntaxHighlighter>
+                        </div>
+                      ) : (
+                        <code className={`${className} bg-black/10 dark:bg-white/10 rounded px-1.5 py-0.5 text-sm`} {...props}>
+                          {children}
+                        </code>
+                      )
+                    }
+                  }}
+                >
                   {message.message}
                 </ReactMarkdown>
                 {/* PDF generation — show download button */}
@@ -366,7 +425,7 @@ export default function MessageBubble({
         tabIndex={0}
         onKeyDown={handleKeyDown}
         onContextMenu={handleContextMenu}
-        className={`flex gap-3 group relative max-w-[75%] animate-fadeIn focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 focus-visible:ring-offset-2 rounded-xl ${
+        className={`flex gap-3 group relative max-w-[75%] animate-slideUpFade focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 focus-visible:ring-offset-2 rounded-xl ${
           isSelf ? 'ml-auto flex-row-reverse' : ''
         }`}
         // Long-press (touch) for mobile action sheet
@@ -509,6 +568,16 @@ export default function MessageBubble({
                   >
                     <Reply className="h-3.5 w-3.5" />
                   </button>
+
+                  {/* AI Response Actions */}
+                  {isAiMessage && (
+                    <MessageToolbar 
+                      message={message} 
+                      onCopy={handleCopy} 
+                      onSave={handleSaveItem}
+                      onSaveToVault={onSaveToVault} 
+                    />
+                  )}
                 </div>
               )}
             </div>
@@ -559,6 +628,7 @@ export default function MessageBubble({
           onClearChat={onClearChat}
           onShowSeenBy={isSelf ? handleShowSeenBy : undefined}
           onSaveToVault={() => onSaveToVault?.(message)}
+          onSaveItem={handleSaveItem}
         />
       )}
 

@@ -623,16 +623,21 @@ export default function AiPage() {
 
                 {/* Typing Indicator */}
                 {isTyping && personalMessages[personalMessages.length - 1]?.sending && (
-                  <div className="flex gap-3 max-w-xl animate-pulse">
-                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-[10px] font-semibold text-white shrink-0">
+                  <div className="flex gap-3 max-w-xl animate-fadeIn">
+                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-[10px] font-semibold text-white shadow-md shrink-0 select-none">
                       AI
                     </div>
                     <div className="space-y-1">
                       <span className="text-[10px] font-bold text-gray-500 block">Companion</span>
-                      <div className="p-3.5 bg-white/5 rounded-2xl border border-white/5 rounded-tl-none flex items-center gap-1.5">
-                        <span className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <span className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <span className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <div className="px-4 py-3 bg-[#1c1f26] dark:bg-[#16181d] rounded-2xl border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.05)] rounded-tl-none flex items-center gap-2">
+                        <div className="flex gap-1 items-center">
+                          <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" style={{ animationDelay: '0ms' }} />
+                          <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" style={{ animationDelay: '150ms' }} />
+                          <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" style={{ animationDelay: '300ms' }} />
+                        </div>
+                        <span className="text-xs text-indigo-300/80 font-medium animate-pulse ml-1">
+                          {personalMessages[personalMessages.length - 1]?.message ? 'IS AI is generating a response...' : 'IS AI is thinking...'}
+                        </span>
                       </div>
                     </div>
                   </div>

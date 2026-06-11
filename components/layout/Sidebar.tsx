@@ -72,7 +72,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: Sideba
       <Link
         key={item.href}
         href={item.href}
-        className={`flex items-center gap-3 py-2.5 px-3.5 rounded-xl text-xs font-bold tracking-wide transition-all relative group cursor-pointer ${
+        className={`flex items-center gap-3 py-2.5 px-3.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-300 ease-out relative group cursor-pointer ${
           isSubItem ? 'pl-8' : ''
         } ${
           isActive 
@@ -149,7 +149,8 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: Sideba
             <>
               <button
                 onClick={() => setUsExpanded(!usExpanded)}
-                className={`w-full flex items-center justify-between py-2.5 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                suppressHydrationWarning
+                className={`w-full flex items-center justify-between py-2.5 px-3.5 rounded-xl text-xs font-bold transition-all duration-300 ease-out cursor-pointer ${
                   pathname.startsWith('/us')
                     ? 'text-violet-600 dark:text-violet-400 bg-violet-500/5 dark:bg-violet-500/5'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-black/3 dark:hover:bg-white/3'
@@ -182,7 +183,8 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: Sideba
             <>
               <button
                 onClick={() => setGrowthExpanded(!growthExpanded)}
-                className={`w-full flex items-center justify-between py-2.5 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                suppressHydrationWarning
+                className={`w-full flex items-center justify-between py-2.5 px-3.5 rounded-xl text-xs font-bold transition-all duration-300 ease-out cursor-pointer ${
                   pathname.startsWith('/growth')
                     ? 'text-violet-600 dark:text-violet-400 bg-violet-500/5 dark:bg-violet-500/5'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-black/3 dark:hover:bg-white/3'

@@ -12,6 +12,7 @@ import { Card } from '@/components/ui/Card'
 import { createClient } from '@/lib/supabase/client'
 import { UserProfile } from '@/types'
 import { useMoodAndMemories, MemoryVaultItem } from '@/hooks/useMoodAndMemories'
+import VaultSkeleton from '@/components/vault/VaultSkeleton'
 
 // Polaroid rotation styles
 const ROTATIONS = [
@@ -131,10 +132,7 @@ export default function VaultPage() {
   if (loading || !activeProfile) {
     return (
       <PageContainer>
-        <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
-          <div className="h-8 w-8 rounded-full border-4 border-amber-500/20 border-t-amber-500 animate-spin" />
-          <p className="text-xs font-semibold text-gray-500 lowercase">opening digital scrapbook vault...</p>
-        </div>
+        <VaultSkeleton />
       </PageContainer>
     )
   }

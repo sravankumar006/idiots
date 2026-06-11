@@ -61,7 +61,7 @@ export default function MobileNav({ onToggleMobileMenu, profile, drawerOpen: par
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex flex-col items-center gap-1 py-1 text-[10px] font-bold tracking-wider transition-all duration-300 ${
+              className={`flex flex-col items-center gap-1 py-1 text-[10px] font-bold tracking-wider transition-all duration-300 ease-out ${
                 isActive ? 'text-violet-600 dark:text-violet-400' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-300'
               }`}
             >
