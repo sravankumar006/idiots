@@ -46,40 +46,7 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
         />
       </div>
 
-      {/* 2. Mobile Slide-out Sidebar Drawer */}
-      {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex animate-fadeIn">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setMobileMenuOpen(false)}
-          />
-          
-          {/* Sidebar container */}
-          <div className="relative w-64 h-full bg-[#faf9f6] dark:bg-[#16181d] border-r border-black/5 dark:border-white/10 flex flex-col z-10 animate-slideRight">
-            {/* Header close trigger */}
-            <div className="flex items-center justify-between h-16 px-5 border-b border-black/5 dark:border-white/5">
-              <div className="flex items-center gap-2">
-                <div className="h-6 w-6 rounded-lg bg-gradient-to-tr from-violet-500 to-rose-400 flex items-center justify-center text-[10px] font-black text-black">
-                  IS
-                </div>
-                <span className="text-xs font-bold tracking-widest text-gray-900 dark:text-white uppercase">Idiots Space</span>
-              </div>
-              <button 
-                onClick={() => setMobileMenuOpen(false)}
-                className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-950 dark:hover:text-white cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
 
-            {/* Render Sidebar components directly */}
-            <div className="flex-1 overflow-y-auto px-3 py-4" onClick={() => setMobileMenuOpen(false)}>
-              <Sidebar isCollapsed={false} setIsCollapsed={() => {}} profile={profile} />
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 3. Main Workspace Container */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
@@ -109,7 +76,7 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
         </div>
 
         {/* Mobile Bottom Tab Navbar */}
-        <MobileNav profile={profile} />
+        <MobileNav profile={profile} drawerOpen={mobileMenuOpen} setDrawerOpen={setMobileMenuOpen} />
 
       </div>
 

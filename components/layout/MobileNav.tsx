@@ -25,11 +25,15 @@ import { UserProfile } from '@/types'
 interface MobileNavProps {
   onToggleMobileMenu?: () => void
   profile?: UserProfile
+  drawerOpen?: boolean
+  setDrawerOpen?: (open: boolean) => void
 }
 
-export default function MobileNav({ onToggleMobileMenu, profile }: MobileNavProps) {
+export default function MobileNav({ onToggleMobileMenu, profile, drawerOpen: parentDrawerOpen, setDrawerOpen: parentSetDrawerOpen }: MobileNavProps) {
   const pathname = usePathname()
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [localDrawerOpen, setLocalDrawerOpen] = useState(false)
+  const drawerOpen = parentDrawerOpen !== undefined ? parentDrawerOpen : localDrawerOpen
+  const setDrawerOpen = parentSetDrawerOpen !== undefined ? parentSetDrawerOpen : setLocalDrawerOpen
   const [isLoggingOut, startLogoutTransition] = useTransition()
 
   const tabs = [
