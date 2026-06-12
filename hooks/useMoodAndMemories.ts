@@ -56,20 +56,24 @@ export function useMoodAndMemories(userId: string | null | undefined) {
     const aiMemKey = `mock_ai_memories_${userId}`
 
     try {
-      const [moodRes, vaultRes, aiRes] = await Promise.all([
+      let [moodRes, vaultRes, aiRes] = await Promise.all([
         supabase.from('mood_logs').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(30),
         supabase.from('vault_entries').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
         supabase.from('ai_memories').select('*').eq('user_id', userId).order('created_at', { ascending: false })
       ])
 
-      if (moodRes.error) throw moodRes.error
-      if (vaultRes.error) throw vaultRes.error
-      if (aiRes.error) throw aiRes.error
+      // Fallback for vault_entries -> memory_vault if missing
+      if (vaultRes.error && (vaultRes.error.code === 'PGRST205' || vaultRes.error.message.includes('does not exist') || vaultRes.error.code === '42P01')) {
+        vaultRes = await supabase.from('memory_vault').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+      }
 
-      setMoodLogs(moodRes.data as MoodLog[])
-      setVaultItems(vaultRes.data as MemoryVaultItem[])
-      setAIMemories(aiRes.data as AIMemoryItem[])
+      if (moodRes.error) console.warn("Mood fetch error:", moodRes.error);
+      if (vaultRes.error) console.warn("Vault fetch error:", vaultRes.error);
+      if (aiRes.error) console.warn("AI Memories fetch error:", aiRes.error);
 
+      setMoodLogs((moodRes.data as MoodLog[]) || []);
+      setVaultItems((vaultRes.data as MemoryVaultItem[]) || []);
+      setAIMemories((aiRes.data as AIMemoryItem[]) || []);
     } catch (err: any) {
       console.warn("DB fetch failed in useMoodAndMemories (switching to localStorage fallback):", err.message)
       
@@ -127,7 +131,21 @@ export function useMoodAndMemories(userId: string | null | undefined) {
         status_text: text,
         visibility
       })
-      if (error) throw error
+      if (error) {
+        if (error.message.includes('does not exist') || error.code === 'PGRST204' || error.code === '42703') {
+          console.warn("New mood_logs columns missing, falling back to old schema.");
+          const { error: fallbackError } = await supabase.from('mood_logs').insert({
+            user_id: userId,
+            mood_rating: rating,
+            energy_level: energy,
+            focus_level: focus,
+            status_text: text
+          })
+          if (fallbackError) throw fallbackError;
+        } else {
+          throw error;
+        }
+      }
     } catch (err: any) {
       console.warn("DB mood insertion failed, using localStorage fallback:", err.message)
       const moodKey = `mock_mood_logs_${userId}`
@@ -177,7 +195,23 @@ export function useMoodAndMemories(userId: string | null | undefined) {
         category,
         tags
       })
-      if (error) throw error
+      if (error) {
+        if (error.code === 'PGRST205' || error.message.includes('does not exist') || error.code === '42P01') {
+          console.warn("vault_entries missing, falling back to memory_vault schema.");
+          const { error: fallbackError } = await supabase.from('memory_vault').insert({
+            user_id: userId,
+            title,
+            message_id: messageId,
+            file_url: fileUrl,
+            file_name: fileName,
+            notes,
+            is_shared: isShared
+          })
+          if (fallbackError) throw fallbackError;
+        } else {
+          throw error;
+        }
+      }
     } catch (err: any) {
       console.warn("DB vault insertion failed, using localStorage fallback:", err.message)
       const vaultKey = `mock_memory_vault_${userId}`
@@ -194,7 +228,14 @@ export function useMoodAndMemories(userId: string | null | undefined) {
 
     try {
       const { error } = await supabase.from('vault_entries').delete().eq('id', id)
-      if (error) throw error
+      if (error) {
+        if (error.code === 'PGRST205' || error.message.includes('does not exist') || error.code === '42P01') {
+          const { error: fallbackError } = await supabase.from('memory_vault').delete().eq('id', id);
+          if (fallbackError) throw fallbackError;
+        } else {
+          throw error;
+        }
+      }
     } catch (err: any) {
       console.warn("DB vault deletion failed, using localStorage fallback:", err.message)
       const vaultKey = `mock_memory_vault_${userId}`

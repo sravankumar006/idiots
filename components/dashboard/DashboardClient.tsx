@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import {
   Sparkles, Clock, MessageSquare, FolderHeart, ArrowRight,
   Activity, Brain, Plus, Award, Briefcase, GraduationCap,
-  GitBranch, BarChart2, CheckCircle2, User, Edit3, X, Calendar, RefreshCw
+  GitBranch, BarChart2, CheckCircle2, User, Edit3, X, Calendar, RefreshCw, Heart
 } from 'lucide-react'
 import Link from 'next/link'
 import { UserProfile } from '@/types'
@@ -13,6 +13,7 @@ import SectionHeader from '@/components/layout/SectionHeader'
 import { Card } from '@/components/ui/Card'
 import { useDashboardData } from '@/hooks/useDashboardData'
 import { useProjectsData } from '@/hooks/useProjectsData'
+import { useMoodAndMemories } from '@/hooks/useMoodAndMemories'
 
 // Avatar config
 const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
@@ -48,6 +49,16 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
     projects,
     loading: projectsLoading
   } = useProjectsData(activeUser)
+
+  // Fetch mood data for Emotional Status
+  const resolvedUserId = targetUser?.id || activeUser?.id
+  const {
+    moodLogs,
+    loading: moodLoading
+  } = useMoodAndMemories(resolvedUserId || null)
+
+  const publicMoodLogs = moodLogs.filter(log => log.visibility !== 'private' || !isReadOnly)
+  const latestMood = publicMoodLogs[0]
 
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -225,6 +236,56 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
                   <span className="font-semibold text-emerald-500">{careerProfile.internship_status}</span>
                 </div>
               </div>
+            </div>
+          </Card>
+
+          {/* Emotional Status Card */}
+          <Card className="p-6 space-y-4">
+            <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+              <Heart className="h-4 w-4 text-rose-400" />
+              Emotional Status
+            </h3>
+            
+            <div className="pt-2">
+              {moodLoading ? (
+                <p className="text-xs text-gray-500 font-medium animate-pulse">syncing emotional data...</p>
+              ) : !latestMood ? (
+                <p className="text-xs text-gray-500 font-medium">no emotional status tracked recently.</p>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl">{latestMood.mood_label?.split(' ')[0] || '😐'}</span>
+                    <div>
+                      <p className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                        "{latestMood.status_text || 'stable state.'}"
+                      </p>
+                      <span className="text-[10px] text-gray-400 uppercase tracking-widest mt-0.5 block">
+                        {new Date(latestMood.created_at || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 pt-3 border-t border-black/5 dark:border-white/5">
+                    <div className="flex justify-between text-[10px] font-bold">
+                      <span className="text-gray-600 dark:text-gray-400 uppercase tracking-wider">energy level</span>
+                      <span className="text-gray-500">{latestMood.energy_level}/10</span>
+                    </div>
+                    <div className="w-full bg-black/5 dark:bg-white/5 h-1.5 rounded-full overflow-hidden">
+                      <div className="bg-gradient-to-r from-amber-400 to-rose-400 h-full rounded-full" style={{ width: `${(latestMood.energy_level / 10) * 100}%` }} />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 pt-1">
+                    <div className="flex justify-between text-[10px] font-bold">
+                      <span className="text-gray-600 dark:text-gray-400 uppercase tracking-wider">focus level</span>
+                      <span className="text-gray-500">{latestMood.focus_level}/10</span>
+                    </div>
+                    <div className="w-full bg-black/5 dark:bg-white/5 h-1.5 rounded-full overflow-hidden">
+                      <div className="bg-gradient-to-r from-violet-500 to-cyan-400 h-full rounded-full" style={{ width: `${(latestMood.focus_level / 10) * 100}%` }} />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
 
