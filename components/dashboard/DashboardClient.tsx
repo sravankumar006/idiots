@@ -37,6 +37,8 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
     codingStats,
     studyStats,
     activities,
+    focusSessions = [],
+    focusStats = { totalHours: 0, totalSessions: 0, weeklyMinutes: 0, monthlyMinutes: 0 },
     targetUser,
     updateCareerProfile,
     syncCodingPlatform,
@@ -147,6 +149,38 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
   // Simple statistics totals
   const totalSolved = codingStats.leetcode_solved + codingStats.hackerrank_solved + codingStats.codeforces_solved
   const studyHours = (studyStats.total_study_minutes / 60).toFixed(1)
+
+  // Calculate actual daily study minutes for the last 7 days from focus sessions
+  const getWeeklyTrend = () => {
+    const days = ['s', 'm', 't', 'w', 't', 'f', 's']
+    const now = new Date()
+    const trendData: { dateStr: string; dayLabel: string; minutes: number }[] = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date()
+      d.setDate(now.getDate() - i)
+      trendData.push({
+        dateStr: d.toDateString(),
+        dayLabel: days[d.getDay()],
+        minutes: 0
+      })
+    }
+
+    focusSessions.forEach(s => {
+      const sDateStr = new Date(s.created_at).toDateString()
+      const match = trendData.find(t => t.dateStr === sDateStr)
+      if (match) {
+        match.minutes += s.actual_minutes
+      }
+    })
+
+    const maxMins = Math.max(...trendData.map(t => t.minutes), 30)
+    return trendData.map(t => ({
+      label: t.dayLabel,
+      minutes: t.minutes,
+      heightPercent: Math.min(100, Math.round((t.minutes / maxMins) * 100))
+    }))
+  }
+  const weeklyTrend = getWeeklyTrend()
 
   return (
     <PageContainer>
@@ -419,34 +453,56 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
             <div className="grid grid-cols-2 gap-4 pt-2">
               <div className="bg-[#faf8f5] dark:bg-[#121216] border border-black/5 dark:border-white/5 p-3 rounded-2xl">
                 <span className="text-[9px] text-gray-400 uppercase tracking-wider block">completed hours</span>
-                <span className="text-xl font-bold text-gray-900 dark:text-white">{studyHours}h</span>
+                <span className="text-xl font-bold text-gray-900 dark:text-white">{focusStats.totalHours || studyHours}h</span>
               </div>
               <div className="bg-[#faf8f5] dark:bg-[#121216] border border-black/5 dark:border-white/5 p-3 rounded-2xl">
                 <span className="text-[9px] text-gray-400 uppercase tracking-wider block">pomodoros done</span>
                 <span className="text-xl font-bold text-gray-900 dark:text-white">{studyStats.completed_pomodoros}</span>
               </div>
               <div className="bg-[#faf8f5] dark:bg-[#121216] border border-black/5 dark:border-white/5 p-3 rounded-2xl">
-                <span className="text-[9px] text-gray-400 uppercase tracking-wider block">pdfs analyzed</span>
-                <span className="text-xl font-bold text-gray-900 dark:text-white">{studyStats.pdfs_reviewed}</span>
+                <span className="text-[9px] text-gray-400 uppercase tracking-wider block">weekly focus</span>
+                <span className="text-xl font-bold text-amber-500">{Math.round(focusStats.weeklyMinutes / 60)}h {focusStats.weeklyMinutes % 60}m</span>
               </div>
               <div className="bg-[#faf8f5] dark:bg-[#121216] border border-black/5 dark:border-white/5 p-3 rounded-2xl">
-                <span className="text-[9px] text-gray-400 uppercase tracking-wider block">ai helper sessions</span>
-                <span className="text-xl font-bold text-gray-900 dark:text-white">{studyStats.ai_sessions_count}</span>
+                <span className="text-[9px] text-gray-400 uppercase tracking-wider block">monthly focus</span>
+                <span className="text-xl font-bold text-cyan-400">{Math.round(focusStats.monthlyMinutes / 60)}h {focusStats.monthlyMinutes % 60}m</span>
               </div>
             </div>
 
-            {/* Weekly trend chart placeholder */}
+            {/* Weekly trend chart */}
             <div className="pt-2 border-t border-black/5 dark:border-white/5 space-y-2">
               <span className="text-[10px] text-gray-400 uppercase tracking-wider block">7-day focus activity</span>
               <div className="flex items-end justify-between h-14 px-2 pt-2">
-                {[20, 45, 15, 60, 25, 40, 50].map((val, idx) => (
+                {weeklyTrend.map((t, idx) => (
                   <div key={idx} className="flex flex-col items-center gap-1.5 w-6">
-                    <div className="w-full bg-gradient-to-t from-violet-500 to-rose-400 rounded-t-md hover:opacity-80 transition-all cursor-pointer" style={{ height: `${val}%` }} title={`${(val*1.2).toFixed(0)}m studied`} />
-                    <span className="text-[8px] font-bold text-gray-400 lowercase">{['m', 't', 'w', 't', 'f', 's', 's'][idx]}</span>
+                    <div 
+                      className="w-full bg-gradient-to-t from-violet-500 to-rose-400 rounded-t-md hover:opacity-80 transition-all cursor-pointer" 
+                      style={{ height: `${t.heightPercent}%` }} 
+                      title={`${t.minutes}m focused`} 
+                    />
+                    <span className="text-[8px] font-bold text-gray-400 lowercase">{t.label}</span>
                   </div>
                 ))}
               </div>
             </div>
+
+            {/* Recent Accomplishments Feed */}
+            {focusSessions.length > 0 && (
+              <div className="pt-3 border-t border-black/5 dark:border-white/5 space-y-2.5">
+                <span className="text-[10px] text-gray-400 uppercase tracking-wider block">recent accomplishments</span>
+                <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1 scrollbar-thin">
+                  {focusSessions.filter(s => s.accomplishments).slice(0, 3).map((s) => (
+                    <div key={s.id} className="bg-[#faf8f5] dark:bg-[#121216] border border-black/5 dark:border-white/5 p-2.5 rounded-xl text-[11px] leading-relaxed">
+                      <div className="flex justify-between items-center mb-0.5">
+                        <span className="font-bold text-gray-800 dark:text-gray-200 lowercase">{s.goal}</span>
+                        <span className="text-[9px] text-amber-500 font-bold">{s.actual_minutes}m</span>
+                      </div>
+                      <p className="text-gray-500 font-medium">{s.accomplishments}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </Card>
 
           {/* Active Projects Feed */}

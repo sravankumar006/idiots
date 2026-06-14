@@ -314,3 +314,49 @@ body {
   animation: pageFadeIn 0.2s ease-out forwards;
 }
 
+/* Zen Focus Ambient Theme Animations */
+@keyframes aurora-gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animate-aurora {
+  background-size: 400% 400%;
+  animation: aurora-gradient 25s ease infinite;
+}
+
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0.2; transform: scale(0.9); }
+  50% { opacity: 0.9; transform: scale(1.1); }
+}
+.animate-twinkle {
+  animation: star-twinkle 4s ease-in-out infinite;
+}
+
+@keyframes glow-breathing {
+  0%, 100% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.15); opacity: 0.6; }
+}
+.animate-breathing {
+  animation: glow-breathing 10s ease-in-out infinite;
+}
+
+@keyframes ocean-undulate {
+  0% { background-position: 0% 30%; }
+  50% { background-position: 100% 70%; }
+  100% { background-position: 0% 30%; }
+}
+.animate-ocean {
+  background-size: 200% 200%;
+  animation: ocean-undulate 15s ease-in-out infinite;
+}
+
+@keyframes rain-fall-y {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(100%); }
+}
+.animate-rain-fall {
+  animation: rain-fall-y 1.5s linear infinite;
+}
+
+

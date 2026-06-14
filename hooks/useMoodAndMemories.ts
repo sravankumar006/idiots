@@ -32,8 +32,10 @@ export interface MemoryVaultItem {
 
 export interface AIMemoryItem {
   id: string
-  user_id: string
-  memory_text: string
+  created_by: string
+  title: string
+  content: string
+  memory_type: string
   is_visible: boolean
   created_at: string
 }
@@ -59,7 +61,7 @@ export function useMoodAndMemories(userId: string | null | undefined) {
       let [moodRes, vaultRes, aiRes] = await Promise.all([
         supabase.from('mood_logs').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(30),
         supabase.from('vault_entries').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-        supabase.from('ai_memories').select('*').eq('user_id', userId).order('created_at', { ascending: false })
+        supabase.from('ai_memories').select('*').eq('created_by', userId).order('created_at', { ascending: false })
       ])
 
       // Fallback for vault_entries -> memory_vault if missing

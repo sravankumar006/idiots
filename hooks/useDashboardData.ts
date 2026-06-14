@@ -46,6 +46,28 @@ export interface ActivityLog {
   created_at: string
 }
 
+export interface FocusSession {
+  id: string
+  user_id: string
+  goal: string
+  duration_minutes: number | null
+  actual_minutes: number
+  theme: string
+  notes: string
+  accomplishments: string
+  reflections: string
+  completed: boolean
+  created_at: string
+  completed_at: string | null
+}
+
+export interface FocusStats {
+  totalHours: number
+  totalSessions: number
+  weeklyMinutes: number
+  monthlyMinutes: number
+}
+
 const DEFAULT_CAREER_PROFILE = (userId: string): CareerProfile => ({
   id: userId,
   resume_url: '',
@@ -107,12 +129,45 @@ const DEFAULT_ACTIVITIES = (userId: string): ActivityLog[] => [
   }
 ]
 
+const DEFAULT_FOCUS_SESSIONS = (userId: string): FocusSession[] => [
+  {
+    id: 'fs-1',
+    user_id: userId,
+    goal: 'Coding',
+    duration_minutes: 45,
+    actual_minutes: 45,
+    theme: 'coding_cave',
+    notes: 'Implemented the new grid layout for the dashboard. Added Tailwind styling.',
+    accomplishments: 'Completed dashboard components & styled them.',
+    reflections: 'Felt very focused. Coding cave theme matches coding headspace.',
+    completed: true,
+    created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
+    completed_at: new Date(Date.now() - 3600000 * 2 + 45 * 60000).toISOString()
+  },
+  {
+    id: 'fs-2',
+    user_id: userId,
+    goal: 'Research',
+    duration_minutes: 60,
+    actual_minutes: 60,
+    theme: 'aurora',
+    notes: 'Researched Supabase RLS policies and channel replication details.',
+    accomplishments: 'Mapped out migration scripts.',
+    reflections: 'A bit distracted by notifications in the middle.',
+    completed: true,
+    created_at: new Date(Date.now() - 3600000 * 24).toISOString(),
+    completed_at: new Date(Date.now() - 3600000 * 24 + 60 * 60000).toISOString()
+  }
+]
+
 export function useDashboardData(activeUser: UserProfile | null, targetUserId?: string | null) {
   const [loading, setLoading] = useState(true)
   const [careerProfile, setCareerProfile] = useState<CareerProfile | null>(null)
   const [codingStats, setCodingStats] = useState<CodingStats | null>(null)
   const [studyStats, setStudyStats] = useState<StudyStats | null>(null)
   const [activities, setActivities] = useState<ActivityLog[]>([])
+  const [focusSessions, setFocusSessions] = useState<FocusSession[]>([])
+  const [focusStats, setFocusStats] = useState<FocusStats>({ totalHours: 0, totalSessions: 0, weeklyMinutes: 0, monthlyMinutes: 0 })
   const [targetUser, setTargetUser] = useState<UserProfile | null>(null)
 
   const supabase = createClient()
@@ -120,6 +175,30 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
 
   // Determine active query ID
   const userIdToLoad = targetUserId || userId
+
+  // Compute stats from raw sessions list helper
+  const computeFocusStats = (sessions: FocusSession[]): FocusStats => {
+    const totalMins = sessions.reduce((acc, s) => acc + s.actual_minutes, 0)
+    const nowTime = Date.now()
+    const oneWeekAgo = nowTime - 7 * 24 * 60 * 60 * 1000
+    const oneMonthAgo = nowTime - 30 * 24 * 60 * 60 * 1000
+
+    let weeklyMins = 0
+    let monthlyMins = 0
+
+    sessions.forEach(s => {
+      const time = new Date(s.created_at).getTime()
+      if (time >= oneWeekAgo) weeklyMins += s.actual_minutes
+      if (time >= oneMonthAgo) monthlyMins += s.actual_minutes
+    })
+
+    return {
+      totalHours: Number((totalMins / 60).toFixed(1)),
+      totalSessions: sessions.length,
+      weeklyMinutes: weeklyMins,
+      monthlyMinutes: monthlyMins
+    }
+  }
 
   // 1. Fetch Dashboard Data
   const fetchData = useCallback(async () => {
@@ -131,13 +210,15 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
     const codingKey = `mock_coding_stats_${userIdToLoad}`
     const studyKey = `mock_study_stats_${userIdToLoad}`
     const activitiesKey = `mock_activities_${userIdToLoad}`
+    const focusKey = `mock_focus_sessions_${userIdToLoad}`
 
     try {
       const promises: any[] = [
         supabase.from('career_profiles').select('*').eq('id', userIdToLoad).maybeSingle(),
         supabase.from('coding_stats').select('*').eq('user_id', userIdToLoad).maybeSingle(),
         supabase.from('study_stats').select('*').eq('user_id', userIdToLoad).maybeSingle(),
-        supabase.from('activity_logs').select('*').eq('user_id', userIdToLoad).order('created_at', { ascending: false }).limit(20)
+        supabase.from('activity_logs').select('*').eq('user_id', userIdToLoad).order('created_at', { ascending: false }).limit(20),
+        supabase.from('focus_sessions').select('*').eq('user_id', userIdToLoad).eq('completed', true).order('created_at', { ascending: false }).limit(30)
       ]
 
       // Fetch target user profiles metadata if different
@@ -145,7 +226,7 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
         promises.push(supabase.from('profiles').select('*').eq('id', targetUserId).maybeSingle())
       }
 
-      const [careerRes, codingRes, studyRes, activitiesRes, profileRes] = await Promise.all(promises)
+      const [careerRes, codingRes, studyRes, activitiesRes, focusRes, profileRes] = await Promise.all(promises)
 
       // Set target user details
       if (profileRes && profileRes.data) {
@@ -203,6 +284,17 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
         setActivities(def)
       }
 
+      // Focus Sessions handle
+      if (focusRes.error) throw focusRes.error
+      if (focusRes.data && focusRes.data.length > 0) {
+        setFocusSessions(focusRes.data as FocusSession[])
+        setFocusStats(computeFocusStats(focusRes.data as FocusSession[]))
+      } else {
+        const def = DEFAULT_FOCUS_SESSIONS(userIdToLoad)
+        setFocusSessions(def)
+        setFocusStats(computeFocusStats(def))
+      }
+
     } catch (err: any) {
       console.warn("DB Dashboard Fetch failed (switching to localStorage fallback):", err.message)
       
@@ -254,6 +346,18 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
         const def = DEFAULT_ACTIVITIES(userIdToLoad)
         localStorage.setItem(activitiesKey, JSON.stringify(def))
         setActivities(def)
+      }
+
+      let localFocus = localStorage.getItem(focusKey)
+      if (localFocus) {
+        const parsed = JSON.parse(localFocus) as FocusSession[]
+        setFocusSessions(parsed)
+        setFocusStats(computeFocusStats(parsed))
+      } else {
+        const def = DEFAULT_FOCUS_SESSIONS(userIdToLoad)
+        localStorage.setItem(focusKey, JSON.stringify(def))
+        setFocusSessions(def)
+        setFocusStats(computeFocusStats(def))
       }
     } finally {
       setLoading(false)
@@ -368,6 +472,8 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
     codingStats,
     studyStats,
     activities,
+    focusSessions,
+    focusStats,
     targetUser,
     updateCareerProfile,
     syncCodingPlatform,
