@@ -118,9 +118,15 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: Sideba
           </div>
         )}
         {isCollapsed && (
-          <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-logo-start to-logo-end flex items-center justify-center shadow-md">
-            <span className="text-black font-extrabold text-xs">IS</span>
-          </div>
+          <button 
+            onClick={() => setIsCollapsed(false)}
+            className="h-8 w-8 rounded-xl bg-gradient-to-tr from-logo-start to-logo-end flex items-center justify-center shadow-md hover:from-violet-500 hover:to-pink-400 group transition-all duration-300 cursor-pointer border-none"
+            title="Expand Sidebar"
+            suppressHydrationWarning
+          >
+            <span className="text-black font-extrabold text-xs group-hover:hidden">IS</span>
+            <ChevronRight className="h-4 w-4 text-black hidden group-hover:block" />
+          </button>
         )}
 
         {!isCollapsed && (

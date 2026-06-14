@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import {
   Play, Square, BookOpen, Brain, Flame, Volume2, Sparkles,
-  Music, VolumeX, Moon, CloudRain, Wind, Radio, Info
+  Music, VolumeX, Moon, CloudRain, Wind, Radio, Info, GraduationCap, Code, Search
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -104,10 +104,15 @@ export default function StudyPanel({
     fireplace: false,
   })
 
-  // List of other users who are currently studying/focusing
-  const studyBuddies = useMemo(() => {
-    return Object.values(onlineUsers).filter((u: any) => u.userId !== activeUserId && u.isFocusing)
-  }, [onlineUsers, activeUserId])
+  // List of all users who are currently studying/focusing
+  const studyMembers = useMemo(() => {
+    return Object.values(onlineUsers).filter((u: any) => u.isFocusing)
+  }, [onlineUsers])
+
+  const startPresetSession = (activity: string) => {
+    setStatusInput(activity)
+    updateFocusStatus(true, activity, myFocus.isDeepFocus)
+  }
 
   // Focus duration string helper
   const getFocusMins = (focusSince: string | null) => {
@@ -231,88 +236,127 @@ export default function StudyPanel({
           <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest pl-1">
             my focus activity
           </span>
-          <div className="bg-white dark:bg-[#18181f] rounded-2xl p-4 border border-black/5 dark:border-white/[0.05] shadow-sm space-y-3.5">
-            <div>
-              <label htmlFor="focus-input" className="sr-only">What are you studying?</label>
-              <input
-                id="focus-input"
-                type="text"
-                value={statusInput}
-                onChange={(e) => setStatusInput(e.target.value.slice(0, 30))}
-                placeholder="what are you studying? (e.g. solving DSA)"
-                className="w-full text-xs bg-black/[0.03] dark:bg-[#121216] border border-black/5 dark:border-white/5 rounded-xl px-3 py-2 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 placeholder:dark:text-gray-500 focus:outline-none focus:border-amber-500/50"
-              />
-            </div>
+          <div className="bg-white dark:bg-[#18181f] rounded-2xl p-4 border border-black/5 dark:border-white/[0.05] shadow-sm">
+            {!myFocus.isFocusing ? (
+              <div className="space-y-3">
+                <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider pl-0.5">Quick Presets</p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    onClick={() => startPresetSession('Study')}
+                    className="flex flex-col items-center justify-center p-2 rounded-xl border border-black/5 dark:border-white/5 hover:border-amber-500/30 hover:bg-amber-500/5 dark:hover:bg-amber-500/10 transition-all text-[10.5px] font-bold text-gray-600 dark:text-gray-300 cursor-pointer"
+                  >
+                    <GraduationCap className="h-4 w-4 text-indigo-400 mb-1" />
+                    study
+                  </button>
+                  <button
+                    onClick={() => startPresetSession('Coding')}
+                    className="flex flex-col items-center justify-center p-2 rounded-xl border border-black/5 dark:border-white/5 hover:border-amber-500/30 hover:bg-amber-500/5 dark:hover:bg-amber-500/10 transition-all text-[10.5px] font-bold text-gray-600 dark:text-gray-300 cursor-pointer"
+                  >
+                    <Code className="h-4 w-4 text-emerald-400 mb-1" />
+                    coding
+                  </button>
+                  <button
+                    onClick={() => startPresetSession('Research')}
+                    className="flex flex-col items-center justify-center p-2 rounded-xl border border-black/5 dark:border-white/5 hover:border-amber-500/30 hover:bg-amber-500/5 dark:hover:bg-amber-500/10 transition-all text-[10.5px] font-bold text-gray-600 dark:text-gray-300 cursor-pointer"
+                  >
+                    <Search className="h-4 w-4 text-cyan-400 mb-1" />
+                    research
+                  </button>
+                </div>
+                
+                <div className="pt-2.5 border-t border-black/5 dark:border-white/5 space-y-2">
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider pl-0.5">Or Custom Session</p>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={statusInput}
+                      onChange={(e) => setStatusInput(e.target.value.slice(0, 30))}
+                      placeholder="custom activity (e.g. writing docs)"
+                      className="flex-1 text-xs bg-black/[0.03] dark:bg-[#121216] border border-black/5 dark:border-white/5 rounded-xl px-3 py-1.5 text-gray-700 dark:text-gray-200 placeholder:text-gray-400 placeholder:dark:text-gray-500 focus:outline-none focus:border-amber-500/50"
+                    />
+                    <button
+                      onClick={() => {
+                        const val = statusInput.trim() || 'Focusing'
+                        startPresetSession(val)
+                      }}
+                      className="px-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
+                    >
+                      start
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 rounded-xl p-2.5">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[9px] text-amber-500 font-bold uppercase tracking-wider">current session</span>
+                    <p className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate mt-0.5 lowercase">
+                      {myFocus.status || 'focusing quietly'}
+                    </p>
+                  </div>
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0 ml-2" />
+                </div>
 
-            <div className="flex items-center justify-between gap-2">
-              {/* Deep Focus Toggle */}
-              <button
-                onClick={() => updateFocusStatus(myFocus.isFocusing, statusInput, !myFocus.isDeepFocus)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                  myFocus.isDeepFocus
-                    ? 'bg-amber-500/15 border-amber-500/30 text-amber-500 shadow-sm shadow-amber-500/5 animate-pulse'
-                    : 'bg-black/[0.02] dark:bg-white/[0.02] border-black/5 dark:border-white/5 text-gray-500 hover:bg-black/[0.04] dark:hover:bg-white/[0.04]'
-                }`}
-                title="Reduces client animations and blocks unnecessary notifications"
-              >
-                <Moon className={`h-3.5 w-3.5 ${myFocus.isDeepFocus ? 'fill-amber-500' : ''}`} />
-                deep focus
-              </button>
+                <div className="flex items-center justify-between gap-2">
+                  {/* Deep Focus Toggle */}
+                  <button
+                    onClick={() => updateFocusStatus(myFocus.isFocusing, statusInput, !myFocus.isDeepFocus)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                      myFocus.isDeepFocus
+                        ? 'bg-amber-500/15 border-amber-500/30 text-amber-500 shadow-sm shadow-amber-500/5 animate-pulse'
+                        : 'bg-black/[0.02] dark:bg-white/[0.02] border-black/5 dark:border-white/5 text-gray-500 hover:bg-black/[0.04] dark:hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    <Moon className={`h-3.5 w-3.5 ${myFocus.isDeepFocus ? 'fill-amber-500' : ''}`} />
+                    deep focus
+                  </button>
 
-              {/* Study Toggle */}
-              <button
-                onClick={() => handleUpdateFocus(!myFocus.isFocusing)}
-                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl border text-xs font-bold transition-all active:scale-95 cursor-pointer ${
-                  myFocus.isFocusing
-                    ? 'bg-emerald-500 text-white border-transparent shadow-md shadow-emerald-500/20'
-                    : 'bg-amber-500 text-white border-transparent shadow-md shadow-amber-500/20 hover:bg-amber-600'
-                }`}
-              >
-                {myFocus.isFocusing ? (
-                  <>
-                    <Square className="h-3 w-3 fill-white" />
+                  {/* Stop Focus Button */}
+                  <button
+                    onClick={() => updateFocusStatus(false, '', false)}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 text-xs font-bold transition-all active:scale-95 cursor-pointer"
+                  >
+                    <Square className="h-3 w-3 fill-rose-500" />
                     stop focus
-                  </>
-                ) : (
-                  <>
-                    <Play className="h-3 w-3 fill-white" />
-                    start focus
-                  </>
-                )}
-              </button>
-            </div>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
         {/* ══════════════════════════════════════
-            3. STUDY BUDDIES PRESENCE
+            3. ACTIVE STUDY PRESENCE
             ══════════════════════════════════════ */}
         <section className="space-y-2">
           <div className="flex items-center justify-between pl-1">
             <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-              friends studying
+              members studying
             </span>
             <span className="text-[10px] text-gray-400 lowercase">
-              {studyBuddies.length} focused
+              {studyMembers.length} active
             </span>
           </div>
 
           <div className="space-y-1.5">
-            {studyBuddies.length === 0 ? (
+            {studyMembers.length === 0 ? (
               <div className="bg-white/40 dark:bg-white/[0.02] border border-dashed border-black/5 dark:border-white/5 rounded-2xl p-4 text-center">
                 <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed lowercase">
-                  no friends studying yet.<br />start focusing to inspire them!
+                  no members studying yet.<br />start focusing to inspire others!
                 </p>
               </div>
             ) : (
-              studyBuddies.map((buddy: any) => {
-                const avatar = AVATAR_MAP[buddy.avatar] || { gradient: 'from-slate-400 to-indigo-500', symbol: 'EX' }
-                const isDeep = !!buddy.isDeepFocus
+              studyMembers.map((member: any) => {
+                const avatar = AVATAR_MAP[member.avatar] || { gradient: 'from-slate-400 to-indigo-500', symbol: 'EX' }
+                const isDeep = !!member.isDeepFocus
+                const isMe = member.userId === activeUserId
+                const displayName = isMe ? `${member.username} (you)` : member.username
+                
                 return (
-                  <Link
-                    key={buddy.userId}
-                    href={`/dashboard?userId=${buddy.userId}`}
-                    className={`flex items-center gap-3 p-3 rounded-2xl bg-white dark:bg-[#18181f] border border-black/5 dark:border-white/[0.05] shadow-sm transition-all duration-300 hover:border-violet-500/30 cursor-pointer ${
+                  <div
+                    key={member.userId}
+                    className={`flex items-center gap-3 p-3 rounded-2xl bg-white dark:bg-[#18181f] border border-black/5 dark:border-white/[0.05] shadow-sm transition-all duration-300 ${
                       isDeep ? 'ring-1 ring-amber-500/20 bg-amber-500/[0.02] dark:bg-amber-500/[0.01]' : ''
                     }`}
                   >
@@ -329,19 +373,19 @@ export default function StudyPanel({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">
-                          {buddy.username}
+                          {displayName}
                         </span>
-                        {buddy.focusSince && (
-                          <span className="text-[9px] text-gray-400 dark:text-gray-500 shrink-0 font-medium">
-                            focused {getFocusMins(buddy.focusSince)}m
+                        {member.focusSince && (
+                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold shrink-0">
+                            {getFocusMins(member.focusSince)} mins
                           </span>
                         )}
                       </div>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate lowercase mt-0.5 font-medium">
-                        {isDeep ? '🤫 in deep focus' : buddy.focusStatus || 'focusing quietly'}
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate lowercase mt-0.5 font-semibold">
+                        {isDeep ? '🤫 in deep focus' : member.focusStatus || 'focusing quietly'}
                       </p>
                     </div>
-                  </Link>
+                  </div>
                 )
               })
             )}

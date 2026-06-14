@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import {
   Settings, X, Heart, ArrowLeft,
   LayoutDashboard, Sparkles, Clock, Brain, FolderHeart,
-  Hash, Sun, Moon, ChevronDown
+  Hash, Sun, Moon, ChevronDown, ChevronLeft, ChevronRight
 } from 'lucide-react'
 import { UserProfile, ChatGroup } from '@/types'
 import { createClient } from '@/lib/supabase/client'
@@ -63,6 +63,9 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
   const [newUsername, setNewUsername] = useState(activeUser?.username || '')
   const [selectedAvatar, setSelectedAvatar] = useState(activeUser?.avatar || 'avatar-cyber-ghost')
   const [isSavingProfile, setIsSavingProfile] = useState(false)
+
+  // ——— Sidebar collapsed state (desktop) ───
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
   // ——— Mobile: 'sidebar' | 'chat' ———
   const [mobileView, setMobileView] = useState<'sidebar' | 'chat'>('sidebar')
@@ -166,159 +169,256 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
   const activeAvatar = AVATAR_MAP[activeProfile?.avatar || 'avatar-cyber-ghost'] || AVATAR_MAP['avatar-cyber-ghost']
 
   // ——— Sidebar inner content (shared between desktop and mobile) ———
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full">
+  const SidebarContent = ({ isDesktop = false }: { isDesktop?: boolean }) => {
+    const isCollapsed = isDesktop && isSidebarCollapsed
 
-      {/* ── Brand header ── */}
-      <div className="flex items-center justify-between px-4 h-14 shrink-0 border-b border-black/5 dark:border-white/5">
-        <div className="flex items-center gap-2.5">
-          <div className="h-7 w-7 rounded-xl bg-gradient-to-tr from-violet-500 to-pink-400 flex items-center justify-center text-[11px] font-bold text-white shadow-sm select-none">
-            is
-          </div>
-          <span className="text-sm font-semibold text-gray-900 dark:text-white lowercase tracking-wide">
-            idiots space
-          </span>
-        </div>
+    return (
+      <div className="flex flex-col h-full">
 
-        {/* Nav dropdown trigger */}
-        <div className="relative" onClick={(e) => e.stopPropagation()}>
-          <button
-            onClick={() => setNavOpen(v => !v)}
-            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition-all cursor-pointer"
-            aria-label="Navigation menu"
-            title="More pages"
-          >
-            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${navOpen ? 'rotate-180' : ''}`} />
-          </button>
-
-            {navOpen && (
-              <div className="absolute top-full right-0 mt-1 w-48 z-50 bg-[#fefdfb] dark:bg-[#1c1f26] rounded-xl border border-black/6 dark:border-white/5 shadow-xl p-1.5 animate-scaleIn">
-              {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/5 transition-all"
-                >
-                  <Icon className="h-3.5 w-3.5 text-violet-400 shrink-0" />
-                  {label}
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Channels list ── */}
-      <div className="px-3 pt-5 pb-2 shrink-0">
-        <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-2 mb-2">
-          Rooms
-        </p>
-        <div className="space-y-0.5">
-          {groups.map((g) => {
-            const isActive = selectedGroup?.id === g.id
-            return (
-              <button
-                key={g.id}
-                onClick={() => selectChannel(g)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 text-left cursor-pointer group relative ${
-                  isActive
-                    ? 'bg-violet-500/10 dark:bg-violet-500/12 text-violet-700 dark:text-violet-300'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-black/[0.04] dark:hover:bg-white/[0.04] hover:text-gray-900 dark:hover:text-gray-100'
-                }`}
-              >
-                {/* Active indicator bar */}
-                {isActive && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-violet-500" />
-                )}
-                <Hash className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-violet-500' : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'}`} />
-                <span className="truncate">{g.group_name.replace('#', '').toLowerCase()}</span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* ── Online friends (scrollable flex-1) ── */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin px-3 pb-2 min-h-0">
-        <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-2 mb-2 mt-4">
-          Online
-        </p>
-        <div className="space-y-0.5">
-          {friends.map((f) => {
-            const av = AVATAR_MAP[f.avatar || 'avatar-cyber-ghost'] || AVATAR_MAP['avatar-cyber-ghost']
-            return (
-              <div key={f.id} className="flex items-center gap-2.5 px-3 py-2 rounded-xl">
-                <div className="relative shrink-0">
-                  <div className={`h-7 w-7 rounded-full bg-gradient-to-br ${av.gradient} flex items-center justify-center text-[9px] font-semibold text-white shadow-sm`}>
-                    {av.symbol}
-                  </div>
-                  <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-400 border-2 border-white dark:border-[#0a0b14] shadow-sm" />
+        {/* ── Brand header ── */}
+        <div className={`flex items-center px-4 h-14 shrink-0 border-b border-black/5 dark:border-white/5 ${
+          isCollapsed ? 'justify-center' : 'justify-between'
+        }`}>
+          {!isCollapsed ? (
+            <>
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-xl bg-gradient-to-tr from-violet-500 to-pink-400 flex items-center justify-center text-[11px] font-bold text-white shadow-sm select-none">
+                  is
                 </div>
-                <span className="text-xs text-gray-600 dark:text-gray-400 font-medium truncate lowercase">
-                  {f.username}
+                <span className="text-sm font-semibold text-gray-900 dark:text-white lowercase tracking-wide animate-fadeIn">
+                  idiots space
                 </span>
               </div>
-            )
-          })}
-          {friends.length === 0 && (
-            <p className="px-3 py-2 text-[10px] text-gray-400 dark:text-gray-500 italic">
-              just you right now 🌙
-            </p>
-          )}
-        </div>
-      </div>
 
-      {/* ── Profile footer ── */}
-      <div className="px-3 py-3 border-t border-black/5 dark:border-white/5 shrink-0">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={openProfileModal}
-            className="flex-1 flex items-center gap-2.5 p-2 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-all duration-150 text-left cursor-pointer group"
-            title="Edit profile"
-          >
-            <div className={`h-7 w-7 rounded-full bg-gradient-to-br ${activeAvatar.gradient} flex items-center justify-center text-[9px] font-semibold text-white shadow-md shrink-0`}>
-              {activeAvatar.symbol}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-gray-800 dark:text-white truncate lowercase">
-                {activeProfile?.username || 'you'}
-              </p>
-              <p className="text-[9px] text-gray-400 dark:text-gray-500 font-medium">
-                edit profile
-              </p>
-            </div>
-          </button>
+              {/* Nav dropdown trigger and collapse button */}
+              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                <button
+                  onClick={() => setNavOpen(v => !v)}
+                  className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition-all cursor-pointer"
+                  aria-label="Navigation menu"
+                  title="More pages"
+                >
+                  <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${navOpen ? 'rotate-180' : ''}`} />
+                </button>
 
-          {/* Theme toggle */}
-          {mounted && (
+                {isDesktop && (
+                  <button
+                    onClick={() => setIsSidebarCollapsed(true)}
+                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition-all cursor-pointer"
+                    title="Collapse Sidebar"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                )}
+
+                {navOpen && (
+                  <div className="absolute top-full right-0 mt-1 w-48 z-50 bg-[#fefdfb] dark:bg-[#1c1f26] rounded-xl border border-black/6 dark:border-white/5 shadow-xl p-1.5 animate-scaleIn">
+                    {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
+                      <Link
+                        key={href}
+                        href={href}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/5 transition-all"
+                      >
+                        <Icon className="h-3.5 w-3.5 text-violet-400 shrink-0" />
+                        {label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
             <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all cursor-pointer shrink-0"
-              title="Toggle theme"
-              aria-label="Toggle light/dark mode"
+              onClick={() => setIsSidebarCollapsed(false)}
+              className="h-8 w-8 rounded-xl bg-gradient-to-tr from-violet-500 to-pink-400 flex items-center justify-center text-[11px] font-bold text-white shadow-md hover:from-violet-600 hover:to-pink-500 group transition-all duration-300 cursor-pointer border-none"
+              title="Expand Sidebar"
             >
-              {theme === 'dark'
-                ? <Sun className="h-3.5 w-3.5 text-amber-400" />
-                : <Moon className="h-3.5 w-3.5 text-indigo-500" />
-              }
+              <span className="group-hover:hidden">is</span>
+              <ChevronRight className="h-4 w-4 text-white hidden group-hover:block" />
             </button>
           )}
         </div>
-      </div>
-    </div>
-  )
 
-    return (
-      <div className="flex h-full bg-[#f4f3ef] dark:bg-[#0f0f12] text-gray-900 dark:text-gray-100 overflow-hidden">
+        {/* ── Home Navigation Escape Hatch ── */}
+        <div className={`px-3 pt-3 shrink-0 ${isCollapsed ? 'flex flex-col items-center' : ''}`}>
+          <Link
+            href="/dashboard"
+            className={`w-full flex items-center rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer group relative ${
+              isCollapsed ? 'h-10 w-10 justify-center p-0' : 'px-3 py-2.5 text-left'
+            } text-gray-500 dark:text-gray-400 hover:bg-black/[0.04] dark:hover:bg-white/[0.04] hover:text-gray-900 dark:hover:text-gray-100`}
+            title="Go to Home"
+          >
+            <LayoutDashboard className="h-4.5 w-4.5 shrink-0 text-violet-500" />
+            {!isCollapsed && (
+              <span className="ml-2.5 lowercase animate-fadeIn">home</span>
+            )}
+            
+            {isCollapsed && (
+              <div className="absolute left-14 scale-0 group-hover:scale-100 transition-all duration-200 z-50 py-1.5 px-3 rounded-lg bg-[#faf9f6] dark:bg-[#141520] border border-black/5 dark:border-white/10 text-xs font-bold text-gray-800 dark:text-white whitespace-nowrap shadow-lg">
+                home
+              </div>
+            )}
+          </Link>
+        </div>
+
+        {/* ── Channels list ── */}
+        <div className={`px-3 pt-5 pb-2 shrink-0 ${isCollapsed ? 'flex flex-col items-center' : ''}`}>
+          {!isCollapsed ? (
+            <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-2 mb-2">
+              Rooms
+            </p>
+          ) : (
+            <div className="h-px w-8 bg-black/5 dark:bg-white/5 mb-4" />
+          )}
+          <div className="space-y-1 w-full flex flex-col items-center">
+            {groups.map((g) => {
+              const isActive = selectedGroup?.id === g.id
+              const roomShortName = g.group_name.replace('#', '').toLowerCase()
+              return (
+                <button
+                  key={g.id}
+                  onClick={() => selectChannel(g)}
+                  className={`w-full flex items-center rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer group relative ${
+                    isCollapsed ? 'h-10 w-10 justify-center p-0' : 'px-3 py-2.5 text-left'
+                  } ${
+                    isActive
+                      ? 'bg-violet-500/10 dark:bg-violet-500/12 text-violet-700 dark:text-violet-300'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-black/[0.04] dark:hover:bg-white/[0.04] hover:text-gray-900 dark:hover:text-gray-100'
+                  }`}
+                  title={isCollapsed ? roomShortName : undefined}
+                >
+                  {/* Active indicator bar */}
+                  {isActive && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-violet-500" />
+                  )}
+                  <Hash className={`h-4 w-4 shrink-0 ${isActive ? 'text-violet-500' : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'}`} />
+                  {!isCollapsed && (
+                    <span className="ml-2.5 truncate lowercase animate-fadeIn">{roomShortName}</span>
+                  )}
+
+                  {isCollapsed && (
+                    <div className="absolute left-14 scale-0 group-hover:scale-100 transition-all duration-200 z-50 py-1.5 px-3 rounded-lg bg-[#faf9f6] dark:bg-[#141520] border border-black/5 dark:border-white/10 text-xs font-bold text-gray-800 dark:text-white whitespace-nowrap shadow-lg">
+                      {roomShortName}
+                    </div>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* ── Online friends ── */}
+        <div className={`flex-1 overflow-y-auto scrollbar-thin px-3 pb-2 min-h-0 ${isCollapsed ? 'flex flex-col items-center' : ''}`}>
+          {!isCollapsed ? (
+            <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-2 mb-2 mt-4">
+              Online
+            </p>
+          ) : (
+            <div className="h-px w-8 bg-black/5 dark:bg-white/5 my-4" />
+          )}
+          <div className="space-y-1.5 w-full flex flex-col items-center">
+            {friends.map((f) => {
+              const av = AVATAR_MAP[f.avatar || 'avatar-cyber-ghost'] || AVATAR_MAP['avatar-cyber-ghost']
+              return (
+                <div 
+                  key={f.id} 
+                  className={`flex items-center gap-2.5 rounded-xl group relative transition-all duration-150 ${
+                    isCollapsed ? 'h-10 w-10 justify-center p-0' : 'px-3 py-2 w-full'
+                  }`}
+                  title={isCollapsed ? f.username : undefined}
+                >
+                  <div className="relative shrink-0">
+                    <div className={`h-7 w-7 rounded-full bg-gradient-to-br ${av.gradient} flex items-center justify-center text-[9px] font-semibold text-white shadow-sm`}>
+                      {av.symbol}
+                    </div>
+                    <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-400 border-2 border-white dark:border-[#0a0b14] shadow-sm" />
+                  </div>
+                  {!isCollapsed && (
+                    <span className="text-xs text-gray-600 dark:text-gray-400 font-medium truncate lowercase animate-fadeIn">
+                      {f.username}
+                    </span>
+                  )}
+
+                  {isCollapsed && (
+                    <div className="absolute left-14 scale-0 group-hover:scale-100 transition-all duration-200 z-50 py-1.5 px-3 rounded-lg bg-[#faf9f6] dark:bg-[#141520] border border-black/5 dark:border-white/10 text-xs font-bold text-gray-800 dark:text-white whitespace-nowrap shadow-lg">
+                      {f.username}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+            {friends.length === 0 && !isCollapsed && (
+              <p className="px-3 py-2 text-[10px] text-gray-400 dark:text-gray-500 italic animate-fadeIn">
+                just you right now 🌙
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* ── Profile footer ── */}
+        <div className={`px-3 py-3 border-t border-black/5 dark:border-white/5 shrink-0 ${isCollapsed ? 'flex flex-col items-center' : ''}`}>
+          <div className="flex items-center gap-2 w-full justify-center">
+            <button
+              onClick={openProfileModal}
+              className={`flex items-center rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-all duration-150 text-left cursor-pointer group relative ${
+                isCollapsed ? 'h-10 w-10 justify-center p-0' : 'p-2 flex-1 gap-2.5'
+              }`}
+              title="Edit profile"
+            >
+              <div className={`h-7 w-7 rounded-full bg-gradient-to-br ${activeAvatar.gradient} flex items-center justify-center text-[9px] font-semibold text-white shadow-md shrink-0`}>
+                {activeAvatar.symbol}
+              </div>
+              {!isCollapsed && (
+                <div className="min-w-0 flex-1 animate-fadeIn">
+                  <p className="text-xs font-semibold text-gray-800 dark:text-white truncate lowercase">
+                    {activeProfile?.username || 'you'}
+                  </p>
+                  <p className="text-[9px] text-gray-400 dark:text-gray-500 font-medium">
+                    edit profile
+                  </p>
+                </div>
+              )}
+
+              {isCollapsed && (
+                <div className="absolute left-14 scale-0 group-hover:scale-100 transition-all duration-200 z-50 py-1.5 px-3 rounded-lg bg-[#faf9f6] dark:bg-[#1c1f26] border border-black/5 dark:border-white/10 text-xs font-bold text-gray-800 dark:text-white whitespace-nowrap shadow-lg">
+                  edit profile ({activeProfile?.username || 'you'})
+                </div>
+              )}
+            </button>
+
+            {/* Theme toggle */}
+            {mounted && !isCollapsed && (
+              <button
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all cursor-pointer shrink-0 animate-fadeIn"
+                title="Toggle theme"
+                aria-label="Toggle light/dark mode"
+              >
+                {theme === 'dark'
+                  ? <Sun className="h-3.5 w-3.5 text-amber-400" />
+                  : <Moon className="h-3.5 w-3.5 text-indigo-500" />
+                }
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex h-full bg-[#f4f3ef] dark:bg-[#0f0f12] text-gray-900 dark:text-gray-100 overflow-hidden">
 
       {/* ═══════════════════════════════════════════
           DESKTOP SIDEBAR
           ═══════════════════════════════════════════ */}
       <aside
-        className={`hidden md:flex flex-col w-[280px] shrink-0 h-full min-h-0 bg-[#faf9f6] dark:bg-[#16181d] border-r border-black/6 dark:border-white/[0.05]`}
+        className={`hidden md:flex flex-col shrink-0 h-full min-h-0 bg-[#faf9f6] dark:bg-[#16181d] border-r border-black/6 dark:border-white/[0.05] transition-all duration-500 ease-in-out ${
+          isSidebarCollapsed ? 'w-20' : 'w-[280px]'
+        }`}
         aria-label="Sidebar"
       >
-        <SidebarContent />
+        <SidebarContent isDesktop={true} />
       </aside>
 
       {/* ═══════════════════════════════════════════
@@ -326,7 +426,7 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
           ═══════════════════════════════════════════ */}
       {mobileView === 'sidebar' && (
         <div className="md:hidden flex flex-col w-full h-full bg-[#faf9f6] dark:bg-[#16181d]">
-          <SidebarContent />
+          <SidebarContent isDesktop={false} />
         </div>
       )}
 

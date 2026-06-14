@@ -321,6 +321,22 @@ export default function MessageBubble({
               message.replied_message ? (isSelf ? 'rounded-tr-none' : 'rounded-tl-none') : ''
             }`}
           >
+            {/* Optional category badge */}
+            {message.category && message.category !== 'General' && message.category !== 'chats' && (
+              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wide mb-1.5 border select-none ${
+                isSelf 
+                  ? 'bg-white/15 border-white/25 text-white/95' 
+                  : 'bg-amber-500/10 border-amber-500/25 text-amber-600 dark:text-amber-400'
+              }`}>
+                {message.category === 'Question' && '❓ question'}
+                {message.category === 'Resource' && '📚 resource'}
+                {message.category === 'Study Update' && '🕯️ study update'}
+                {message.category === 'Coding Update' && '💻 coding update'}
+                {message.category === 'Project Discussion' && '🤝 project discussion'}
+                {!['Question', 'Resource', 'Study Update', 'Coding Update', 'Project Discussion'].includes(message.category) && `📌 ${message.category.toLowerCase()}`}
+              </span>
+            )}
+
             {message.type === 'ai' ? (
               <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-xl prose-code:text-indigo-300 break-words">
                 {/* AI mode badge — shows context being analyzed */}

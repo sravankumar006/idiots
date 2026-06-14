@@ -48,6 +48,14 @@ export default function Topbar({
       
       {/* Left: Route Title */}
       <div className="flex items-center gap-3">
+        <button
+          onClick={onToggleMobileMenu}
+          className="md:hidden flex items-center justify-center h-9 w-9 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition-all cursor-pointer shrink-0 border-none bg-transparent"
+          title="Open menu"
+          aria-label="Open menu"
+        >
+          <Menu className="h-4.5 w-4.5" />
+        </button>
 
         <div className="flex items-center gap-2">
           <Sparkles className="h-4.5 w-4.5 text-violet-400 animate-pulse" />

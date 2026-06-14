@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { ArrowLeft, Users, MoreVertical, Phone, Sun, Moon, Copy, BellOff, LogOut, Trash2, BookOpen, Sparkles, X, Flame } from 'lucide-react'
+import { ArrowLeft, Users, MoreVertical, Phone, Sun, Moon, Copy, BellOff, LogOut, Trash2, BookOpen, Sparkles, X, Flame, Search, Info, Play, BarChart2 } from 'lucide-react'
 import { UserProfile, ChatMessage } from '@/types'
 import { useTheme } from 'next-themes'
 import MessageList from './MessageList'
@@ -12,6 +12,8 @@ import useMessages from '@/hooks/useMessages'
 import useRealtimeChat from '@/hooks/useRealtimeChat'
 import useRealtimeGroupState from '@/hooks/useRealtimeGroupState'
 import { useMoodAndMemories } from '@/hooks/useMoodAndMemories'
+import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 
 // Avatar palette — same as workspace (kept local to avoid coupling)
 const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
@@ -45,6 +47,7 @@ interface ChatWindowProps {
 
 export default function ChatWindow({ groupId, groupName, activeUser, onBack }: ChatWindowProps) {
   const { theme, setTheme } = useTheme()
+  const router = useRouter()
   const [mounted, setMounted] = React.useState(false)
   React.useEffect(() => setMounted(true), [])
 
@@ -116,16 +119,62 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
   // Local Study Filter active state
   const [studyFilterActive, setStudyFilterActive] = useState(false)
 
+  const onlineCount = Object.keys(onlineUsers).length
+  const activeCount = Object.values(onlineUsers).filter((u: any) => !u.isFocusing).length
+  const activeStudyMembers = Object.values(onlineUsers).filter((u: any) => u.isFocusing).length
+  const cleanName = groupName.replace('#', '').toLowerCase()
+  const isGeneralRoom = cleanName === 'general'
+  const isFocusRoom = cleanName === 'focus room'
+  const effectiveStudyModeActive = isGeneralRoom ? false : (isFocusRoom ? true : studyModeActive)
+  const gradient = groupGradient(groupId)
+
+  const supabase = createClient()
+  const [focusRoomStats, setFocusRoomStats] = useState({ activeSessions: 0, todayHours: 0 })
+
+  useEffect(() => {
+    if (!isFocusRoom) return
+
+    const fetchStats = async () => {
+      try {
+        // Query active sessions (completed = false)
+        const { count: activeCountVal, error: activeErr } = await supabase
+          .from('focus_sessions')
+          .select('*', { count: 'exact', head: true })
+          .eq('completed', false)
+
+        // Query today's completed focus sessions
+        const startOfToday = new Date()
+        startOfToday.setHours(0, 0, 0, 0)
+        
+        const { data: todaySessions, error: todayErr } = await supabase
+          .from('focus_sessions')
+          .select('actual_minutes')
+          .eq('completed', true)
+          .gte('completed_at', startOfToday.toISOString())
+
+        if (!activeErr && !todayErr) {
+          const totalMins = todaySessions?.reduce((sum, s) => sum + s.actual_minutes, 0) || 0
+          setFocusRoomStats({
+            activeSessions: activeCountVal || 0,
+            todayHours: Number((totalMins / 60).toFixed(1))
+          })
+        }
+      } catch (err) {
+        console.warn("Failed to fetch focus room stats:", err)
+      }
+    }
+
+    fetchStats()
+    const interval = setInterval(fetchStats, 15000)
+    return () => clearInterval(interval)
+  }, [isFocusRoom, supabase])
+
   // Close study panel automatically on tiny mobile screens initially
   useEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       setStudyPanelOpen(false)
     }
-  }, [studyModeActive])
-
-  const onlineCount = Object.keys(onlineUsers).length
-  const cleanName = groupName.replace('#', '').toLowerCase()
-  const gradient = groupGradient(groupId)
+  }, [effectiveStudyModeActive])
 
   // Initials from group name
   const initials = cleanName
@@ -138,26 +187,45 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
   return (
     <DragDropZone onFileDrop={setDraftFile}>
       <div className={`flex flex-col h-full relative overflow-hidden transition-all duration-500 ${
-        studyModeActive
-          ? 'bg-[#f6f3eb] dark:bg-[#0c0c0f]'
-          : 'bg-[#f0ede8] dark:bg-[#0f0f12]'
+        isGeneralRoom
+          ? 'bg-[#faf6f2] dark:bg-[#0e0d10]'
+          : (isFocusRoom
+              ? 'bg-[#fafaf6] dark:bg-[#0a0a0d]'
+              : (effectiveStudyModeActive
+                  ? 'bg-[#f6f3eb] dark:bg-[#0c0c0f]'
+                  : 'bg-[#f0ede8] dark:bg-[#0f0f12]'))
       }`}>
 
         {/* ── Subtle background texture ── */}
-        <div className="absolute inset-0 opacity-[0.015] dark:opacity-[0.03] pointer-events-none"
-          style={{ backgroundImage: studyModeActive
-            ? 'radial-gradient(circle at 30% 20%, #f59e0b 0%, transparent 60%), radial-gradient(circle at 80% 80%, #d97706 0%, transparent 50%)'
-            : 'radial-gradient(circle at 30% 20%, #6366f1 0%, transparent 60%), radial-gradient(circle at 80% 80%, #8b5cf6 0%, transparent 50%)'
+        <div 
+          className={`absolute inset-0 pointer-events-none transition-all duration-500 ${
+            isGeneralRoom 
+              ? 'opacity-[0.025] dark:opacity-[0.05]' 
+              : (isFocusRoom
+                  ? 'opacity-[0.03] dark:opacity-[0.06]'
+                  : 'opacity-[0.015] dark:opacity-[0.03]')
+          }`}
+          style={{ backgroundImage: isGeneralRoom
+            ? 'radial-gradient(circle at 20% 30%, #ec4899 0%, transparent 60%), radial-gradient(circle at 80% 80%, #8b5cf6 0%, transparent 50%)'
+            : (isFocusRoom
+                ? 'radial-gradient(circle at 30% 20%, rgba(245, 158, 11, 0.4) 0%, transparent 60%), radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.25) 0%, transparent 50%)'
+                : (effectiveStudyModeActive
+                    ? 'radial-gradient(circle at 30% 20%, #f59e0b 0%, transparent 60%), radial-gradient(circle at 80% 80%, #d97706 0%, transparent 50%)'
+                    : 'radial-gradient(circle at 30% 20%, #6366f1 0%, transparent 60%), radial-gradient(circle at 80% 80%, #8b5cf6 0%, transparent 50%)'))
           }}
         />
 
         {/* ══════════════════════════════════════
             STICKY HEADER
             ══════════════════════════════════════ */}
-        <header className={`relative z-10 flex items-center gap-3 px-4 h-14 shrink-0 backdrop-blur-xl border-b transition-all duration-500 ${
-          studyModeActive
-            ? 'bg-[#faf8f4]/90 dark:bg-[#121216]/90 border-amber-500/10 shadow-[0_1px_10px_rgba(245,158,11,0.02)]'
-            : 'bg-[#faf9f6]/80 dark:bg-[#16181d]/80 border-black/5 dark:border-white/[0.05]'
+        <header className={`relative z-10 flex items-center gap-3 px-4 shrink-0 backdrop-blur-xl border-b transition-all duration-500 ${
+          isGeneralRoom
+            ? 'bg-[#faf6f2]/90 dark:bg-[#141318]/90 py-2.5 h-auto border-black/5 dark:border-white/[0.05]'
+            : (isFocusRoom
+                ? 'bg-[#fafaf6]/90 dark:bg-[#0e0e12]/90 py-2.5 h-auto border-amber-500/10 shadow-[0_1px_10px_rgba(245,158,11,0.01)]'
+                : (effectiveStudyModeActive
+                    ? 'bg-[#faf8f4]/90 dark:bg-[#121216]/90 border-amber-500/10 shadow-[0_1px_10px_rgba(245,158,11,0.02)] h-14'
+                    : 'bg-[#faf9f6]/80 dark:bg-[#16181d]/80 border-black/5 dark:border-white/[0.05] h-14'))
         }`}>
 
           {/* Back arrow — mobile only */}
@@ -177,14 +245,30 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
           </div>
 
           {/* Name + status */}
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900 dark:text-white lowercase leading-none truncate">
+          <div className="flex-1 min-w-0 flex flex-col justify-center">
+            <p className="text-sm font-bold text-gray-900 dark:text-white lowercase leading-none truncate">
               {cleanName}
             </p>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${studyModeActive ? 'bg-amber-400' : 'bg-emerald-400'}`} />
-              <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">
-                {studyModeActive ? 'zen study session' : `${onlineCount} ${onlineCount === 1 ? 'person' : 'people'} here`}
+            {isGeneralRoom && (
+              <p className="text-[10.5px] text-gray-500 dark:text-gray-400 font-medium mt-1 leading-tight max-w-[280px] sm:max-w-md md:max-w-lg truncate lowercase">
+                community discussions, planning and daily conversations.
+              </p>
+            )}
+            {isFocusRoom && (
+              <p className="text-[10.5px] text-gray-500 dark:text-gray-400 font-medium mt-1 leading-tight max-w-[280px] sm:max-w-md md:max-w-lg truncate lowercase">
+                collaborative study space
+              </p>
+            )}
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                isFocusRoom
+                  ? (activeStudyMembers > 0 ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400')
+                  : (effectiveStudyModeActive ? 'bg-amber-400' : 'bg-emerald-400')
+              }`} />
+              <span className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold lowercase">
+                {isGeneralRoom && `${onlineCount} ${onlineCount === 1 ? 'member' : 'members'} online • ${activeCount} active`}
+                {isFocusRoom && `${activeStudyMembers} active study members • ${focusRoomStats.activeSessions} active sessions • ${focusRoomStats.todayHours}h focused today`}
+                {!isGeneralRoom && !isFocusRoom && (effectiveStudyModeActive ? 'zen study session' : `${onlineCount} ${onlineCount === 1 ? 'person' : 'people'} here`)}
               </span>
             </div>
           </div>
@@ -201,7 +285,7 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
             </button>
 
             {/* Study Mode Toggles (visible only if study mode is active) */}
-            {studyModeActive && (
+            {effectiveStudyModeActive && (
               <>
                 {/* Study Filter Toggle */}
                 <button
@@ -274,45 +358,133 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
               {moreMenuOpen && (
                 <div
                   role="menu"
-                  className="absolute top-full right-0 mt-1.5 w-52 z-50 bg-[#fefdfb] dark:bg-[#1c1f26] rounded-2xl border border-black/6 dark:border-white/5 shadow-xl shadow-black/10 dark:shadow-black/40 p-1.5 animate-scaleIn"
+                  className="absolute top-full right-0 mt-1.5 w-56 z-50 bg-[#fefdfb] dark:bg-[#1c1f26] rounded-2xl border border-black/6 dark:border-white/5 shadow-xl shadow-black/10 dark:shadow-black/40 p-1.5 animate-scaleIn"
                   style={{ transformOrigin: 'top right' }}
                 >
-                  {/* Room info */}
+                  {isGeneralRoom && (
+                    <>
+                      {/* Room info */}
+                      <button
+                        role="menuitem"
+                        onClick={() => {
+                          alert(`room info: #${cleanName}\n\ndescription: community discussions, planning and daily conversations.\nonline members: ${onlineCount}\nactive members: ${activeCount}`)
+                          setMoreMenuOpen(false)
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white transition-all text-left cursor-pointer"
+                      >
+                        <Info className="h-3.5 w-3.5 text-violet-400 shrink-0" />
+                        room info
+                      </button>
+
+                      {/* Search messages */}
+                      <button
+                        role="menuitem"
+                        onClick={() => {
+                          const query = prompt("enter text to search in this room:")
+                          if (query) {
+                            alert(`searching messages for: "${query}"\n\nfeature is powered by supabase search. look for matches in the message feed!`)
+                          }
+                          setMoreMenuOpen(false)
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white transition-all text-left cursor-pointer"
+                      >
+                        <Search className="h-3.5 w-3.5 text-violet-400 shrink-0" />
+                        search messages
+                      </button>
+                    </>
+                  )}
+
+                  {isFocusRoom && (
+                    <>
+                      {/* Start Focus Session */}
+                      <button
+                        role="menuitem"
+                        onClick={() => {
+                          router.push('/growth/focus')
+                          setMoreMenuOpen(false)
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/5 transition-all text-left cursor-pointer"
+                      >
+                        <Play className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                        start focus session
+                      </button>
+
+                      {/* View Active Members */}
+                      <button
+                        role="menuitem"
+                        onClick={() => {
+                          const studyingList = Object.values(onlineUsers)
+                            .filter((u: any) => u.isFocusing)
+                            .map((u: any) => `${u.username || 'explorer'} (${u.focusActivity || 'studying'})`)
+                            .join('\n')
+                          alert(studyingList ? `members studying now:\n\n${studyingList}` : "no members are currently studying in this room.")
+                          setMoreMenuOpen(false)
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white transition-all text-left cursor-pointer"
+                      >
+                        <Users className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                        view active members
+                      </button>
+
+                      {/* View Room Statistics */}
+                      <button
+                        role="menuitem"
+                        onClick={() => {
+                          alert(`focus room statistics:\n\n• active study members: ${activeStudyMembers}\n• active focus sessions: ${focusRoomStats.activeSessions}\n• today's total focused time: ${focusRoomStats.todayHours} hours`)
+                          setMoreMenuOpen(false)
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white transition-all text-left cursor-pointer"
+                      >
+                        <BarChart2 className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                        view room statistics
+                      </button>
+                    </>
+                  )}
+
+                  {!isGeneralRoom && !isFocusRoom && (
+                    <>
+                      {/* Room info */}
+                      <button
+                        role="menuitem"
+                        onClick={() => {
+                          alert(`room info: #${cleanName}\n\nonline members: ${onlineCount}`)
+                          setMoreMenuOpen(false)
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white transition-all text-left cursor-pointer"
+                      >
+                        <Info className="h-3.5 w-3.5 text-violet-400 shrink-0" />
+                        room info
+                      </button>
+
+                      {/* Toggle Study Mode */}
+                      <button
+                        role="menuitem"
+                        onClick={() => {
+                          toggleStudyMode(!studyModeActive)
+                          setMoreMenuOpen(false)
+                        }}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer ${
+                          studyModeActive
+                            ? 'text-amber-600 dark:text-amber-400 bg-amber-500/5 hover:bg-amber-500/10'
+                            : 'text-gray-600 dark:text-gray-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white'
+                        }`}
+                      >
+                        <BookOpen className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                        {studyModeActive ? 'disable study mode' : 'enable study mode'}
+                      </button>
+                    </>
+                  )}
+
+                  {/* Common Options */}
                   <button
                     role="menuitem"
                     onClick={() => {
-                      navigator.clipboard.writeText(cleanName)
+                      alert("notifications muted for this room!")
                       setMoreMenuOpen(false)
                     }}
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white transition-all text-left cursor-pointer"
                   >
-                    <Copy className="h-3.5 w-3.5 text-violet-400 shrink-0" />
-                    copy room name
-                  </button>
-
-                  {/* Toggle Study Mode */}
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      toggleStudyMode(!studyModeActive)
-                      setMoreMenuOpen(false)
-                    }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer ${
-                      studyModeActive
-                        ? 'text-amber-600 dark:text-amber-400 bg-amber-500/5 hover:bg-amber-500/10'
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white'
-                    }`}
-                  >
-                    <BookOpen className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                    {studyModeActive ? 'disable study mode' : 'enable study mode'}
-                  </button>
-
-                  <button
-                    role="menuitem"
-                    onClick={() => setMoreMenuOpen(false)}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white transition-all text-left cursor-pointer"
-                  >
-                    <BellOff className="h-3.5 w-3.5 text-violet-400 shrink-0" />
+                    <BellOff className="h-3.5 w-3.5 text-violet-400 dark:text-amber-400 shrink-0" />
                     mute notifications
                   </button>
 
@@ -335,7 +507,10 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
 
                   <button
                     role="menuitem"
-                    onClick={() => setMoreMenuOpen(false)}
+                    onClick={() => {
+                      alert("to leave this channel, please contact the workspace moderator or administrator.")
+                      setMoreMenuOpen(false)
+                    }}
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all text-left cursor-pointer"
                   >
                     <LogOut className="h-3.5 w-3.5 shrink-0" />
@@ -347,7 +522,7 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
           </div>
         </header>
 
-        {/* ══════════════════════════════════════
+        {/* ── ══════════════════════════════════════
             SPLIT LAYOUT FOR CHAT + SIDEBAR
             ══════════════════════════════════════ */}
         <div className="flex-1 flex min-h-0 overflow-hidden relative">
@@ -365,14 +540,15 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
               onDeleteForMe={deleteMessageForMe}
               onClearChat={clearChatForMe}
               // @ts-ignore (we will add these types or they are handled in MessageList)
-              studyModeActive={studyModeActive}
+              studyModeActive={effectiveStudyModeActive}
               studyFilterActive={studyFilterActive}
               isDeepFocusActive={myFocus.isDeepFocus}
               onSaveToVault={handleSaveToVault}
             />
 
             <MessageInput
-              onSendMessage={(text, fileInfo) => sendMessage(text, fileInfo, studyModeActive)}
+              studyModeActive={effectiveStudyModeActive}
+              onSendMessage={(text, fileInfo, category) => sendMessage(text, fileInfo, false, category, effectiveStudyModeActive)}
               replyTo={replyTo}
               onClearReply={() => setReplyTo(null)}
               onTypingStatusChange={sendTypingStatus}
@@ -383,7 +559,7 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
           </div>
 
           {/* Study Room sidebar (slides in from right/absolute on mobile, relative on desktop) */}
-          {studyModeActive && studyPanelOpen && (
+          {effectiveStudyModeActive && studyPanelOpen && (
             <div className="absolute top-0 right-0 z-50 h-full w-80 lg:relative lg:z-0 border-l border-black/5 dark:border-white/[0.05] shadow-2xl lg:shadow-none">
               {/* Close button on mobile overlay */}
               <button

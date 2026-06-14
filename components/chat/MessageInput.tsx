@@ -10,7 +10,8 @@ import FilePreview from './FilePreview'
 interface MessageInputProps {
   onSendMessage: (
     text: string,
-    fileInfo?: { file: File; type: string } | { stickerUrl: string; type: 'sticker' }
+    fileInfo?: { file: File; type: string } | { stickerUrl: string; type: 'sticker' },
+    category?: string
   ) => void
   replyTo: ChatMessage | null
   onClearReply: () => void
@@ -18,6 +19,7 @@ interface MessageInputProps {
   disabled?: boolean
   draftFile: File | null
   setDraftFile: (file: File | null) => void
+  studyModeActive?: boolean
 }
 
 export default function MessageInput({
@@ -28,8 +30,10 @@ export default function MessageInput({
   disabled,
   draftFile,
   setDraftFile,
+  studyModeActive = false,
 }: MessageInputProps) {
   const [text, setText] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [isTypingState, setIsTypingState] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -54,17 +58,19 @@ export default function MessageInput({
   // ── Send handler ──
   const handleSend = () => {
     if (!hasContent || disabled) return
+    const cat = selectedCategory || undefined
     if (draftFile) {
       let fileType = 'document'
       if (draftFile.type.startsWith('image/')) fileType = 'image'
       else if (draftFile.type.startsWith('video/')) fileType = 'video'
       else if (draftFile.type === 'application/pdf') fileType = 'pdf'
-      onSendMessage(text.trim(), { file: draftFile, type: fileType })
+      onSendMessage(text.trim(), { file: draftFile, type: fileType }, cat)
       setDraftFile(null)
     } else {
-      onSendMessage(text.trim())
+      onSendMessage(text.trim(), undefined, cat)
     }
     setText('')
+    setSelectedCategory(null)
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
     setIsTypingState(false)
     onTypingStatusChange(false)
@@ -94,6 +100,35 @@ export default function MessageInput({
 
   return (
     <div className="shrink-0 px-3 pb-3 md:px-8 md:pb-6 pt-2 bg-transparent">
+
+      {/* Category selector row (above pill, visible if studyModeActive is true) */}
+      {studyModeActive && (
+        <div className="flex flex-wrap gap-1.5 mb-2 px-1 select-none animate-fadeIn">
+          {[
+            { id: 'Question', label: 'question', emoji: '❓' },
+            { id: 'Resource', label: 'resource', emoji: '📚' },
+            { id: 'Study Update', label: 'study update', emoji: '🕯️' },
+            { id: 'Coding Update', label: 'coding update', emoji: '💻' },
+            { id: 'Project Discussion', label: 'project discussion', emoji: '🤝' },
+          ].map((cat) => {
+            const isSelected = selectedCategory === cat.id
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(isSelected ? null : cat.id)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold tracking-wide transition-all duration-200 border cursor-pointer ${
+                  isSelected
+                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400 shadow-sm shadow-amber-500/5'
+                    : 'bg-white/40 dark:bg-[#16181d]/40 border-black/5 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/8'
+                }`}
+              >
+                <span>{cat.emoji}</span>
+                <span className="lowercase">{cat.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {/* Reply preview (above pill) */}
       <ReplyPreview message={replyTo} onClose={onClearReply} />
