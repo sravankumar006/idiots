@@ -67,3 +67,13 @@ export interface ChatMessage {
   uploadProgress?: number // Realtime optimistic progress indicator
   aiMode?: 'pdf-generate' | 'image-analyze' | 'pdf-analyze' // multimodal AI response mode
 }
+
+export interface ProjectFile {
+  id: string
+  project_id: string
+  name: string
+  content: string
+  created_at: string
+  updated_at: string
+}
+

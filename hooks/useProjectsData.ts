@@ -18,6 +18,10 @@ export interface Project {
   created_by: string
   created_at: string
   contributors?: string[]
+  mood?: string
+  icon?: string
+  banner_url?: string
+  accent_color?: string
 }
 
 const DEFAULT_PROJECTS = (userId: string): Project[] => [
@@ -37,7 +41,11 @@ This is our primary codebase!
     references_text: 'Supabase JS docs: https://supabase.com/docs/reference/javascript',
     deadline: new Date(Date.now() + 3600000 * 24 * 7).toISOString(), // 7 days from now
     created_by: userId,
-    created_at: new Date(Date.now() - 3600000 * 24 * 10).toISOString()
+    created_at: new Date(Date.now() - 3600000 * 24 * 10).toISOString(),
+    mood: 'idle',
+    icon: '🚀',
+    banner_url: '',
+    accent_color: '#7c3aed'
   },
   {
     id: 'p2',
@@ -55,7 +63,11 @@ Let's keep visuals extremely premium:
     references_text: 'Glassmorphism generator link',
     deadline: null,
     created_by: userId,
-    created_at: new Date(Date.now() - 3600000 * 24 * 30).toISOString()
+    created_at: new Date(Date.now() - 3600000 * 24 * 30).toISOString(),
+    mood: 'idle',
+    icon: '🎨',
+    banner_url: '',
+    accent_color: '#7c3aed'
   }
 ]
 
