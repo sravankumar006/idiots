@@ -311,7 +311,9 @@ export default function MessageBubble({
         )}
         {(message.type === 'text' || message.type === 'ai' || hasCaption) && (
           <div
-            className={`p-3.5 text-[13px] leading-relaxed border transition-all duration-500 ${
+            className={`p-3.5 text-[13px] leading-relaxed border transition-all duration-500 w-fit max-w-full ${
+              isSelf ? 'ml-auto' : ''
+            } ${
               message.type === 'ai'
                 ? studyModeActive
                   ? 'bg-[#f3f0e8] text-gray-800 border-amber-500/20 dark:bg-[#201c18] dark:text-gray-300 dark:border-amber-500/10'
@@ -460,7 +462,7 @@ export default function MessageBubble({
         onKeyDown={handleKeyDown}
         onContextMenu={handleContextMenu}
         className={`flex gap-3 group relative max-w-[75%] animate-slideUpFade focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 focus-visible:ring-offset-2 rounded-xl transition-all duration-1000 ${
-          isSelf ? 'ml-auto flex-row-reverse' : ''
+          isSelf ? 'ml-auto flex-row-reverse mr-2 sm:mr-3' : ''
         } ${glow ? 'ring-2 ring-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.6)] bg-violet-500/10' : ''}`}
         // Long-press (touch) for mobile action sheet + Swipe reply
         onTouchStart={(e) => {
@@ -547,7 +549,7 @@ export default function MessageBubble({
             )}
 
             {/* Bubble container */}
-            <div className="relative">
+            <div className={`relative ${isSelf ? 'ml-auto' : ''} w-fit max-w-full`}>
 
               {/* Replied-to preview */}
               {message.replied_message && (

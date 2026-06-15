@@ -32,10 +32,14 @@ import remarkGfm from 'remark-gfm'
 interface LogItem {
   id: string
   prompt: string
-  response: string
+  response: string | null
   model: string
   created_at: string
   room_id: string | null
+  provider: string | null
+  response_time_ms: number | null
+  success: boolean | null
+  error_message: string | null
   profiles: {
     id: string
     username: string
@@ -89,6 +93,12 @@ export default function AiPage() {
   const [summaries, setSummaries] = useState<any[]>([])
   const [loadingMemory, setLoadingMemory] = useState(false)
 
+  // AI config and live diagnostics status state
+  const [selectedProvider, setSelectedProvider] = useState<string>('auto')
+  const [modelNameDisplay, setModelNameDisplay] = useState<string>('gemini-2.5-flash')
+  const [liveProviders, setLiveProviders] = useState<any[]>([])
+  const [loadingStatus, setLoadingStatus] = useState<boolean>(false)
+
   const supabase = createClient()
 
   // Fetch currentUser session on mount
@@ -106,6 +116,63 @@ export default function AiPage() {
       }
     }
     fetchUser()
+  }, [])
+
+  // Load local AI provider preference on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('selected_ai_provider') || 'auto'
+      setSelectedProvider(saved)
+      updateModelNameDisplay(saved)
+    }
+  }, [])
+
+  const updateModelNameDisplay = (provider: string) => {
+    switch (provider) {
+      case 'gemini':
+        setModelNameDisplay('gemini-2.5-flash')
+        break
+      case 'openai':
+        setModelNameDisplay('gpt-4o-mini')
+        break
+      case 'openrouter':
+        setModelNameDisplay('openrouter-routed')
+        break
+      default:
+        setModelNameDisplay('auto (gemini-2.5-flash with fallbacks)')
+    }
+  }
+
+  const handleProviderChange = (provider: string) => {
+    setSelectedProvider(provider)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('selected_ai_provider', provider)
+    }
+    updateModelNameDisplay(provider)
+  }
+
+  // Fetch live AI systems health status
+  const fetchHealthStatus = async () => {
+    setLoadingStatus(true)
+    try {
+      const res = await fetch('/api/ai/providers/status')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.providers) {
+          setLiveProviders(data.providers)
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to load live health status:', err)
+    } finally {
+      setLoadingStatus(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchHealthStatus()
+    const interval = setInterval(fetchHealthStatus, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   // Auto-scroll personal consultant chat on message change
@@ -151,7 +218,7 @@ export default function AiPage() {
               id: `${log.id}-ai`,
               group_id: '',
               sender_id: '00000000-0000-0000-0000-000000000000',
-              message: log.response,
+              message: log.response || (log.error_message ? `⚠️ Error: ${log.error_message}` : ''),
               type: 'ai',
               reply_to: null,
               created_at: log.created_at,
@@ -189,6 +256,10 @@ export default function AiPage() {
             model,
             created_at,
             room_id,
+            provider,
+            response_time_ms,
+            success,
+            error_message,
             profiles (
               id,
               username,
@@ -229,6 +300,10 @@ export default function AiPage() {
               model,
               created_at,
               room_id,
+              provider,
+              response_time_ms,
+              success,
+              error_message,
               profiles (
                 id,
                 username,
@@ -469,7 +544,7 @@ export default function AiPage() {
 
     const matchesSearch = 
       log.prompt.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.response.toLowerCase().includes(searchQuery.toLowerCase())
+      (log.response ? log.response.toLowerCase().includes(searchQuery.toLowerCase()) : false)
     
     const matchesGroup = selectedGroup === 'all' || log.room_id === selectedGroup
     const matchesUser = selectedUser === 'all' || log.profiles?.id === selectedUser
@@ -483,7 +558,7 @@ export default function AiPage() {
   const activeRoomsCount = new Set(groupLogsOnly.map(l => l.room_id)).size
   const activeUsersCount = new Set(groupLogsOnly.map(l => l.profiles?.id)).size
   const averageLength = totalGroupQueries > 0 
-    ? Math.round(groupLogsOnly.reduce((sum, log) => sum + log.response.length, 0) / totalGroupQueries)
+    ? Math.round(groupLogsOnly.reduce((sum, log) => sum + (log.response ? log.response.length : 0), 0) / totalGroupQueries)
     : 0
 
   const presets = [
@@ -555,31 +630,118 @@ export default function AiPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Diagnostic Sidebar */}
           <div className="space-y-4 select-none">
+            {/* AI Config & Settings Panel */}
             <Card className="p-6 space-y-4 hover:border-violet-500/10">
               <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/5 pb-3">
-                <Cpu className="h-4 w-4 text-violet-400" />
-                Consultant Node
+                <Settings className="h-4 w-4 text-violet-400" />
+                AI Config & Settings
               </h3>
               
-              <div className="space-y-3 text-xs">
-                <div className="flex justify-between">
+              <div className="space-y-4 text-xs">
+                <div className="flex items-center justify-between">
                   <span className="text-gray-500 font-semibold">Security Context</span>
                   <span className="text-emerald-400 font-bold flex items-center gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     Private 1-on-1
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500 font-semibold">API Model</span>
-                  <span className="text-violet-300 font-bold">gemini-1.5-flash</span>
+                
+                <div className="space-y-1">
+                  <label htmlFor="ai-provider-select" className="text-gray-500 font-semibold block">Preferred Provider</label>
+                  <select
+                    id="ai-provider-select"
+                    value={selectedProvider}
+                    onChange={(e) => handleProviderChange(e.target.value)}
+                    className="w-full appearance-none bg-black/20 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl py-2.5 px-3 text-xs text-gray-750 dark:text-gray-200 font-bold focus:outline-none focus:border-violet-500/30 transition-all cursor-pointer"
+                  >
+                    <option value="auto">Auto (Gemini + Fallbacks)</option>
+                    <option value="gemini">Google Gemini</option>
+                    <option value="openai">OpenAI GPT</option>
+                    <option value="openrouter">OpenRouter API</option>
+                  </select>
                 </div>
-                <div className="flex justify-between">
+
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500 font-semibold">Active AI Model</span>
+                  <span className="text-violet-300 font-bold max-w-[150px] truncate text-right" title={modelNameDisplay}>
+                    {modelNameDisplay}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
                   <span className="text-gray-500 font-semibold">Logs Location</span>
-                  <span className="text-gray-300 font-bold lowercase">ai_logs (room_id: null)</span>
+                  <span className="text-gray-300 font-semibold lowercase">ai_logs (room: null)</span>
                 </div>
               </div>
             </Card>
 
+            {/* AI Systems Monitor Panel */}
+            <Card className="p-6 space-y-4 hover:border-emerald-500/10">
+              <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-emerald-400" />
+                  AI Systems Monitor
+                </h3>
+                {loadingStatus && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-ping" />
+                )}
+              </div>
+              
+              <div className="space-y-4 select-none">
+                {liveProviders.length === 0 ? (
+                  <p className="text-[11px] text-gray-500 font-semibold leading-relaxed">
+                    Loading diagnostics health parameters...
+                  </p>
+                ) : (
+                  liveProviders.map((provider) => {
+                    let statusColor = 'text-gray-400 bg-gray-400/10 border-gray-400/20'
+                    let statusDot = 'bg-gray-400'
+                    if (!provider.configured) {
+                      statusColor = 'text-red-400 bg-red-500/10 border-red-500/20'
+                      statusDot = 'bg-red-400'
+                    } else if (provider.health === 'Healthy') {
+                      statusColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                      statusDot = 'bg-emerald-400 animate-pulse'
+                    } else if (provider.health === 'Warning') {
+                      statusColor = 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+                      statusDot = 'bg-amber-400 animate-pulse'
+                    } else if (provider.health === 'Unavailable') {
+                      statusColor = 'text-red-400 bg-red-500/10 border-red-500/20'
+                      statusDot = 'bg-red-400'
+                    }
+
+                    return (
+                      <div key={provider.name} className="space-y-1.5 pb-3 border-b border-white/5 last:border-0 last:pb-0">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-gray-200">{provider.displayName}</span>
+                          <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border flex items-center gap-1 ${statusColor}`}>
+                            <span className={`h-1 w-1 rounded-full ${statusDot}`} />
+                            {provider.configured ? provider.health : 'Not Configured'}
+                          </span>
+                        </div>
+                        
+                        {provider.configured && (
+                          <div className="grid grid-cols-2 gap-2 text-[10px] text-gray-400 font-semibold">
+                            <div>
+                              <span className="text-gray-600 block">Success Rate</span>
+                              <span className="text-gray-300 font-bold">{provider.stats.successRate}%</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-600 block">Avg Latency</span>
+                              <span className="text-gray-300 font-bold">
+                                {provider.stats.avgLatencyMs > 0 ? `${(provider.stats.avgLatencyMs / 1000).toFixed(2)}s` : '0.00s'}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </Card>
+
+            {/* Prompt Presets */}
             <Card className="p-6 space-y-4 hover:border-rose-500/10">
               <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/5 pb-3">
                 <Brain className="h-4 w-4 text-rose-400" />
@@ -623,7 +785,7 @@ export default function AiPage() {
                     return (
                       <div 
                         key={msg.id || idx} 
-                        className={`flex gap-3 max-w-xl animate-fadeIn ${
+                        className={`flex gap-3 w-fit max-w-[75%] animate-fadeIn ${
                           isSelf ? 'ml-auto flex-row-reverse' : ''
                         }`}
                       >
@@ -636,11 +798,11 @@ export default function AiPage() {
                           {isSelf ? activeAvatar.symbol : 'AI'}
                         </div>
 
-                        <div className="space-y-1">
-                          <span className={`text-[10px] font-bold text-gray-500 block ${isSelf ? 'text-right' : 'text-left'}`}>
+                        <div className={`space-y-1 flex flex-col ${isSelf ? 'items-end' : 'items-start'}`}>
+                          <span className="text-[10px] font-bold text-gray-500 block">
                             {isSelf ? 'You' : 'Companion'}
                           </span>
-                          <div className={`p-4 rounded-2xl text-[13px] leading-relaxed border ${
+                          <div className={`p-4 rounded-2xl text-[13px] leading-relaxed border w-fit max-w-full ${
                             isSelf 
                               ? 'bg-[#6366f1] text-white border-black/5 dark:bg-[#5b5fcf] dark:border-white/5 rounded-tr-none' 
                               : 'bg-[#1c1f26] text-gray-200 border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.1)] dark:bg-[#16181d] dark:border-indigo-400/20 rounded-tl-none'
@@ -663,13 +825,13 @@ export default function AiPage() {
 
                 {/* Typing Indicator */}
                 {isTyping && personalMessages[personalMessages.length - 1]?.sending && (
-                  <div className="flex gap-3 max-w-xl animate-fadeIn">
+                  <div className="flex gap-3 w-fit max-w-[75%] animate-fadeIn">
                     <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-[10px] font-semibold text-white shadow-md shrink-0 select-none">
                       AI
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 flex flex-col items-start">
                       <span className="text-[10px] font-bold text-gray-500 block">Companion</span>
-                      <div className="px-4 py-3 bg-[#1c1f26] dark:bg-[#16181d] rounded-2xl border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.05)] rounded-tl-none flex items-center gap-2">
+                      <div className="px-4 py-3 bg-[#1c1f26] dark:bg-[#16181d] rounded-2xl border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.05)] rounded-tl-none flex items-center gap-2 w-fit max-w-full">
                         <div className="flex gap-1 items-center">
                           <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" style={{ animationDelay: '0ms' }} />
                           <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" style={{ animationDelay: '150ms' }} />
@@ -830,10 +992,11 @@ export default function AiPage() {
             ) : (
               filteredLogs.map((log) => {
                 const isExpanded = expandedLogs[log.id] || false
-                const isLong = log.response.length > 500
+                const responseText = log.response || ''
+                const isLong = responseText.length > 500
                 const displayResponse = isExpanded || !isLong 
-                  ? log.response 
-                  : `${log.response.substring(0, 500)}...`
+                  ? responseText 
+                  : `${responseText.substring(0, 500)}...`
 
                 const avatarId = log.profiles?.avatar || 'avatar-cyber-ghost'
                 const avatar = AVATAR_MAP[avatarId] || AVATAR_MAP['avatar-cyber-ghost']
@@ -845,6 +1008,18 @@ export default function AiPage() {
                   minute: '2-digit',
                   hour12: false
                 })
+
+                const providerDisplayName = log.provider === 'gemini' 
+                  ? 'Google Gemini' 
+                  : log.provider === 'openai' 
+                    ? 'OpenAI GPT' 
+                    : log.provider === 'openrouter'
+                      ? 'OpenRouter'
+                      : 'AI Companion'
+
+                const latencySec = log.response_time_ms 
+                  ? `${(log.response_time_ms / 1000).toFixed(1)}s` 
+                  : null
 
                 return (
                   <Card 
@@ -880,14 +1055,27 @@ export default function AiPage() {
                       </div>
 
                       {/* Model badge and actions */}
-                      <div className="flex items-center gap-2 select-none">
+                      <div className="flex flex-wrap items-center gap-2 select-none">
+                        {log.provider && (
+                          <span className="flex items-center gap-1 text-[10px] font-bold text-teal-400 bg-teal-500/10 px-2.5 py-1 rounded-xl border border-teal-500/20">
+                            {providerDisplayName}
+                          </span>
+                        )}
+
                         <span className="flex items-center gap-1 text-[10px] font-bold text-violet-400 bg-violet-500/10 px-2.5 py-1 rounded-xl border border-violet-500/20">
                           <Cpu className="h-3 w-3" />
                           {log.model}
                         </span>
 
+                        {latencySec && (
+                          <span className="flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-xl border border-amber-500/20">
+                            <Clock className="h-3 w-3" />
+                            {latencySec}
+                          </span>
+                        )}
+
                         <button
-                          onClick={() => handleCopy(log.id, log.response)}
+                          onClick={() => handleCopy(log.id, log.response || '')}
                           className={`p-2 rounded-xl border transition-all cursor-pointer flex items-center justify-center ${
                             copiedId === log.id 
                               ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
@@ -908,24 +1096,44 @@ export default function AiPage() {
                       </p>
                     </div>
 
-                    {/* Response Section */}
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block select-none">Companion synthesis</span>
-                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-xl prose-code:text-violet-300 break-words leading-relaxed text-gray-800 dark:text-gray-300">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {displayResponse}
-                        </ReactMarkdown>
-                      </div>
+                    {/* Failure Banner or Response Section */}
+                    {log.success === false ? (
+                      <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-5 space-y-3">
+                        <div className="flex items-center gap-2 text-red-400 select-none">
+                          <Terminal className="h-4 w-4 shrink-0" />
+                          <span className="text-xs font-black uppercase tracking-wider">API Execution Failure Diagnostics</span>
+                        </div>
+                        
+                        <p className="text-xs text-red-300/95 font-semibold leading-relaxed">
+                          {log.error_message || 'An unknown server error occurred during inference token generation.'}
+                        </p>
 
-                      {isLong && (
-                        <button
-                          onClick={() => toggleExpand(log.id)}
-                          className="text-[10px] font-bold text-violet-400 hover:text-violet-300 transition-colors pt-2 block cursor-pointer select-none"
-                        >
-                          {isExpanded ? 'Show less' : 'Read full response'}
-                        </button>
-                      )}
-                    </div>
+                        <div className="bg-black/40 border border-red-500/10 rounded-xl p-3">
+                          <code className="text-[10px] font-mono text-red-400/90 block break-all whitespace-pre-wrap">
+                            {`Error Code: ERR_API_INFERENCE_FAIL\nTimestamp: ${new Date(log.created_at).toISOString()}\nTarget Provider: ${log.provider || 'unknown'}\nModel Config: ${log.model}`}
+                          </code>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Response Section */
+                      <div className="space-y-2">
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block select-none">Companion synthesis</span>
+                        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-xl prose-code:text-violet-300 break-words leading-relaxed text-gray-800 dark:text-gray-300">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {displayResponse}
+                          </ReactMarkdown>
+                        </div>
+
+                        {isLong && (
+                          <button
+                            onClick={() => toggleExpand(log.id)}
+                            className="text-[10px] font-bold text-violet-400 hover:text-violet-300 transition-colors pt-2 block cursor-pointer select-none"
+                          >
+                            {isExpanded ? 'Show less' : 'Read full response'}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </Card>
                 )
               })

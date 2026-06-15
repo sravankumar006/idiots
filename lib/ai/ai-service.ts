@@ -67,6 +67,27 @@ When asked technical questions, format code and markdown beautifully.
 Keep your responses concise as they are part of a fast-paced chat environment.
 `;
 
+const COMPANION_SYSTEM_PROMPT = `You are a calm, intelligent, and highly capable personal AI companion.
+Your name is Rocky. Your role is to act as a technical advisor and developer companion.
+
+YOUR PERSONALITY AND TONE:
+- Be natural, calm, conversational, and direct. Avoid artificial cheerfulness or excessive enthusiasm.
+- Keep responses concise and focused. This is a fast-paced chat environment.
+- Use emojis very sparingly. Do not spam emojis or exclamation marks.
+- Avoid roleplay, robotic terms (like "my memory banks", "digital database"), or artificial/theatrical concern (like "virtual hug", "alive and kicking", "as a digital friend").
+- Do not mention that you are an AI or talk about your system design/capabilities unless explicitly asked.
+
+MEMORY RECALL PROTOCOL:
+- You will be provided with user memories and conversation summaries if they are relevant.
+- Do NOT proactively bring up or reference these memories or past emotional states unless:
+  1. The user explicitly asks about them (e.g., "what did we decide yesterday?", "do you remember my project name?").
+  2. The memory is directly relevant and helpful to answer the user's current query.
+- Never interrupt a casual greeting or test ping with memory recalls. If a user says "Hello", simply respond naturally with a short greeting (e.g., "Hey! What's on your mind?").
+
+TRUTHFULNESS ON SYSTEM LIMITATIONS:
+- If a user asks you to delete, modify, or erase a memory, be honest: explain that you cannot directly alter or delete rows from the database yourself in this chat stream, but they can easily manage and delete memories in their Settings page or the Memory Center tab. Do not pretend you can delete them if you can't.
+`;
+
 const PDF_GENERATE_SUFFIX = `
 The user has explicitly asked you to CREATE or GENERATE a document. 
 Respond with richly formatted, well-structured markdown that is suitable for export as a PDF.
@@ -94,7 +115,7 @@ export class AIService {
     onFinishCb?: (text: string, provider: string, model: string, durationMs: number) => Promise<void>,
     onFailureCb?: (provider: string, model: string, durationMs: number, errorMsg: string) => Promise<void>
   ): Promise<{ response: Response; mode: AIResponse['mode']; providerName: string; modelName: string }> {
-    const { prompt, contextMessages, attachedFile, studyModeActive } = request;
+    const { prompt, contextMessages, attachedFile, studyModeActive, groupId } = request;
 
     // Detect intent
     const isPDFGen = promptRequestsPDFGeneration(prompt);
@@ -107,7 +128,8 @@ export class AIService {
     else if (isPDFRef) mode = 'pdf-analyze';
 
     // Build system prompt
-    let systemPrompt = BASE_SYSTEM_PROMPT + emotionalContext + memoryContext;
+    const isCompanionPage = !groupId;
+    let systemPrompt = (isCompanionPage ? COMPANION_SYSTEM_PROMPT : BASE_SYSTEM_PROMPT) + emotionalContext + memoryContext;
     if (isPDFGen) systemPrompt += PDF_GENERATE_SUFFIX;
     if (studyModeActive) systemPrompt += STUDY_MODE_SUFFIX;
 
@@ -116,13 +138,22 @@ export class AIService {
       systemPrompt += `\n\n[Document context — the user is asking about this PDF file "${attachedFile.name || 'document.pdf'}"]\n${extractedText}\n[End of document context]`;
     }
 
-    // Build core messages
+    // Build core messages supporting both formats (role/content or type/message)
     const messages: any[] = contextMessages
-      .filter((msg: any) => msg.message && msg.type !== 'ai')
-      .map((msg: any) => ({
-        role: 'user',
-        content: msg.message,
-      }));
+      .map((msg: any) => {
+        const content = msg.content || msg.message;
+        if (!content) return null;
+
+        let role = 'user';
+        if (msg.role) {
+          role = msg.role === 'assistant' ? 'assistant' : 'user';
+        } else if (msg.type) {
+          role = msg.type === 'ai' ? 'assistant' : 'user';
+        }
+
+        return { role, content };
+      })
+      .filter(Boolean);
 
     // Build the final user message payload
     if (isImgRef && attachedFile?.url) {

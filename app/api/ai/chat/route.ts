@@ -29,24 +29,33 @@ export async function POST(req: Request) {
 
     if (user) {
       try {
-        const memoryResult = await MemoryService.getRelevantMemories(user.id, groupId);
-        longTermMemoriesInstructions = memoryResult.aiMemories + memoryResult.summaries;
-        // Load recent mood logs
-        const { data: moodLogs } = await supabase
-          .from('mood_logs')
-          .select('mood_value, mood_rating, mood_label, status_text')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(3);
+        const isCompanionPage = !groupId;
+        const isGreetingOrTest = isCompanionPage && MemoryService.isGreetingOrTestMessage(prompt);
 
-        if (moodLogs && moodLogs.length > 0) {
-          const sum = moodLogs.reduce((acc, log) => {
-            const val = log.mood_value !== undefined ? log.mood_value : (log.mood_rating * 10);
-            return acc + val;
-          }, 0);
-          const avg = sum / moodLogs.length;
-          if (avg <= 40) {
-            emotionalSupportInstructions = `\n\n[USER MOOD INSIGHT: The user has been feeling low recently (average mood index: ${avg.toFixed(1)}/100, status: "${moodLogs[0].status_text || 'quiet'}", mood label: "${moodLogs[0].mood_label || 'low'}"). Adjust your tone to be extremely supportive, warm, soft, and companion-like. Encourage them politely, suggest taking a break, suggest talking/hanging out with friends in the lounge chat, or offer quiet study support. AVOID therapy behavior, clinical advice, diagnostics, or mental health scoring language.]`;
+        if (!isGreetingOrTest) {
+          const memoryResult = await MemoryService.getRelevantMemories(user.id, groupId);
+          longTermMemoriesInstructions = memoryResult.aiMemories + memoryResult.summaries;
+          // Load recent mood logs
+          const { data: moodLogs } = await supabase
+            .from('mood_logs')
+            .select('mood_value, mood_rating, mood_label, status_text')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(3);
+
+          if (moodLogs && moodLogs.length > 0) {
+            const sum = moodLogs.reduce((acc, log) => {
+              const val = log.mood_value !== undefined ? log.mood_value : (log.mood_rating * 10);
+              return acc + val;
+            }, 0);
+            const avg = sum / moodLogs.length;
+            if (avg <= 40) {
+              if (isCompanionPage) {
+                emotionalSupportInstructions = `\n\n[USER MOOD INSIGHT: The user's recent mood rating is low (average mood index: ${avg.toFixed(1)}/100). Adjust your tone to be supportive, calm, and understanding. Offer quiet technical support, keep explanations clear, and avoid theatrical or overly emotional concern. AVOID clinical diagnostics, therapeutic advice, or references to digital/physical hugs.]`;
+              } else {
+                emotionalSupportInstructions = `\n\n[USER MOOD INSIGHT: The user has been feeling low recently (average mood index: ${avg.toFixed(1)}/100, status: "${moodLogs[0].status_text || 'quiet'}", mood label: "${moodLogs[0].mood_label || 'low'}"). Adjust your tone to be extremely supportive, warm, soft, and companion-like. Encourage them politely, suggest taking a break, suggest talking/hanging out with friends in the lounge chat, or offer quiet study support. AVOID therapy behavior, clinical advice, diagnostics, or mental health scoring language.]`;
+              }
+            }
           }
         }
 
@@ -81,7 +90,7 @@ export async function POST(req: Request) {
             });
 
             // 2. Perform AI memory extraction
-            await MemoryService.extractAndStoreMemory(user.id, prompt, category);
+            await MemoryService.extractAndStoreMemory(user.id, prompt, category, groupId);
 
             // 2.5 Trigger background summarization if conversation is long
             if (contextMessages && contextMessages.length > 8) {

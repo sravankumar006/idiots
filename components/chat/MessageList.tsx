@@ -163,7 +163,7 @@ export default function MessageList({
     <div
       ref={containerRef}
       onScroll={handleScroll}
-      className="flex-1 min-h-0 overflow-y-auto p-5 scrollbar-thin scroll-smooth flex flex-col"
+      className="flex-1 min-h-0 overflow-y-auto pl-5 pr-7 pt-5 pb-5 scrollbar-thin scroll-smooth flex flex-col"
       role="log"
       aria-label="Message history"
       aria-live="polite"

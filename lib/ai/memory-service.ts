@@ -55,24 +55,91 @@ export class MemoryService {
   }
 
   /**
+   * Identifies pings, greetings, one-word messages, or casual test messages.
+   */
+  static isGreetingOrTestMessage(prompt: string): boolean {
+    const p = prompt.trim().toLowerCase();
+    
+    // 1. One-word messages or empty messages or punctuation-only messages
+    const splitWords = p.split(/\s+/);
+    if (!p || splitWords.length === 1) {
+      const shortWords = ['hello', 'hi', 'hey', 'yo', 'sup', 'test', 'testing', 'lol', 'haha', 'ok', 'okay', 'cool', 'thanks', 'thx', 'bye', 'greetings'];
+      if (shortWords.includes(p) || /^[^\w\s]+$/.test(p)) {
+        return true;
+      }
+    }
+
+    // 2. Greetings and common test message patterns
+    const patterns = [
+      /^hello\b/i,
+      /^hi\b/i,
+      /^hey\b/i,
+      /^good\s+(morning|afternoon|evening|day)\b/i,
+      /^what's\s+up\b/i,
+      /^yo\b/i,
+      /^testing\b/i,
+      /^test\b/i,
+      /^this is a test/i,
+      /^respond if the api works/i,
+      /^hello,?\s*rocky/i,
+      /^hi,?\s*rocky/i,
+      /^hey,?\s*rocky/i
+    ];
+
+    if (patterns.some(regex => regex.test(p))) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
    * Auto-extract a memory from user's prompt (e.g. "Remember that...").
    */
-  static async extractAndStoreMemory(userId: string, prompt: string, category: string = 'General'): Promise<void> {
+  static async extractAndStoreMemory(userId: string, prompt: string, category: string = 'General', groupId?: string | null): Promise<void> {
     const supabase = await createClient();
     const lowerPrompt = prompt.toLowerCase();
     
     let extractedFact = '';
     let memoryType = category;
 
-    if (lowerPrompt.includes('remember that')) {
-      extractedFact = prompt.replace(/remember that/i, '').trim();
-    } else if (lowerPrompt.includes('inside joke:')) {
-      extractedFact = prompt.replace(/inside joke:/i, '').trim();
-    } else if (lowerPrompt.includes('favorite topic is') || lowerPrompt.includes('favorite language is')) {
-      extractedFact = prompt.trim();
-    } else if (lowerPrompt.includes('project name is') || lowerPrompt.includes('we are building')) {
-      extractedFact = prompt.trim();
-      memoryType = 'Project';
+    // Apply strict filtering only if it's from the Companion Node page (!groupId)
+    if (!groupId) {
+      if (this.isGreetingOrTestMessage(prompt)) {
+        return;
+      }
+
+      const fillerPatterns = [
+        /^(lol|haha|lmao|😂|🤣|xd|ok|okay|cool|thanks|thx|ty|great|awesome|nice|perfect|yes|no|yep|nope)$/i,
+        /\b(joke|funny|fun)\b/i,
+        /\b(feel|feeling|mood|status|sad|angry|happy|depressed|tired|sick)\b/i
+      ];
+
+      if (fillerPatterns.some(regex => regex.test(lowerPrompt))) {
+        return;
+      }
+
+      // Strict auto-extraction constraints for Companion
+      if (lowerPrompt.includes('remember that')) {
+        extractedFact = prompt.replace(/remember that/i, '').trim();
+      } else if (lowerPrompt.includes('favorite topic is') || lowerPrompt.includes('favorite language is')) {
+        extractedFact = prompt.trim();
+      } else if (lowerPrompt.includes('project name is') || lowerPrompt.includes('we are building')) {
+        extractedFact = prompt.trim();
+        memoryType = 'Project';
+      }
+    } else {
+      // Keep original logic for Lounge Chat
+      if (lowerPrompt.includes('remember that')) {
+        extractedFact = prompt.replace(/remember that/i, '').trim();
+      } else if (lowerPrompt.includes('inside joke:')) {
+        extractedFact = prompt.replace(/inside joke:/i, '').trim();
+      } else if (lowerPrompt.includes('favorite topic is') || lowerPrompt.includes('favorite language is')) {
+        extractedFact = prompt.trim();
+      } else if (lowerPrompt.includes('project name is') || lowerPrompt.includes('we are building')) {
+        extractedFact = prompt.trim();
+        memoryType = 'Project';
+      }
     }
 
     if (extractedFact && extractedFact.length > 5 && extractedFact.length < 500) {
