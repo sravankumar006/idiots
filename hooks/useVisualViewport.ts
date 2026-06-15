@@ -21,6 +21,11 @@ export default function useVisualViewport() {
       const height = vv.height
       setViewportHeight(height)
       document.documentElement.style.setProperty('--visual-viewport-height', `${height}px`)
+      
+      // Force layout viewport scroll position to 0 to prevent keyboard panning issues
+      window.scrollTo(0, 0)
+      document.body.scrollTop = 0
+      document.documentElement.scrollTop = 0
     }
 
     const vv = window.visualViewport

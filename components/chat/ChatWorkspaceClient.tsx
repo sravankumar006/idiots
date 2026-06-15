@@ -419,7 +419,10 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
   }
 
   return (
-    <div className="flex h-full bg-[#f4f3ef] dark:bg-[#0f0f12] text-gray-900 dark:text-gray-100 overflow-hidden">
+    <div 
+      className="flex bg-[#f4f3ef] dark:bg-[#0f0f12] text-gray-900 dark:text-gray-100 overflow-hidden w-full"
+      style={{ height: 'var(--visual-viewport-height, 100dvh)' }}
+    >
 
       {/* ═══════════════════════════════════════════
           DESKTOP SIDEBAR

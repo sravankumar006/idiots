@@ -112,8 +112,11 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
   // Standard full-screen layout for chat (2-column Telegram split style)
   if (isChatPage) {
     return (
-      <div className="relative h-full flex bg-background text-foreground overflow-hidden font-sans transition-colors duration-300">
-        <main className="flex-1 overflow-hidden relative min-w-0">
+      <div 
+        className="relative flex bg-background text-foreground overflow-hidden font-sans transition-colors duration-300 w-full"
+        style={{ height: 'var(--visual-viewport-height, 100dvh)' }}
+      >
+        <main className="flex-1 overflow-hidden relative min-w-0 h-full">
           {children}
         </main>
       </div>
@@ -122,7 +125,10 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
 
   // General layout for dashboard, settings, and other pages
   return (
-    <div className="relative h-full flex bg-background text-foreground overflow-hidden font-sans transition-colors duration-300">
+    <div 
+      className="relative flex bg-background text-foreground overflow-hidden font-sans transition-colors duration-300 w-full"
+      style={{ height: 'var(--visual-viewport-height, 100dvh)' }}
+    >
       
       {/* 1. Desktop & Tablet Sidebar */}
       <div className="hidden md:flex h-full shrink-0">
