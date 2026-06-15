@@ -7,11 +7,20 @@ import SectionHeader from '@/components/layout/SectionHeader'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { createClient } from '@/lib/supabase/client'
+import { usePushNotifications } from '@/hooks/usePushNotifications'
 
 export default function SettingsPage() {
   const [notifications, setNotifications] = useState(true)
   const [audioHandshake, setAudioHandshake] = useState(false)
   const [selectedTheme, setSelectedTheme] = useState('midnight-violet')
+
+  // Notification Preferences States
+  const [prefChat, setPrefChat] = useState(true)
+  const [prefFocus, setPrefFocus] = useState(true)
+  const [prefAi, setPrefAi] = useState(true)
+  const [prefMemory, setPrefMemory] = useState(true)
+  const [prefAchievement, setPrefAchievement] = useState(true)
+  const [savingPrefs, setSavingPrefs] = useState(false)
 
   // AI Memory Toggles
   const [aiContextEnabled, setAiContextEnabled] = useState(true)
@@ -54,15 +63,173 @@ export default function SettingsPage() {
         setLoadingProviders(false)
       }
     }
+
+    // Fetch user notification preferences
+    async function fetchNotificationPreferences() {
+      try {
+        const res = await fetch('/api/notifications/preferences')
+        if (res.ok) {
+          const data = await res.json()
+          setPrefChat(data.chat_enabled !== false)
+          setPrefFocus(data.focus_enabled !== false)
+          setPrefAi(data.ai_enabled !== false)
+          setPrefMemory(data.memory_enabled !== false)
+          setPrefAchievement(data.achievement_enabled !== false)
+        }
+      } catch (err) {
+        console.error('Failed to load notification preferences:', err)
+      }
+    }
+
     fetchProvidersStatus()
+    fetchNotificationPreferences()
   }, [])
   
   const supabase = createClient()
+  const { token, permission } = usePushNotifications()
 
-  const handleSave = (e: React.FormEvent) => {
+  // Notification Debug States
+  const [swStatus, setSwStatus] = useState<'Connected' | 'Disconnected' | 'Checking...'>('Checking...')
+  const [dbTokenStatus, setDbTokenStatus] = useState<'Registered' | 'Missing' | 'Checking...'>('Checking...')
+  const [lastRegistrationTime, setLastRegistrationTime] = useState<string | null>(null)
+  const [devicePlatform, setDevicePlatform] = useState<string>('Web')
+  const [sendingTest, setSendingTest] = useState(false)
+
+  const checkServiceWorker = async () => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      try {
+        const regs = await navigator.serviceWorker.getRegistrations()
+        const hasFCM = regs.some(r => r.active && (r.active.scriptURL.includes('firebase-messaging-sw') || r.scope === '/'))
+        setSwStatus(hasFCM ? 'Connected' : 'Disconnected')
+      } catch (err) {
+        console.error('Error checking service worker:', err)
+        setSwStatus('Disconnected')
+      }
+    } else {
+      setSwStatus('Disconnected')
+    }
+  }
+
+  const fetchDeviceStatus = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: devices, error } = await supabase
+        .from('user_devices')
+        .select('created_at, platform')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      if (devices && devices.length > 0) {
+        setDbTokenStatus('Registered')
+        setLastRegistrationTime(new Date(devices[0].created_at).toLocaleString())
+      } else {
+        setDbTokenStatus('Missing')
+        setLastRegistrationTime(null)
+      }
+    } catch (err) {
+      console.error('Error fetching device tokens:', err)
+      setDbTokenStatus('Missing')
+    }
+  }
+
+  const checkSystemHealth = async () => {
+    await checkServiceWorker()
+    await fetchDeviceStatus()
+  }
+
+  useEffect(() => {
+    checkSystemHealth()
+  }, [token, permission])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    // @ts-ignore
+    if (window.Capacitor && window.Capacitor.getPlatform() === 'android') {
+      setDevicePlatform('Android')
+    } else if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
+      setDevicePlatform('PWA')
+    } else {
+      setDevicePlatform('Web')
+    }
+  }, [])
+
+  const handleSendTestNotification = async () => {
+    setSendingTest(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        alert('You must be logged in to send a test notification.')
+        return
+      }
+
+      const res = await fetch('/api/notifications/trigger', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          title: 'rocky test notification 🔔',
+          body: 'if you see this, push notifications are working perfectly!',
+          category: 'chat',
+          type: 'test'
+        })
+      })
+
+      if (res.ok) {
+        const result = await res.json()
+        if (result.notification) {
+          alert('Test notification triggered successfully! Check your notification tray and the database.')
+        } else {
+          alert('Notification endpoint responded successfully, but notification was skipped (likely because chat category is disabled in preferences).')
+        }
+      } else {
+        const errorData = await res.json()
+        throw new Error(errorData.error || 'Failed to trigger test notification')
+      }
+    } catch (err: any) {
+      console.error(err)
+      alert(`Failed to send test notification: ${err.message}`)
+    } finally {
+      setSendingTest(false)
+    }
+  }
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    localStorage.setItem('selected_ai_provider', providerPreference)
-    alert('Preferences saved successfully.')
+    setSavingPrefs(true)
+    try {
+      localStorage.setItem('selected_ai_provider', providerPreference)
+      
+      const res = await fetch('/api/notifications/preferences', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          chat_enabled: prefChat,
+          focus_enabled: prefFocus,
+          ai_enabled: prefAi,
+          memory_enabled: prefMemory,
+          achievement_enabled: prefAchievement
+        })
+      })
+
+      if (res.ok) {
+        alert('Preferences saved successfully.')
+      } else {
+        throw new Error('Failed to save notification settings.')
+      }
+    } catch (err) {
+      console.error(err)
+      alert('Preferences saved locally, but failed to sync notifications to database.')
+    } finally {
+      setSavingPrefs(false)
+    }
   }
 
   const handleClearMemory = async (type: string) => {
@@ -141,7 +308,7 @@ export default function SettingsPage() {
           <Card className="space-y-4">
             <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
               <Bell className="h-4 w-4 text-rose-400" />
-              Alert Rules
+              Alert & Push Notification Rules
             </h3>
             
             <div className="space-y-4 pt-2">
@@ -174,6 +341,89 @@ export default function SettingsPage() {
                   className="rounded bg-white/5 border-white/10 text-violet-500 focus:ring-violet-500 focus:ring-offset-0 h-4 w-4 cursor-pointer"
                 />
               </label>
+
+              {/* FCM Toggles */}
+              <div className="border-t border-white/5 pt-4 space-y-4">
+                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  Push Subscriptions (Firebase Cloud Messaging)
+                </span>
+
+                <label className="flex items-center justify-between cursor-pointer select-none">
+                  <div className="space-y-0.5 pr-4">
+                    <span className="text-xs font-bold text-white block">Chat Notifications</span>
+                    <span className="text-[10px] text-gray-500 font-semibold leading-normal">
+                      Get pushed for replies, reactions, quotes, and direct mentions.
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={prefChat}
+                    onChange={(e) => setPrefChat(e.target.checked)}
+                    className="rounded bg-white/5 border-white/10 text-violet-500 focus:ring-violet-500 focus:ring-offset-0 h-4 w-4 cursor-pointer"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between cursor-pointer select-none border-t border-white/5 pt-4">
+                  <div className="space-y-0.5 pr-4">
+                    <span className="text-xs font-bold text-white block">Focus Room Activity</span>
+                    <span className="text-[10px] text-gray-500 font-semibold leading-normal">
+                      Get alerts when study sessions start, finish, or when you receive invitations.
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={prefFocus}
+                    onChange={(e) => setPrefFocus(e.target.checked)}
+                    className="rounded bg-white/5 border-white/10 text-violet-500 focus:ring-violet-500 focus:ring-offset-0 h-4 w-4 cursor-pointer"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between cursor-pointer select-none border-t border-white/5 pt-4">
+                  <div className="space-y-0.5 pr-4">
+                    <span className="text-xs font-bold text-white block">AI Companion Updates</span>
+                    <span className="text-[10px] text-gray-500 font-semibold leading-normal">
+                      Receive notices when Rocky completes a response, summary, or generated note.
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={prefAi}
+                    onChange={(e) => setPrefAi(e.target.checked)}
+                    className="rounded bg-white/5 border-white/10 text-violet-500 focus:ring-violet-500 focus:ring-offset-0 h-4 w-4 cursor-pointer"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between cursor-pointer select-none border-t border-white/5 pt-4">
+                  <div className="space-y-0.5 pr-4">
+                    <span className="text-xs font-bold text-white block">Timeline & Scrapbook Memory Alerts</span>
+                    <span className="text-[10px] text-gray-500 font-semibold leading-normal">
+                      Get notified when peers comment, react, or quote your shared vault entries.
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={prefMemory}
+                    onChange={(e) => setPrefMemory(e.target.checked)}
+                    className="rounded bg-white/5 border-white/10 text-violet-500 focus:ring-violet-500 focus:ring-offset-0 h-4 w-4 cursor-pointer"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between cursor-pointer select-none border-t border-white/5 pt-4">
+                  <div className="space-y-0.5 pr-4">
+                    <span className="text-xs font-bold text-white block">Milestones & Achievements</span>
+                    <span className="text-[10px] text-gray-500 font-semibold leading-normal">
+                      Get alert milestones for streaks, focus records, or roadmap completions.
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={prefAchievement}
+                    onChange={(e) => setPrefAchievement(e.target.checked)}
+                    className="rounded bg-white/5 border-white/10 text-violet-500 focus:ring-violet-500 focus:ring-offset-0 h-4 w-4 cursor-pointer"
+                  />
+                </label>
+              </div>
+
             </div>
           </Card>
 
@@ -321,9 +571,9 @@ export default function SettingsPage() {
             </div>
           </Card>
 
-          <Button type="submit" variant="neon" className="w-auto py-2.5 px-6 self-start flex items-center gap-2">
+          <Button type="submit" variant="neon" className="w-auto py-2.5 px-6 self-start flex items-center gap-2" disabled={savingPrefs}>
             <Save className="h-4 w-4" />
-            <span>Save Preferences</span>
+            <span>{savingPrefs ? 'Saving Settings...' : 'Save Preferences'}</span>
           </Button>
 
         </div>
@@ -346,6 +596,79 @@ export default function SettingsPage() {
               <div className="border-t border-white/5 pt-3">
                 <span className="text-gray-500 font-semibold uppercase tracking-wider text-[9px] block">Auth Provider</span>
                 <span className="text-gray-300 font-bold block mt-1">Supabase SSR Cookies API</span>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-5 space-y-4">
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <Activity className="h-4 w-4 text-emerald-400" />
+              Notification Debug Center
+            </h3>
+            
+            <div className="space-y-3.5 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500 font-semibold uppercase tracking-wider text-[9px]">Push Permission</span>
+                <span className={`font-bold px-2 py-0.5 rounded-full border text-[10px] ${
+                  permission === 'granted'
+                    ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                    : permission === 'denied'
+                    ? 'text-rose-400 bg-rose-500/10 border-rose-500/20'
+                    : 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+                }`}>
+                  {permission === 'granted' ? 'Granted' : permission === 'denied' ? 'Denied' : 'Not Requested'}
+                </span>
+              </div>
+
+              <div className="border-t border-white/5 pt-3.5 flex justify-between items-center">
+                <span className="text-gray-500 font-semibold uppercase tracking-wider text-[9px]">Service Worker</span>
+                <span className={`font-bold px-2 py-0.5 rounded-full border text-[10px] ${
+                  swStatus === 'Connected'
+                    ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                    : swStatus === 'Checking...'
+                    ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+                    : 'text-rose-400 bg-rose-500/10 border-rose-500/20'
+                }`}>
+                  {swStatus}
+                </span>
+              </div>
+
+              <div className="border-t border-white/5 pt-3.5 flex justify-between items-center">
+                <span className="text-gray-500 font-semibold uppercase tracking-wider text-[9px]">FCM Token</span>
+                <span className={`font-bold px-2 py-0.5 rounded-full border text-[10px] ${
+                  dbTokenStatus === 'Registered'
+                    ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                    : dbTokenStatus === 'Checking...'
+                    ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+                    : 'text-rose-400 bg-rose-500/10 border-rose-500/20'
+                }`}>
+                  {dbTokenStatus}
+                </span>
+              </div>
+
+              <div className="border-t border-white/5 pt-3.5">
+                <span className="text-gray-500 font-semibold uppercase tracking-wider text-[9px] block">Last Registration</span>
+                <span className="text-gray-300 font-bold block mt-1 font-mono text-[10px]">
+                  {lastRegistrationTime || 'N/A'}
+                </span>
+              </div>
+
+              <div className="border-t border-white/5 pt-3.5 flex justify-between items-center">
+                <span className="text-gray-500 font-semibold uppercase tracking-wider text-[9px]">Device Platform</span>
+                <span className="text-gray-300 font-bold">
+                  {devicePlatform}
+                </span>
+              </div>
+
+              <div className="pt-2">
+                <Button 
+                  type="button" 
+                  onClick={handleSendTestNotification} 
+                  disabled={sendingTest}
+                  className="w-full bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/20 py-2 rounded-xl text-xs font-bold transition-all"
+                >
+                  {sendingTest ? 'Sending Test...' : 'Send Test Notification'}
+                </Button>
               </div>
             </div>
           </Card>

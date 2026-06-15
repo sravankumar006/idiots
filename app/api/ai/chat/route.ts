@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { AIService } from '@/lib/ai/ai-service';
 import { MemoryService } from '@/lib/ai/memory-service';
 import { AIRequest } from '@/types/ai';
+import { createNotification } from '@/lib/notifications/createNotification';
 
 export async function POST(req: Request) {
   try {
@@ -103,6 +104,36 @@ export async function POST(req: Request) {
 
           if (aiInsertError) {
             console.error('Server-side AI message insertion failed:', aiInsertError);
+          } else if (user) {
+            // Trigger AI response/notes/PDF notification
+            const cleanPrompt = (prompt || '').toLowerCase()
+            const isPdfSummary = cleanPrompt.includes('pdf') || cleanPrompt.includes('summary') || cleanPrompt.includes('summarize')
+            const isNotesGen = cleanPrompt.includes('note') || cleanPrompt.includes('study guide') || cleanPrompt.includes('notes')
+
+            let title = 'rocky companion response ⚡'
+            let bodyText = text.length > 100 ? text.substring(0, 97) + '...' : text
+            let notificationType = 'completed response'
+
+            if (isPdfSummary) {
+              title = 'ai study summary ready 📄'
+              bodyText = 'rocky has generated a PDF study summary for you.'
+              notificationType = 'pdf summary'
+            } else if (isNotesGen) {
+              title = 'ai study notes generated 📝'
+              bodyText = 'rocky has created structured study notes for you.'
+              notificationType = 'generated notes'
+            }
+
+            await createNotification({
+              userId: user.id,
+              title,
+              body: bodyText,
+              category: 'ai',
+              type: notificationType,
+              relatedId: aiMessageId
+            }).catch(err => {
+              console.error('Failed to trigger AI notification:', err)
+            })
           }
 
         } catch (dbErr) {

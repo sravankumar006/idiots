@@ -172,6 +172,57 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
         prev.map((m) => (m.id === tempId ? { ...m, ...data, sending: false, uploadProgress: undefined } : m))
       )
 
+      // --- PUSH NOTIFICATION SYSTEM: Trigger notifications for replies and mentions ---
+      if (activeUser) {
+        // 1. Trigger Reply notification if this message replies to someone else
+        if (activeReply && activeReply.sender_id !== activeUser.id) {
+          fetch('/api/notifications/trigger', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: activeReply.sender_id,
+              title: `@${activeUser.username} replied to you`,
+              body: text.trim() || (isSticker ? 'Sent a sticker' : 'Sent an attachment'),
+              category: 'chat',
+              type: 'reply',
+              relatedId: data.id
+            })
+          }).catch(err => console.error('Failed to trigger reply notification:', err))
+        }
+
+        // 2. Trigger Mention notification for any @username found
+        const mentionRegex = /@([a-zA-Z0-9_-]+)/g
+        const matches = [...text.matchAll(mentionRegex)]
+        const usernames = Array.from(new Set(matches.map(m => m[1])))
+
+        if (usernames.length > 0) {
+          supabase
+            .from('profiles')
+            .select('id, username')
+            .in('username', usernames)
+            .then(({ data: profilesData }) => {
+              if (profilesData) {
+                profilesData.forEach(p => {
+                  if (p.id !== activeUser.id && (!activeReply || p.id !== activeReply.sender_id)) {
+                    fetch('/api/notifications/trigger', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        userId: p.id,
+                        title: `@${activeUser.username} mentioned you`,
+                        body: text.trim() || 'mentioned you in chat',
+                        category: 'chat',
+                        type: 'mention',
+                        relatedId: data.id
+                      })
+                    }).catch(err => console.error('Failed to trigger mention notification:', err))
+                  }
+                })
+              }
+            })
+        }
+      }
+
       // --- AI INTEGRATION: Detect @rocky and trigger shared AI ---
       if (isAI || text.toLowerCase().includes('@rocky')) {
         const aiMessageId = crypto.randomUUID()
@@ -468,6 +519,22 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
             user_id: activeUser.id,
             emoji
           })
+
+        // --- PUSH NOTIFICATION SYSTEM: Trigger notification for reactions ---
+        if (activeUser && targetMsg && targetMsg.sender_id !== activeUser.id) {
+          fetch('/api/notifications/trigger', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: targetMsg.sender_id,
+              title: `@${activeUser.username} reacted to your message`,
+              body: `reacted with ${emoji} to: "${targetMsg.message || 'message'}"`,
+              category: 'chat',
+              type: 'reaction',
+              relatedId: messageId
+            })
+          }).catch(err => console.error('Failed to trigger reaction notification:', err))
+        }
       }
     } catch (e) {
       console.error("Error toggling reaction:", e)

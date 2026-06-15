@@ -15,6 +15,20 @@ export interface CareerProfile {
   target_goals: string[]
   tech_stack: string[]
   favorite_language: string
+  achievement_visibility: string
+}
+
+export interface Achievement {
+  id: string
+  user_id: string
+  title: string
+  verb: string
+  visibility: string
+  created_at: string
+  profiles?: {
+    username: string
+    avatar: string
+  } | null
 }
 
 export interface CodingStats {
@@ -57,6 +71,7 @@ export interface FocusSession {
   accomplishments: string
   reflections: string
   completed: boolean
+  group_id?: string | null
   created_at: string
   completed_at: string | null
 }
@@ -66,99 +81,72 @@ export interface FocusStats {
   totalSessions: number
   weeklyMinutes: number
   monthlyMinutes: number
+  collaborativeSessions: number
+  streak: number
+  goalBreakdown: Record<string, number>
+}
+
+export interface CrewStats {
+  weeklyFocusHours: number
+  activeMembersToday: number
+  activeSessions: number
+  completedSessions: number
+  totalActivities: number
+  totalMemories: number
+  totalChatMessages: number
+}
+
+export interface RoadmapItem {
+  id: string
+  user_id: string
+  stage: string
+  title: string
+  completed: boolean
+  display_order: number
+  created_at: string
 }
 
 const DEFAULT_CAREER_PROFILE = (userId: string): CareerProfile => ({
   id: userId,
   resume_url: '',
   portfolio_url: '',
-  certifications: ['AWS Cloud Practitioner', 'Next.js Professional'],
+  certifications: [],
   internship_status: 'applying',
   learning_roadmap: `- [x] Master basic JavaScript and TS
 - [/] Build collaborative hub with Supabase
 - [ ] Complete 150 LeetCode problems
 - [ ] Apply to 10 summer internships`,
-  dream_company: 'Google',
-  target_goals: ['Solve 200 DSA problems', 'Build 3 Fullstack projects', 'Resume review with crew'],
-  tech_stack: ['Next.js', 'TypeScript', 'Supabase', 'React', 'TailwindCSS'],
-  favorite_language: 'TypeScript'
+  dream_company: '',
+  target_goals: [],
+  tech_stack: [],
+  favorite_language: '',
+  achievement_visibility: 'public'
 })
 
 const DEFAULT_CODING_STATS = (userId: string): CodingStats => ({
-  leetcode_username: 'idiot_dev',
-  leetcode_solved: 84,
-  leetcode_streak: 5,
-  hackerrank_username: 'idiot_hack',
-  hackerrank_solved: 25,
-  codeforces_username: 'idiot_cf',
-  codeforces_solved: 12,
-  github_username: 'idiot_coder',
-  github_contributions: 147,
-  languages_json: { 'TypeScript': 50, 'JavaScript': 30, 'C++': 15, 'Python': 5 }
+  leetcode_username: '',
+  leetcode_solved: 0,
+  leetcode_streak: 0,
+  hackerrank_username: '',
+  hackerrank_solved: 0,
+  codeforces_username: '',
+  codeforces_solved: 0,
+  github_username: '',
+  github_contributions: 0,
+  languages_json: {}
 })
 
 const DEFAULT_STUDY_STATS = (userId: string): StudyStats => ({
-  total_study_minutes: 360,
-  completed_pomodoros: 12,
-  pdfs_reviewed: 3,
-  ai_sessions_count: 8,
-  current_streak: 4
+  total_study_minutes: 0,
+  completed_pomodoros: 0,
+  pdfs_reviewed: 0,
+  ai_sessions_count: 0,
+  current_streak: 0
 })
 
-const DEFAULT_ACTIVITIES = (userId: string): ActivityLog[] => [
-  {
-    id: 'act-1',
-    user_id: userId,
-    activity_type: 'study_session',
-    description: 'Completed a 45-minute focus study session',
-    created_at: new Date(Date.now() - 3600000 * 2).toISOString() // 2 hours ago
-  },
-  {
-    id: 'act-2',
-    user_id: userId,
-    activity_type: 'coding_solve',
-    description: 'Solved 3 LeetCode problems (TypeScript)',
-    created_at: new Date(Date.now() - 3600000 * 24).toISOString() // 1 day ago
-  },
-  {
-    id: 'act-3',
-    user_id: userId,
-    activity_type: 'career_update',
-    description: 'Updated learning roadmap and dream company',
-    created_at: new Date(Date.now() - 3600000 * 48).toISOString() // 2 days ago
-  }
-]
+const DEFAULT_ACTIVITIES = (userId: string): ActivityLog[] => []
 
-const DEFAULT_FOCUS_SESSIONS = (userId: string): FocusSession[] => [
-  {
-    id: 'fs-1',
-    user_id: userId,
-    goal: 'Coding',
-    duration_minutes: 45,
-    actual_minutes: 45,
-    theme: 'coding_cave',
-    notes: 'Implemented the new grid layout for the dashboard. Added Tailwind styling.',
-    accomplishments: 'Completed dashboard components & styled them.',
-    reflections: 'Felt very focused. Coding cave theme matches coding headspace.',
-    completed: true,
-    created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
-    completed_at: new Date(Date.now() - 3600000 * 2 + 45 * 60000).toISOString()
-  },
-  {
-    id: 'fs-2',
-    user_id: userId,
-    goal: 'Research',
-    duration_minutes: 60,
-    actual_minutes: 60,
-    theme: 'aurora',
-    notes: 'Researched Supabase RLS policies and channel replication details.',
-    accomplishments: 'Mapped out migration scripts.',
-    reflections: 'A bit distracted by notifications in the middle.',
-    completed: true,
-    created_at: new Date(Date.now() - 3600000 * 24).toISOString(),
-    completed_at: new Date(Date.now() - 3600000 * 24 + 60 * 60000).toISOString()
-  }
-]
+const DEFAULT_FOCUS_SESSIONS = (userId: string): FocusSession[] => []
 
 export function useDashboardData(activeUser: UserProfile | null, targetUserId?: string | null) {
   const [loading, setLoading] = useState(true)
@@ -167,8 +155,28 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
   const [studyStats, setStudyStats] = useState<StudyStats | null>(null)
   const [activities, setActivities] = useState<ActivityLog[]>([])
   const [focusSessions, setFocusSessions] = useState<FocusSession[]>([])
-  const [focusStats, setFocusStats] = useState<FocusStats>({ totalHours: 0, totalSessions: 0, weeklyMinutes: 0, monthlyMinutes: 0 })
+  const [focusStats, setFocusStats] = useState<FocusStats>({
+    totalHours: 0,
+    totalSessions: 0,
+    weeklyMinutes: 0,
+    monthlyMinutes: 0,
+    collaborativeSessions: 0,
+    streak: 0,
+    goalBreakdown: {}
+  })
+  const [roadmapItems, setRoadmapItems] = useState<RoadmapItem[]>([])
   const [targetUser, setTargetUser] = useState<UserProfile | null>(null)
+  const [crewStats, setCrewStats] = useState<CrewStats>({
+    weeklyFocusHours: 0,
+    activeMembersToday: 0,
+    activeSessions: 0,
+    completedSessions: 0,
+    totalActivities: 0,
+    totalMemories: 0,
+    totalChatMessages: 0
+  })
+  const [communityAchievements, setCommunityAchievements] = useState<Achievement[]>([])
+  const [userAchievements, setUserAchievements] = useState<Achievement[]>([])
 
   const supabase = createClient()
   const userId = activeUser?.id
@@ -176,27 +184,84 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
   // Determine active query ID
   const userIdToLoad = targetUserId || userId
 
+  // Compute consecutive study day streaks from completed focus sessions
+  const calculateStreak = (sessions: FocusSession[]): number => {
+    const completed = sessions.filter(s => s.completed)
+    if (completed.length === 0) return 0
+
+    // Get unique dates sorted descending
+    const dates = Array.from(new Set(
+      completed.map(s => new Date(s.created_at).toDateString())
+    )).map(d => new Date(d)).sort((a, b) => b.getTime() - a.getTime())
+
+    if (dates.length === 0) return 0
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+
+    const mostRecent = new Date(dates[0])
+    mostRecent.setHours(0, 0, 0, 0)
+
+    // If the most recent session is not today and not yesterday, streak is 0
+    if (mostRecent.getTime() !== today.getTime() && mostRecent.getTime() !== yesterday.getTime()) {
+      return 0
+    }
+
+    let streak = 1
+    let currentDate = mostRecent
+
+    for (let i = 1; i < dates.length; i++) {
+      const nextDate = new Date(dates[i])
+      nextDate.setHours(0, 0, 0, 0)
+
+      const diffTime = Math.abs(currentDate.getTime() - nextDate.getTime())
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+      if (diffDays === 1) {
+        streak++
+        currentDate = nextDate
+      } else if (diffDays > 1) {
+        break
+      }
+    }
+
+    return streak
+  }
+
   // Compute stats from raw sessions list helper
   const computeFocusStats = (sessions: FocusSession[]): FocusStats => {
-    const totalMins = sessions.reduce((acc, s) => acc + s.actual_minutes, 0)
+    const completed = sessions.filter(s => s.completed)
+    const totalMins = completed.reduce((acc, s) => acc + s.actual_minutes, 0)
     const nowTime = Date.now()
     const oneWeekAgo = nowTime - 7 * 24 * 60 * 60 * 1000
     const oneMonthAgo = nowTime - 30 * 24 * 60 * 60 * 1000
 
     let weeklyMins = 0
     let monthlyMins = 0
+    let collaborativeCount = 0
+    const breakdown: Record<string, number> = {}
 
-    sessions.forEach(s => {
+    completed.forEach(s => {
       const time = new Date(s.created_at).getTime()
       if (time >= oneWeekAgo) weeklyMins += s.actual_minutes
       if (time >= oneMonthAgo) monthlyMins += s.actual_minutes
+      if (s.group_id) collaborativeCount++
+
+      const goalKey = s.goal || 'General'
+      breakdown[goalKey] = (breakdown[goalKey] || 0) + 1
     })
 
     return {
       totalHours: Number((totalMins / 60).toFixed(1)),
-      totalSessions: sessions.length,
+      totalSessions: completed.length,
       weeklyMinutes: weeklyMins,
-      monthlyMinutes: monthlyMins
+      monthlyMinutes: monthlyMins,
+      collaborativeSessions: collaborativeCount,
+      streak: calculateStreak(sessions),
+      goalBreakdown: breakdown
     }
   }
 
@@ -218,7 +283,10 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
         supabase.from('coding_stats').select('*').eq('user_id', userIdToLoad).maybeSingle(),
         supabase.from('study_stats').select('*').eq('user_id', userIdToLoad).maybeSingle(),
         supabase.from('activity_logs').select('*').eq('user_id', userIdToLoad).order('created_at', { ascending: false }).limit(20),
-        supabase.from('focus_sessions').select('*').eq('user_id', userIdToLoad).eq('completed', true).order('created_at', { ascending: false }).limit(30)
+        supabase.from('focus_sessions').select('*').eq('user_id', userIdToLoad).eq('completed', true).order('created_at', { ascending: false }).limit(1000),
+        supabase.from('roadmap_items').select('*').eq('user_id', userIdToLoad).order('display_order', { ascending: true }),
+        supabase.from('achievements').select('*, profiles(*)').eq('user_id', userIdToLoad).order('created_at', { ascending: false }),
+        supabase.from('achievements').select('*, profiles(*)').neq('user_id', userIdToLoad).order('created_at', { ascending: false }).limit(20)
       ]
 
       // Fetch target user profiles metadata if different
@@ -226,7 +294,10 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
         promises.push(supabase.from('profiles').select('*').eq('id', targetUserId).maybeSingle())
       }
 
-      const [careerRes, codingRes, studyRes, activitiesRes, focusRes, profileRes] = await Promise.all(promises)
+      const [
+        careerRes, codingRes, studyRes, activitiesRes, focusRes, roadmapRes,
+        userAchRes, commAchRes, profileRes
+      ] = await Promise.all(promises)
 
       // Set target user details
       if (profileRes && profileRes.data) {
@@ -236,17 +307,19 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
       }
 
       // Profile handle
+      let careerProfileData: CareerProfile | null = null
       if (careerRes.error) throw careerRes.error
       if (careerRes.data) {
-        setCareerProfile(careerRes.data as CareerProfile)
+        careerProfileData = careerRes.data as CareerProfile
       } else {
         // Create initial record (only if it is current user)
         const def = DEFAULT_CAREER_PROFILE(userIdToLoad)
         if (userIdToLoad === userId) {
           await supabase.from('career_profiles').insert(def)
         }
-        setCareerProfile(def)
+        careerProfileData = def
       }
+      setCareerProfile(careerProfileData)
 
       // Coding Stats handle
       if (codingRes.error) throw codingRes.error
@@ -260,17 +333,45 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
         setCodingStats(def)
       }
 
-      // Study Stats handle
-      if (studyRes.error) throw studyRes.error
-      if (studyRes.data) {
-        setStudyStats(studyRes.data as StudyStats)
-      } else {
-        const def = DEFAULT_STUDY_STATS(userIdToLoad)
-        if (userIdToLoad === userId) {
-          await supabase.from('study_stats').insert({ user_id: userIdToLoad, ...def })
-        }
-        setStudyStats(def)
+      // Focus Sessions handle
+      let finalFocusSessions: FocusSession[] = []
+      let finalFocusStats: FocusStats = {
+        totalHours: 0,
+        totalSessions: 0,
+        weeklyMinutes: 0,
+        monthlyMinutes: 0,
+        collaborativeSessions: 0,
+        streak: 0,
+        goalBreakdown: {}
       }
+
+      if (focusRes.error) throw focusRes.error
+      if (focusRes.data && focusRes.data.length > 0) {
+        finalFocusSessions = focusRes.data as FocusSession[]
+        finalFocusStats = computeFocusStats(finalFocusSessions)
+      } else {
+        const def = DEFAULT_FOCUS_SESSIONS(userIdToLoad)
+        finalFocusSessions = def
+        finalFocusStats = computeFocusStats(def)
+      }
+      setFocusSessions(finalFocusSessions)
+      setFocusStats(finalFocusStats)
+
+      // Study Stats handle - override streak and completed sessions with real calculated stats!
+      if (studyRes.error) throw studyRes.error
+      let studyStatsData: StudyStats
+      if (studyRes.data) {
+        studyStatsData = studyRes.data as StudyStats
+      } else {
+        studyStatsData = DEFAULT_STUDY_STATS(userIdToLoad)
+        if (userIdToLoad === userId) {
+          await supabase.from('study_stats').insert({ user_id: userIdToLoad, ...studyStatsData })
+        }
+      }
+      // Overwrite with real database activity stats
+      studyStatsData.completed_pomodoros = finalFocusStats.totalSessions
+      studyStatsData.current_streak = finalFocusStats.streak
+      setStudyStats(studyStatsData)
 
       // Activities handle
       if (activitiesRes.error) throw activitiesRes.error
@@ -284,16 +385,138 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
         setActivities(def)
       }
 
-      // Focus Sessions handle
-      if (focusRes.error) throw focusRes.error
-      if (focusRes.data && focusRes.data.length > 0) {
-        setFocusSessions(focusRes.data as FocusSession[])
-        setFocusStats(computeFocusStats(focusRes.data as FocusSession[]))
+      // Roadmap Items handle - with auto-migration from careerProfile markdown roadmap
+      if (roadmapRes.error) throw roadmapRes.error
+      let finalRoadmapItems: RoadmapItem[] = []
+      if (roadmapRes.data && roadmapRes.data.length > 0) {
+        finalRoadmapItems = roadmapRes.data as RoadmapItem[]
       } else {
-        const def = DEFAULT_FOCUS_SESSIONS(userIdToLoad)
-        setFocusSessions(def)
-        setFocusStats(computeFocusStats(def))
+        // If empty, check if we can migrate from careerProfile markdown roadmap
+        if (careerProfileData && careerProfileData.learning_roadmap) {
+          const lines = careerProfileData.learning_roadmap.split('\n').filter(Boolean)
+          const newItems = lines.map((line, idx) => {
+            const match = line.match(/^-\s*\[([ x/]+)\]\s*(.*)$/)
+            const completed = match ? match[1].toLowerCase().includes('x') : false
+            const title = match ? match[2].trim() : line.trim()
+            return {
+              user_id: userIdToLoad,
+              stage: 'General',
+              title,
+              completed,
+              display_order: idx
+            }
+          }).filter(item => item.title.length > 0)
+
+          if (newItems.length > 0 && userIdToLoad === userId) {
+            const { data: inserted } = await supabase.from('roadmap_items').insert(newItems).select()
+            if (inserted) {
+              finalRoadmapItems = inserted as RoadmapItem[]
+            }
+          }
+        }
       }
+      setRoadmapItems(finalRoadmapItems)
+
+      // User Achievements handle
+      let finalUserAchievements: Achievement[] = []
+      if (userAchRes && !userAchRes.error && userAchRes.data) {
+        finalUserAchievements = userAchRes.data as Achievement[]
+      }
+      setUserAchievements(finalUserAchievements)
+
+      // Community Achievements handle
+      let finalCommAchievements: Achievement[] = []
+      if (commAchRes && !commAchRes.error && commAchRes.data) {
+        finalCommAchievements = commAchRes.data as Achievement[]
+      }
+      setCommunityAchievements(finalCommAchievements)
+
+      // Auto-detect Achievements
+      if (userIdToLoad === userId) {
+        const currentVisibility = careerProfileData?.achievement_visibility || 'public'
+        await checkAndTriggerAchievements(
+          userIdToLoad,
+          finalFocusStats,
+          finalRoadmapItems,
+          finalUserAchievements,
+          currentVisibility
+        )
+      }
+
+      // Fetch crew stats (platform-wide)
+      let crewStatsData: CrewStats = {
+        weeklyFocusHours: 0,
+        activeMembersToday: 0,
+        activeSessions: 0,
+        completedSessions: 0,
+        totalActivities: 0,
+        totalMemories: 0,
+        totalChatMessages: 0
+      }
+
+      try {
+        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+
+        // 1. Weekly focus hours (all users, last 7 days)
+        const { data: weeklySessions } = await supabase
+          .from('focus_sessions')
+          .select('actual_minutes')
+          .eq('completed', true)
+          .gte('created_at', oneWeekAgo.toISOString())
+        const weeklyMinutes = weeklySessions?.reduce((acc, s) => acc + s.actual_minutes, 0) || 0
+        crewStatsData.weeklyFocusHours = Number((weeklyMinutes / 60).toFixed(1))
+
+        // 2. Active members today (all users, last 24 hours)
+        const [recentFocusUsers, recentActivityUsers, recentMessageUsers] = await Promise.all([
+          supabase.from('focus_sessions').select('user_id').gte('created_at', oneDayAgo.toISOString()),
+          supabase.from('activity_logs').select('user_id').gte('created_at', oneDayAgo.toISOString()),
+          supabase.from('messages').select('sender_id').gte('created_at', oneDayAgo.toISOString())
+        ])
+
+        const activeUserIds = new Set<string>()
+        recentFocusUsers.data?.forEach(u => activeUserIds.add(u.user_id))
+        recentActivityUsers.data?.forEach(u => activeUserIds.add(u.user_id))
+        recentMessageUsers.data?.forEach(u => activeUserIds.add(u.sender_id))
+        crewStatsData.activeMembersToday = activeUserIds.size
+
+        // 3. Active focus sessions
+        const { count: activeSessions } = await supabase
+          .from('focus_sessions')
+          .select('*', { count: 'exact', head: true })
+          .eq('completed', false)
+        crewStatsData.activeSessions = activeSessions || 0
+
+        // 4. Completed focus sessions
+        const { count: completedSessions } = await supabase
+          .from('focus_sessions')
+          .select('*', { count: 'exact', head: true })
+          .eq('completed', true)
+        crewStatsData.completedSessions = completedSessions || 0
+
+        // 5. Total timeline activity
+        const { count: totalActivities } = await supabase
+          .from('activity_logs')
+          .select('*', { count: 'exact', head: true })
+        crewStatsData.totalActivities = totalActivities || 0
+
+        // 6. Total memories
+        const { count: totalMemories } = await supabase
+          .from('ai_memories')
+          .select('*', { count: 'exact', head: true })
+        crewStatsData.totalMemories = totalMemories || 0
+
+        // 7. Total chat messages
+        const { count: totalChatMessages } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+        crewStatsData.totalChatMessages = totalChatMessages || 0
+
+      } catch (err) {
+        console.warn("Failed to fetch crew stats from DB:", err)
+      }
+
+      setCrewStats(crewStatsData)
 
     } catch (err: any) {
       console.warn("DB Dashboard Fetch failed (switching to localStorage fallback):", err.message)
@@ -330,14 +553,39 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
         setCodingStats(def)
       }
 
-      let localSS = localStorage.getItem(studyKey)
-      if (localSS) {
-        setStudyStats(JSON.parse(localSS))
-      } else {
-        const def = DEFAULT_STUDY_STATS(userIdToLoad)
-        localStorage.setItem(studyKey, JSON.stringify(def))
-        setStudyStats(def)
+      let localFocus = localStorage.getItem(focusKey)
+      let finalFocusSessions: FocusSession[] = []
+      let finalFocusStats: FocusStats = {
+        totalHours: 0,
+        totalSessions: 0,
+        weeklyMinutes: 0,
+        monthlyMinutes: 0,
+        collaborativeSessions: 0,
+        streak: 0,
+        goalBreakdown: {}
       }
+
+      if (localFocus) {
+        finalFocusSessions = JSON.parse(localFocus) as FocusSession[]
+      } else {
+        finalFocusSessions = DEFAULT_FOCUS_SESSIONS(userIdToLoad)
+        localStorage.setItem(focusKey, JSON.stringify(finalFocusSessions))
+      }
+      finalFocusStats = computeFocusStats(finalFocusSessions)
+      setFocusSessions(finalFocusSessions)
+      setFocusStats(finalFocusStats)
+
+      let localSS = localStorage.getItem(studyKey)
+      let studyStatsData: StudyStats
+      if (localSS) {
+        studyStatsData = JSON.parse(localSS) as StudyStats
+      } else {
+        studyStatsData = DEFAULT_STUDY_STATS(userIdToLoad)
+      }
+      studyStatsData.completed_pomodoros = finalFocusStats.totalSessions
+      studyStatsData.current_streak = finalFocusStats.streak
+      localStorage.setItem(studyKey, JSON.stringify(studyStatsData))
+      setStudyStats(studyStatsData)
 
       let localAct = localStorage.getItem(activitiesKey)
       if (localAct) {
@@ -348,17 +596,71 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
         setActivities(def)
       }
 
-      let localFocus = localStorage.getItem(focusKey)
-      if (localFocus) {
-        const parsed = JSON.parse(localFocus) as FocusSession[]
-        setFocusSessions(parsed)
-        setFocusStats(computeFocusStats(parsed))
+      // LocalStorage fallback for roadmap items
+      const localRoadmap = localStorage.getItem(`mock_roadmap_items_${userIdToLoad}`)
+      let finalRoadmapItems: RoadmapItem[] = []
+      if (localRoadmap) {
+        finalRoadmapItems = JSON.parse(localRoadmap) as RoadmapItem[]
       } else {
-        const def = DEFAULT_FOCUS_SESSIONS(userIdToLoad)
-        localStorage.setItem(focusKey, JSON.stringify(def))
-        setFocusSessions(def)
-        setFocusStats(computeFocusStats(def))
+        // Initialize from careerProfile markdown roadmap
+        const profileData = localCP ? (JSON.parse(localCP) as CareerProfile) : DEFAULT_CAREER_PROFILE(userIdToLoad)
+        const lines = (profileData.learning_roadmap || '').split('\n').filter(Boolean)
+        finalRoadmapItems = lines.map((line, idx) => {
+          const match = line.match(/^-\s*\[([ x/]+)\]\s*(.*)$/)
+          const completed = match ? match[1].toLowerCase().includes('x') : false
+          const title = match ? match[2].trim() : line.trim()
+          return {
+            id: `roadmap-${idx}-${Date.now()}`,
+            user_id: userIdToLoad,
+            stage: 'General',
+            title,
+            completed,
+            display_order: idx,
+            created_at: new Date().toISOString()
+          }
+        }).filter(item => item.title.length > 0)
+        localStorage.setItem(`mock_roadmap_items_${userIdToLoad}`, JSON.stringify(finalRoadmapItems))
       }
+      setRoadmapItems(finalRoadmapItems)
+
+      // LocalStorage fallback for achievements
+      const localAchKey = `mock_achievements_${userIdToLoad}`
+      const localAchs = localStorage.getItem(localAchKey)
+      let finalUserAchievements: Achievement[] = []
+      if (localAchs) {
+        finalUserAchievements = JSON.parse(localAchs) as Achievement[]
+      }
+      setUserAchievements(finalUserAchievements)
+      setCommunityAchievements(finalUserAchievements.filter(a => a.visibility !== 'private'))
+
+      // LocalStorage fallback for crew stats
+      const oneWeekAgoMs = Date.now() - 7 * 24 * 60 * 60 * 1000
+      const oneDayAgoMs = Date.now() - 24 * 60 * 60 * 1000
+      
+      const parsedFocus = finalFocusSessions
+      const parsedAct = localAct ? (JSON.parse(localAct) as ActivityLog[]) : []
+
+      const weeklyMinutes = parsedFocus
+        .filter(s => s.completed && new Date(s.created_at).getTime() >= oneWeekAgoMs)
+        .reduce((acc, s) => acc + s.actual_minutes, 0)
+      
+      const activeMembersSet = new Set<string>()
+      parsedFocus.forEach(s => {
+        if (new Date(s.created_at).getTime() >= oneDayAgoMs) activeMembersSet.add(s.user_id)
+      })
+      parsedAct.forEach(a => {
+        if (new Date(a.created_at).getTime() >= oneDayAgoMs) activeMembersSet.add(a.user_id)
+      })
+
+      setCrewStats({
+        weeklyFocusHours: Number((weeklyMinutes / 60).toFixed(1)),
+        activeMembersToday: activeMembersSet.size,
+        activeSessions: parsedFocus.filter(s => !s.completed).length,
+        completedSessions: parsedFocus.filter(s => s.completed).length,
+        totalActivities: parsedAct.length,
+        totalMemories: 0,
+        totalChatMessages: 0
+      })
     } finally {
       setLoading(false)
     }
@@ -466,6 +768,223 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
     }
   }
 
+  // Create Achievement
+  const createAchievement = async (uid: string, title: string, verb: string, visibility: string) => {
+    const newAch = {
+      user_id: uid,
+      title,
+      verb,
+      visibility
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('achievements')
+        .insert(newAch)
+        .select('*, profiles(*)')
+        .single()
+      
+      if (error) throw error
+      if (data) {
+        setUserAchievements(prev => [data as Achievement, ...prev])
+        if (visibility !== 'private') {
+          setCommunityAchievements(prev => [data as Achievement, ...prev])
+        }
+
+        // Trigger notification
+        fetch('/api/notifications/trigger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: uid,
+            title: 'achievement unlocked! 🏆',
+            body: `you ${verb} ${title}`,
+            category: 'achievement',
+            type: 'milestone',
+            relatedId: data.id
+          })
+        }).catch(err => console.error('Failed to trigger achievement notification:', err))
+
+        return data as Achievement
+      }
+    } catch (err: any) {
+      console.warn("DB Create Achievement failed, using localStorage fallback:", err.message)
+      const mockAch: Achievement = {
+        id: `ach-${Date.now()}`,
+        user_id: uid,
+        title,
+        verb,
+        visibility,
+        created_at: new Date().toISOString(),
+        profiles: activeUser ? { username: activeUser.username, avatar: activeUser.avatar } : null
+      }
+      setUserAchievements(prev => [mockAch, ...prev])
+      if (visibility !== 'private') {
+        setCommunityAchievements(prev => [mockAch, ...prev])
+      }
+
+      // Trigger notification for mocked achievement
+      fetch('/api/notifications/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: uid,
+          title: 'achievement unlocked! 🏆',
+          body: `you ${verb} ${title}`,
+          category: 'achievement',
+          type: 'milestone',
+          relatedId: mockAch.id
+        })
+      }).catch(err => console.error('Failed to trigger mock achievement notification:', err))
+
+      const localKey = `mock_achievements_${uid}`
+      const current = JSON.parse(localStorage.getItem(localKey) || '[]')
+      localStorage.setItem(localKey, JSON.stringify([mockAch, ...current]))
+      return mockAch
+    }
+    return null
+  }
+
+  // Check and trigger achievements helper
+  const checkAndTriggerAchievements = useCallback(async (
+    uid: string,
+    stats: FocusStats,
+    roadmap: RoadmapItem[],
+    existing: Achievement[],
+    visibility: string
+  ) => {
+    if (targetUserId && targetUserId !== userId) return
+
+    // 1. Check 20 Focus Sessions
+    if (stats.totalSessions >= 20) {
+      const has20 = existing.some(a => a.title === '20 Focus Sessions')
+      if (!has20) {
+        await createAchievement(uid, '20 Focus Sessions', 'completed', visibility)
+      }
+    }
+
+    // 2. Check 50 Study Hours
+    if (stats.totalHours >= 50) {
+      const has50 = existing.some(a => a.title === '50 Study Hours')
+      if (!has50) {
+        await createAchievement(uid, '50 Study Hours', 'reached', visibility)
+      }
+    }
+
+    // 3. Check Roadmap completion
+    const totalGoals = roadmap.length
+    const completedGoals = roadmap.filter(r => r.completed).length
+    if (totalGoals > 0 && completedGoals === totalGoals) {
+      const title = 'Learning Roadmap'
+      const hasRoadmap = existing.some(a => a.title === title)
+      if (!hasRoadmap) {
+        await createAchievement(uid, title, 'completed', visibility)
+      }
+    }
+  }, [activeUser, targetUserId, userId, roadmapItems])
+
+  // 5. Create Roadmap Item
+  const createRoadmapItem = async (stage: string, title: string) => {
+    if (targetUserId && targetUserId !== userId) return null
+    if (!userId) return null
+
+    const maxOrder = roadmapItems.reduce((max, item) => Math.max(max, item.display_order), -1)
+    const newItem: Omit<RoadmapItem, 'id' | 'created_at'> & { id?: string; created_at?: string } = {
+      user_id: userId,
+      stage,
+      title,
+      completed: false,
+      display_order: maxOrder + 1
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('roadmap_items')
+        .insert(newItem)
+        .select()
+        .single()
+      
+      if (error) throw error
+      if (data) {
+        setRoadmapItems(prev => [...prev, data as RoadmapItem])
+        return data as RoadmapItem
+      }
+    } catch (err: any) {
+      console.warn("DB Create Roadmap Item failed, using localStorage fallback:", err.message)
+      const mockItem: RoadmapItem = {
+        id: `roadmap-${Date.now()}`,
+        created_at: new Date().toISOString(),
+        ...newItem
+      }
+      const updated = [...roadmapItems, mockItem]
+      setRoadmapItems(updated)
+      localStorage.setItem(`mock_roadmap_items_${userId}`, JSON.stringify(updated))
+      return mockItem
+    }
+    return null
+  }
+
+  // 6. Update Roadmap Item
+  const updateRoadmapItem = async (id: string, updates: Partial<RoadmapItem>) => {
+    if (targetUserId && targetUserId !== userId) return
+    if (!userId) return
+
+    const updated = roadmapItems.map(item => item.id === id ? { ...item, ...updates } : item)
+    setRoadmapItems(updated)
+
+    try {
+      const { error } = await supabase
+        .from('roadmap_items')
+        .update(updates)
+        .eq('id', id)
+      if (error) throw error
+    } catch (err: any) {
+      console.warn("DB Update Roadmap Item failed, using localStorage fallback:", err.message)
+      localStorage.setItem(`mock_roadmap_items_${userId}`, JSON.stringify(updated))
+    }
+  }
+
+  // 7. Delete Roadmap Item
+  const deleteRoadmapItem = async (id: string) => {
+    if (targetUserId && targetUserId !== userId) return
+    if (!userId) return
+
+    const updated = roadmapItems.filter(item => item.id !== id)
+    setRoadmapItems(updated)
+
+    try {
+      const { error } = await supabase
+        .from('roadmap_items')
+        .delete()
+        .eq('id', id)
+      if (error) throw error
+    } catch (err: any) {
+      console.warn("DB Delete Roadmap Item failed, using localStorage fallback:", err.message)
+      localStorage.setItem(`mock_roadmap_items_${userId}`, JSON.stringify(updated))
+    }
+  }
+
+  // 8. Reorder Roadmap Items
+  const reorderRoadmapItems = async (reordered: RoadmapItem[]) => {
+    if (targetUserId && targetUserId !== userId) return
+    if (!userId) return
+
+    setRoadmapItems(reordered)
+
+    try {
+      const promises = reordered.map(item => 
+        supabase
+          .from('roadmap_items')
+          .update({ display_order: item.display_order })
+          .eq('id', item.id)
+      )
+      await Promise.all(promises)
+    } catch (err: any) {
+      console.warn("DB Reorder Roadmap Items failed, using localStorage fallback:", err.message)
+      localStorage.setItem(`mock_roadmap_items_${userId}`, JSON.stringify(reordered))
+    }
+  }
+
   return {
     loading,
     careerProfile,
@@ -475,9 +994,18 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
     focusSessions,
     focusStats,
     targetUser,
+    crewStats,
+    roadmapItems,
+    createRoadmapItem,
+    updateRoadmapItem,
+    deleteRoadmapItem,
+    reorderRoadmapItems,
     updateCareerProfile,
     syncCodingPlatform,
     addActivityLog,
+    communityAchievements,
+    userAchievements,
+    createAchievement,
     refetch: fetchData
   }
 }

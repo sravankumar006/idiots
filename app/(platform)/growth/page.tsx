@@ -35,37 +35,25 @@ export default function GrowthPage() {
   }, [supabase])
 
   // Fetch dashboard data & projects
-  const { studyStats, careerProfile, loading: dashLoading } = useDashboardData(profile)
+  const { studyStats, careerProfile, loading: dashLoading, roadmapItems: dbRoadmapItems = [], focusStats } = useDashboardData(profile)
   const { projects, loading: projLoading } = useProjectsData(profile)
 
   const loading = dashLoading || projLoading
 
-  // Parse learning roadmap markdown
+  // Format roadmap items from database
   const roadmapItems = useMemo(() => {
-    if (!careerProfile?.learning_roadmap) return []
-    
-    const lines = careerProfile.learning_roadmap.split('\n')
-    return lines.map((line, idx) => {
-      const isCompleted = line.includes('[x]')
-      const isInProgress = line.includes('[/]')
-      const label = line.replace(/^-\s*\[[x/ ]\]\s*/, '').trim()
-      
-      let status: 'completed' | 'progress' | 'todo' = 'todo'
-      if (isCompleted) status = 'completed'
-      else if (isInProgress) status = 'progress'
-
-      return { id: `item-${idx}`, label, status }
-    }).filter(item => item.label.length > 0)
-  }, [careerProfile])
+    return dbRoadmapItems.map((item) => ({
+      id: item.id,
+      label: item.title,
+      status: (item.completed ? 'completed' : 'todo') as 'completed' | 'progress' | 'todo'
+    }))
+  }, [dbRoadmapItems])
 
   // Calculate roadmap completion percentage
   const roadmapProgress = useMemo(() => {
     if (roadmapItems.length === 0) return 0
     const completed = roadmapItems.filter(item => item.status === 'completed').length
-    const progress = roadmapItems.filter(item => item.status === 'progress').length
-    // Give half weight to in-progress items
-    const score = completed + (progress * 0.5)
-    return Math.min(100, Math.round((score / roadmapItems.length) * 100))
+    return Math.min(100, Math.round((completed / roadmapItems.length) * 100))
   }, [roadmapItems])
 
   // AI Study recommendation engine by Rocky
@@ -120,7 +108,7 @@ export default function GrowthPage() {
         <div className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/25 rounded-2xl">
           <Flame className="h-4.5 w-4.5 text-orange-400 fill-orange-500/25 animate-pulse" />
           <span className="text-xs font-bold text-orange-300">
-            {studyStats?.current_streak || 1} Day Streak
+            {(focusStats?.streak !== undefined ? focusStats.streak : studyStats?.current_streak) || 1} Day Streak
           </span>
         </div>
       </div>
@@ -154,14 +142,14 @@ export default function GrowthPage() {
               <div className="space-y-1">
                 <span className="text-[10px] text-gray-500 font-bold lowercase block">focus hours</span>
                 <span className="text-xl font-extrabold text-white">
-                  {studyStats?.total_study_minutes ? Math.round((studyStats.total_study_minutes / 60) * 10) / 10 : 0}h
+                  {focusStats?.totalHours !== undefined ? focusStats.totalHours : (studyStats?.total_study_minutes ? Math.round((studyStats.total_study_minutes / 60) * 10) / 10 : 0)}h
                 </span>
               </div>
               
               <div className="space-y-1">
                 <span className="text-[10px] text-gray-500 font-bold lowercase block">sessions done</span>
                 <span className="text-xl font-extrabold text-white">
-                  {studyStats?.completed_pomodoros || 0}
+                  {focusStats?.totalSessions !== undefined ? focusStats.totalSessions : (studyStats?.completed_pomodoros || 0)}
                 </span>
               </div>
 

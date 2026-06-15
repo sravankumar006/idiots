@@ -43,9 +43,10 @@ interface ChatWindowProps {
   groupName: string
   activeUser: UserProfile | null
   onBack?: () => void
+  highlightMessageId?: string
 }
 
-export default function ChatWindow({ groupId, groupName, activeUser, onBack }: ChatWindowProps) {
+export default function ChatWindow({ groupId, groupName, activeUser, onBack, highlightMessageId }: ChatWindowProps) {
   const { theme, setTheme } = useTheme()
   const router = useRouter()
   const [mounted, setMounted] = React.useState(false)
@@ -544,6 +545,7 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack }: C
               studyFilterActive={studyFilterActive}
               isDeepFocusActive={myFocus.isDeepFocus}
               onSaveToVault={handleSaveToVault}
+              highlightMessageId={highlightMessageId}
             />
 
             <MessageInput

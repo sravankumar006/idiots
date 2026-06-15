@@ -6,6 +6,7 @@ import {
   Music, VolumeX, Moon, CloudRain, Wind, Radio, Info, GraduationCap, Code, Search
 } from 'lucide-react'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 
 // Avatar palette for displaying study presence
 const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
@@ -51,6 +52,61 @@ export default function StudyPanel({
 }: StudyPanelProps) {
   // ── Local countdown timer derived from timerEndsAt ──
   const [timeLeft, setTimeLeft] = useState(0)
+
+  const handleSendInvitation = async () => {
+    const username = prompt("Enter the username of the crew member you want to invite:")
+    if (!username) return
+
+    try {
+      const supabase = createClient()
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('id, username')
+        .eq('username', username)
+        .maybeSingle()
+
+      if (error || !profile) {
+        alert(`Could not find profile for username "${username}".`)
+        return
+      }
+
+      if (profile.id === activeUserId) {
+        alert("You cannot invite yourself.")
+        return
+      }
+
+      // Fetch active user profile
+      const { data: activeProfile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', activeUserId)
+        .single()
+
+      const senderName = activeProfile?.username || 'Someone'
+
+      const res = await fetch('/api/notifications/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: profile.id,
+          title: 'Study Invitation 📚',
+          body: `@${senderName} invited you to join their study session in the focus room!`,
+          category: 'focus',
+          type: 'invitation',
+          relatedId: groupId
+        })
+      })
+
+      if (res.ok) {
+        alert(`Study invitation sent successfully to @${username}!`)
+      } else {
+        throw new Error("Failed to trigger invitation notification.")
+      }
+    } catch (err) {
+      console.error(err)
+      alert("Failed to send study invitation. Please try again.")
+    }
+  }
 
   useEffect(() => {
     if (!timerEndsAt) {
@@ -334,6 +390,12 @@ export default function StudyPanel({
             <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
               members studying
             </span>
+            <button
+              onClick={handleSendInvitation}
+              className="text-[10px] font-bold text-violet-500 hover:text-violet-600 dark:text-violet-400 dark:hover:text-violet-300 bg-transparent border-none cursor-pointer lowercase"
+            >
+              + invite
+            </button>
             <span className="text-[10px] text-gray-400 lowercase">
               {studyMembers.length} active
             </span>

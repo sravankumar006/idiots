@@ -20,6 +20,7 @@ import {
   Database,
   Trash2
 } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ChatMessage, UserProfile } from '@/types'
 import PageContainer from '@/components/layout/PageContainer'
@@ -56,8 +57,17 @@ const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
 }
 
 export default function AiPage() {
-  const [activeTab, setActiveTab] = useState<'consultant' | 'logs' | 'memory'>('consultant')
+  const searchParams = useSearchParams()
+  const highlightAiLogId = searchParams?.get('aiLogId')
+  const highlightMemoryId = searchParams?.get('memoryId')
+
+  const initialTab = highlightMemoryId ? 'memory' : highlightAiLogId ? 'logs' : 'consultant'
+  const [activeTab, setActiveTab] = useState<'consultant' | 'logs' | 'memory'>(initialTab)
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null)
+  
+  // Highlighting effect state
+  const [glowingLogId, setGlowingLogId] = useState<string | null>(null)
+  const [glowingMemoryId, setGlowingMemoryId] = useState<string | null>(null)
   
   // Tab 1: Personal AI Consultant States
   const [personalPrompt, setPersonalPrompt] = useState('')
@@ -243,6 +253,36 @@ export default function AiPage() {
       supabase.removeChannel(subscription)
     }
   }, [])
+
+  // Highlight effect for AI Logs
+  useEffect(() => {
+    if (activeTab === 'logs' && highlightAiLogId && logs.length > 0) {
+      setTimeout(() => {
+        const el = document.getElementById(`ai-log-${highlightAiLogId}`)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          setGlowingLogId(highlightAiLogId)
+          // Also automatically expand it
+          setExpandedLogs(prev => ({ ...prev, [highlightAiLogId]: true }))
+          setTimeout(() => setGlowingLogId(null), 3000)
+        }
+      }, 300)
+    }
+  }, [activeTab, highlightAiLogId, logs])
+
+  // Highlight effect for Memories
+  useEffect(() => {
+    if (activeTab === 'memory' && highlightMemoryId && memories.length > 0) {
+      setTimeout(() => {
+        const el = document.getElementById(`memory-${highlightMemoryId}`)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          setGlowingMemoryId(highlightMemoryId)
+          setTimeout(() => setGlowingMemoryId(null), 3000)
+        }
+      }, 300)
+    }
+  }, [activeTab, highlightMemoryId, memories])
 
   // Fetch Memories when Memory tab is active
   useEffect(() => {
@@ -809,7 +849,12 @@ export default function AiPage() {
                 return (
                   <Card 
                     key={log.id} 
-                    className="p-6 md:p-8 space-y-5 hover:border-white/10 shadow-sm border border-black/5 dark:border-white/5 relative overflow-hidden transition-all duration-300 hover:shadow-[0_0_20px_rgba(139,92,246,0.03)]"
+                    id={`ai-log-${log.id}`}
+                    className={`p-6 md:p-8 space-y-5 hover:border-white/10 shadow-sm relative overflow-hidden transition-all duration-1000 ${
+                      glowingLogId === log.id 
+                        ? 'ring-2 ring-violet-500 border-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.6)] bg-violet-500/10'
+                        : 'border-black/5 dark:border-white/5 hover:shadow-[0_0_20px_rgba(139,92,246,0.03)]'
+                    }`}
                   >
                     {/* Log Meta Header */}
                     <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-black/5 dark:border-white/5">
@@ -910,7 +955,15 @@ export default function AiPage() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {memories.map((mem) => (
-                    <Card key={mem.id} className="p-5 space-y-3 border border-white/5 hover:border-violet-500/20 transition-all">
+                    <Card 
+                      key={mem.id} 
+                      id={`memory-${mem.id}`}
+                      className={`p-5 space-y-3 transition-all duration-1000 ${
+                        glowingMemoryId === mem.id 
+                          ? 'ring-2 ring-violet-500 border-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.6)] bg-violet-500/10'
+                          : 'border border-white/5 hover:border-violet-500/20'
+                      }`}
+                    >
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">
                           {mem.memory_type}

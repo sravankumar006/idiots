@@ -53,6 +53,7 @@ interface MessageBubbleProps {
   studyModeActive?: boolean
   studyFilterActive?: boolean
   onSaveToVault?: (message: ChatMessage) => void
+  isHighlighted?: boolean
 }
 
 export default function MessageBubble({
@@ -69,6 +70,7 @@ export default function MessageBubble({
   studyModeActive = false,
   studyFilterActive = false,
   onSaveToVault,
+  isHighlighted = false,
 }: MessageBubbleProps) {
   const isAiMessage = message.type === 'ai'
   // AI messages always render on the left (not self)
@@ -86,6 +88,21 @@ export default function MessageBubble({
   useEffect(() => {
     setMediaCollapsed(studyFilterActive)
   }, [studyFilterActive])
+
+  // Refs for highlighting
+  const bubbleRef = useRef<HTMLElement>(null)
+  const [glow, setGlow] = useState(false)
+
+  // Scroll and highlight
+  useEffect(() => {
+    if (isHighlighted && bubbleRef.current) {
+      setTimeout(() => {
+        bubbleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        setGlow(true)
+        setTimeout(() => setGlow(false), 3000)
+      }, 300)
+    }
+  }, [isHighlighted])
 
   // Track online status
   useEffect(() => {
@@ -435,15 +452,16 @@ export default function MessageBubble({
     <>
       {/* Main bubble wrapper */}
       <article
+        ref={bubbleRef}
         data-message-id={message.id}
         role="article"
         aria-label={`${isAiMessage ? 'idiot ai' : (message.profiles?.username || 'user')} at ${timeStr}: ${isDeleted ? 'message deleted' : (message.message || message.file_name || 'media')}`}
         tabIndex={0}
         onKeyDown={handleKeyDown}
         onContextMenu={handleContextMenu}
-        className={`flex gap-3 group relative max-w-[75%] animate-slideUpFade focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 focus-visible:ring-offset-2 rounded-xl ${
+        className={`flex gap-3 group relative max-w-[75%] animate-slideUpFade focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 focus-visible:ring-offset-2 rounded-xl transition-all duration-1000 ${
           isSelf ? 'ml-auto flex-row-reverse' : ''
-        }`}
+        } ${glow ? 'ring-2 ring-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.6)] bg-violet-500/10' : ''}`}
         // Long-press (touch) for mobile action sheet
         onTouchStart={() => {
           swipeHandlers.onTouchStart // also handled by swipe hook

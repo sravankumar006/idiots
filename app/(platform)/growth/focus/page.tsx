@@ -274,6 +274,20 @@ export default function RedesignedFocusPage() {
         setElapsedSeconds(0)
         setIsActive(true)
         setIsFullscreen(true)
+
+        // Trigger session started notification
+        fetch('/api/notifications/trigger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: activeProfile.id,
+            title: 'focus session started 🎯',
+            body: `you started a focus session for "${finalGoal}"`,
+            category: 'focus',
+            type: 'study session started',
+            relatedId: data.id
+          })
+        }).catch(err => console.error('Failed to trigger focus started notification:', err))
       }
     } catch (err) {
       alert("Failed to establish secure focus environment database sync. Please check connectivity.")
@@ -303,6 +317,20 @@ export default function RedesignedFocusPage() {
         })
         .eq('id', activeSessionId)
       if (sessionErr) throw sessionErr
+
+      // Trigger session completed notification
+      fetch('/api/notifications/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: activeProfile.id,
+          title: 'focus session completed 🎉',
+          body: `congrats! you completed "${finalGoal}" and logged ${actualMins} mins.`,
+          category: 'focus',
+          type: 'study session completed',
+          relatedId: activeSessionId
+        })
+      }).catch(err => console.error('Failed to trigger focus completed notification:', err))
 
       // 2. Fetch current study stats to update increment
       const { data: stats } = await supabase

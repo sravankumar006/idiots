@@ -6,6 +6,7 @@ import {
   MessageCircle, FileText, CheckCircle2, Trash2, Heart,
   Tag, Filter, Sparkles, FolderOpen, AlertCircle, X, HelpCircle
 } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 import PageContainer from '@/components/layout/PageContainer'
 import SectionHeader from '@/components/layout/SectionHeader'
 import { Card } from '@/components/ui/Card'
@@ -37,10 +38,14 @@ export default function VaultPage() {
   const supabase = createClient()
   const [activeProfile, setActiveProfile] = useState<UserProfile | null>(null)
   
+  const searchParams = useSearchParams()
+  const highlightEntityId = searchParams?.get('entityId')
+
   // Search & Filters
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
+  const [glowingItemId, setGlowingItemId] = useState<string | null>(null)
 
   // Upload/Store modal state
   const [showAddModal, setShowAddModal] = useState(false)
@@ -128,6 +133,20 @@ export default function VaultPage() {
     })
     return Array.from(tagsSet)
   }, [vaultItems])
+
+  // Scroll to highlighted item
+  useEffect(() => {
+    if (highlightEntityId && vaultItems.length > 0) {
+      setTimeout(() => {
+        const el = document.getElementById(`vault-item-${highlightEntityId}`)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          setGlowingItemId(highlightEntityId)
+          setTimeout(() => setGlowingItemId(null), 3000)
+        }
+      }, 300)
+    }
+  }, [highlightEntityId, vaultItems])
 
   if (loading || !activeProfile) {
     return (
@@ -221,7 +240,12 @@ export default function VaultPage() {
                 return (
                   <div 
                     key={item.id}
-                    className={`bg-stone-100 dark:bg-zinc-800 p-4 pb-6 shadow-2xl transition-all duration-300 transform ${rot} hover:-translate-y-2 hover:scale-105 border border-stone-200/50 dark:border-zinc-700/50`}
+                    id={`vault-item-${item.id}`}
+                    className={`bg-stone-100 dark:bg-zinc-800 p-4 pb-6 shadow-2xl transition-all duration-300 transform ${rot} hover:-translate-y-2 hover:scale-105 border ${
+                      glowingItemId === item.id 
+                        ? 'border-violet-500 ring-4 ring-violet-500 shadow-[0_0_25px_rgba(139,92,246,0.8)] dark:shadow-[0_0_25px_rgba(139,92,246,0.6)] z-10' 
+                        : 'border-stone-200/50 dark:border-zinc-700/50'
+                    }`}
                     style={{ minHeight: '260px' }}
                   >
                     {/* Media frame */}

@@ -10,6 +10,7 @@ import { UserProfile, ChatGroup } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { useTheme } from 'next-themes'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import ChatWindow from './ChatWindow'
 import SharedAILogsRoom from './SharedAILogsRoom'
 import EmptyState from './EmptyState'
@@ -51,7 +52,10 @@ interface ChatWorkspaceClientProps {
 export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatWorkspaceClientProps) {
   const supabase = createClient()
   const { theme, setTheme } = useTheme()
+  const searchParams = useSearchParams()
   const [mounted, setMounted] = useState(false)
+  const initialRoomId = searchParams.get('roomId')
+  const highlightMessageId = searchParams.get('messageId')
 
   // ——— Profile state ———
   const [activeProfile, setActiveProfile] = useState<UserProfile | null>(activeUser)
@@ -77,9 +81,14 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
     { id: 'ai-logs',       group_name: 'ai logs',    created_by: 'sys', created_at: new Date().toISOString() },
   ]
   const [groups, setGroups] = useState<ChatGroup[]>(initialGroups.length > 0 ? initialGroups : MOCK_GROUPS)
-  const [selectedGroup, setSelectedGroup] = useState<ChatGroup | null>(
-    initialGroups.length > 0 ? initialGroups[0] : MOCK_GROUPS[0]
-  )
+  const [selectedGroup, setSelectedGroup] = useState<ChatGroup | null>(() => {
+    const defaultList = initialGroups.length > 0 ? initialGroups : MOCK_GROUPS
+    if (initialRoomId) {
+      const match = defaultList.find(g => g.id === initialRoomId)
+      if (match) return match
+    }
+    return defaultList[0]
+  })
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -445,12 +454,13 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
               onBack={() => setMobileView('sidebar')}
             />
           ) : (
-            <ChatWindow
+              <ChatWindow
               key={selectedGroup.id}
               groupId={selectedGroup.id}
               groupName={selectedGroup.group_name}
               activeUser={activeProfile}
               onBack={() => setMobileView('sidebar')}
+              highlightMessageId={highlightMessageId || undefined}
             />
           )
         ) : (

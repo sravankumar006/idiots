@@ -4,7 +4,8 @@ import React, { useState } from 'react'
 import {
   Sparkles, Clock, MessageSquare, FolderHeart, ArrowRight,
   Activity, Brain, Plus, Award, Briefcase, GraduationCap,
-  GitBranch, BarChart2, CheckCircle2, User, Edit3, X, Calendar, RefreshCw, Heart
+  GitBranch, BarChart2, CheckCircle2, User, Edit3, X, Calendar, RefreshCw, Heart,
+  Trash2, Check, ChevronUp, ChevronDown, Trophy
 } from 'lucide-react'
 import Link from 'next/link'
 import { UserProfile } from '@/types'
@@ -38,11 +39,18 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
     studyStats,
     activities,
     focusSessions = [],
-    focusStats = { totalHours: 0, totalSessions: 0, weeklyMinutes: 0, monthlyMinutes: 0 },
+    focusStats = { totalHours: 0, totalSessions: 0, weeklyMinutes: 0, monthlyMinutes: 0, collaborativeSessions: 0, streak: 0, goalBreakdown: {} },
     targetUser,
+    crewStats = { weeklyFocusHours: 0, activeMembersToday: 0, activeSessions: 0, completedSessions: 0, totalActivities: 0, totalMemories: 0, totalChatMessages: 0 },
+    roadmapItems = [],
+    createRoadmapItem,
+    updateRoadmapItem,
+    deleteRoadmapItem,
+    reorderRoadmapItems,
     updateCareerProfile,
     syncCodingPlatform,
-    addActivityLog
+    addActivityLog,
+    communityAchievements = []
   } = useDashboardData(activeUser, targetUserId)
 
   const isReadOnly = targetUserId ? (targetUserId !== activeUser?.id) : false
@@ -69,11 +77,118 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
   const [bio, setBio] = useState('')
   const [techStackInput, setTechStackInput] = useState('')
   const [goalsInput, setGoalsInput] = useState('')
+  const [certificationsInput, setCertificationsInput] = useState('')
   const [resumeUrl, setResumeUrl] = useState('')
   const [portfolioUrl, setPortfolioUrl] = useState('')
 
   // Syncing state loader
   const [isSyncing, setIsSyncing] = useState(false)
+
+  // Learning Roadmap State
+  const [localStages, setLocalStages] = useState<string[]>([])
+  const [newStageName, setNewStageName] = useState('')
+  const [showAddStage, setShowAddStage] = useState(false)
+  const [newGoalTitles, setNewGoalTitles] = useState<Record<string, string>>({})
+  const [editingItemId, setEditingItemId] = useState<string | null>(null)
+  const [editingItemTitle, setEditingItemTitle] = useState('')
+  const [editingItemStage, setEditingItemStage] = useState('')
+
+  // Sync stages with roadmapItems
+  React.useEffect(() => {
+    if (roadmapItems.length > 0) {
+      const uniqueStages = Array.from(new Set(roadmapItems.map(item => item.stage)))
+      setLocalStages(prev => {
+        const combined = [...uniqueStages]
+        prev.forEach(stage => {
+          if (!combined.includes(stage)) {
+            combined.push(stage)
+          }
+        })
+        return combined
+      })
+    } else {
+      setLocalStages(prev => prev.length > 0 ? prev : ['General'])
+    }
+  }, [roadmapItems])
+
+  const handleAddStage = (e: React.FormEvent) => {
+    e.preventDefault()
+    const stage = newStageName.trim()
+    if (!stage) return
+    if (!localStages.includes(stage)) {
+      setLocalStages(prev => [...prev, stage])
+    }
+    setNewStageName('')
+    setShowAddStage(false)
+  }
+
+  const handleDeleteStage = async (stageName: string) => {
+    const itemsToDelete = roadmapItems.filter(item => item.stage === stageName)
+    const promises = itemsToDelete.map(item => deleteRoadmapItem(item.id))
+    await Promise.all(promises)
+    setLocalStages(prev => prev.filter(s => s !== stageName))
+    await addActivityLog('roadmap_update', `Deleted stage: "${stageName}" and its goals.`)
+  }
+
+  const handleAddGoal = async (stage: string) => {
+    const title = newGoalTitles[stage]?.trim()
+    if (!title) return
+    
+    await createRoadmapItem(stage, title)
+    setNewGoalTitles(prev => ({ ...prev, [stage]: '' }))
+    await addActivityLog('roadmap_update', `Added goal: "${title}" to stage "${stage}"`)
+  }
+
+  const handleToggleGoal = async (item: any) => {
+    const nextCompleted = !item.completed
+    await updateRoadmapItem(item.id, { completed: nextCompleted })
+    await addActivityLog(
+      'roadmap_update',
+      `${nextCompleted ? 'Completed' : 'Reset'} learning goal: "${item.title}"`
+    )
+  }
+
+  const handleDeleteGoal = async (id: string, title: string) => {
+    await deleteRoadmapItem(id)
+    await addActivityLog('roadmap_update', `Deleted learning goal: "${title}"`)
+  }
+
+  const handleStartEdit = (item: any) => {
+    setEditingItemId(item.id)
+    setEditingItemTitle(item.title)
+    setEditingItemStage(item.stage)
+  }
+
+  const handleSaveEdit = async (id: string) => {
+    const trimmedTitle = editingItemTitle.trim()
+    const trimmedStage = editingItemStage.trim()
+    if (!trimmedTitle || !trimmedStage) return
+
+    await updateRoadmapItem(id, { title: trimmedTitle, stage: trimmedStage })
+    setEditingItemId(null)
+    setEditingItemTitle('')
+    setEditingItemStage('')
+    await addActivityLog('roadmap_update', `Updated learning goal: "${trimmedTitle}"`)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingItemId(null)
+    setEditingItemTitle('')
+    setEditingItemStage('')
+  }
+
+  const handleMoveItem = async (index: number, direction: 'up' | 'down') => {
+    const targetIdx = direction === 'up' ? index - 1 : index + 1
+    if (targetIdx < 0 || targetIdx >= roadmapItems.length) return
+
+    let itemsCopy = [...roadmapItems].map((item, idx) => ({ ...item, display_order: idx }))
+    const temp = itemsCopy[index]
+    itemsCopy[index] = itemsCopy[targetIdx]
+    itemsCopy[targetIdx] = temp
+
+    itemsCopy = itemsCopy.map((item, idx) => ({ ...item, display_order: idx }))
+    await reorderRoadmapItems(itemsCopy)
+  }
 
   const openEditModal = () => {
     if (!careerProfile) return
@@ -82,6 +197,7 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
     setBio(careerProfile.learning_roadmap.split('\n')[0] || '') // simple mock bio
     setTechStackInput(careerProfile.tech_stack.join(', '))
     setGoalsInput(careerProfile.target_goals.join(', '))
+    setCertificationsInput(careerProfile.certifications.join(', '))
     setResumeUrl(careerProfile.resume_url || '')
     setPortfolioUrl(careerProfile.portfolio_url || '')
     setIsEditModalOpen(true)
@@ -93,17 +209,19 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
 
     const techArray = techStackInput.split(',').map((t) => t.trim()).filter(Boolean)
     const goalsArray = goalsInput.split(',').map((g) => g.trim()).filter(Boolean)
+    const certsArray = certificationsInput.split(',').map((c) => c.trim()).filter(Boolean)
 
     await updateCareerProfile({
       dream_company: dreamCompany,
       favorite_language: favoriteLanguage,
       tech_stack: techArray,
       target_goals: goalsArray,
+      certifications: certsArray,
       resume_url: resumeUrl || null,
       portfolio_url: portfolioUrl || null
     })
 
-    await addActivityLog('career_update', 'Updated career details, favorite stack, and goals.')
+    await addActivityLog('career_update', 'Updated career details, favorite stack, certifications, and goals.')
   }
 
   // Handle Sync Coding Stats
@@ -194,12 +312,18 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
           <div>
             <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest block">crew motivation status</span>
             <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
-              The crew logged <span className="text-amber-500 font-bold">{studyHours}h focus time</span> this week. <span className="text-emerald-500 font-bold">3 members</span> solved DSA problems today!
+              {crewStats && (crewStats.weeklyFocusHours > 0 || crewStats.activeMembersToday > 0 || crewStats.activeSessions > 0 || crewStats.completedSessions > 0 || crewStats.totalActivities > 0 || crewStats.totalMemories > 0 || crewStats.totalChatMessages > 0) ? (
+                <>
+                  The crew logged <span className="text-amber-500 font-bold">{crewStats.weeklyFocusHours}h focus time</span> this week. <span className="text-emerald-500 font-bold">{crewStats.activeMembersToday} member{crewStats.activeMembersToday !== 1 ? 's' : ''}</span> active today!
+                </>
+              ) : (
+                "No activity data available yet"
+              )}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-[11px] font-bold text-gray-600 dark:text-gray-300">
-          study streak: <span className="text-rose-400 font-black">{studyStats.current_streak} days</span> 🔥
+          study streak: <span className="text-rose-400 font-black">{focusStats.streak || studyStats.current_streak} days</span> 🔥
         </div>
       </div>
 
@@ -356,14 +480,20 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
               {/* Certification badges */}
               <div className="pt-2 border-t border-black/5 dark:border-white/5 space-y-2">
                 <span className="text-[10px] text-gray-400 uppercase tracking-wider block">Certifications</span>
-                <div className="flex flex-col gap-1.5">
-                  {careerProfile.certifications.map((cert) => (
-                    <div key={cert} className="flex items-center gap-2 bg-[#faf8f5] dark:bg-[#121216] border border-black/5 dark:border-white/5 p-2 rounded-xl">
-                      <Award className="h-4 w-4 text-amber-500 shrink-0" />
-                      <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">{cert}</span>
-                    </div>
-                  ))}
-                </div>
+                {careerProfile.certifications && careerProfile.certifications.length > 0 ? (
+                  <div className="flex flex-col gap-1.5">
+                    {careerProfile.certifications.map((cert) => (
+                      <div key={cert} className="flex items-center gap-2 bg-[#faf8f5] dark:bg-[#121216] border border-black/5 dark:border-white/5 p-2 rounded-xl">
+                        <Award className="h-4 w-4 text-amber-500 shrink-0" />
+                        <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">{cert}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-xs text-gray-500 border border-dashed border-black/10 dark:border-white/10 rounded-2xl bg-black/[0.01] dark:bg-white/[0.01]">
+                    No certifications added yet.
+                  </div>
+                )}
               </div>
             </div>
           </Card>
@@ -382,64 +512,16 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
                 <GitBranch className="h-4 w-4 text-gray-700 dark:text-gray-300" />
                 Coding Platforms
               </h3>
-              {!isReadOnly && (
-                <button
-                  onClick={handleSyncStats}
-                  disabled={isSyncing}
-                  className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 transition-all cursor-pointer"
-                  title="Sync Coding platforms"
-                >
-                  <RefreshCw className={`h-4.5 w-4.5 ${isSyncing ? 'animate-spin text-amber-500' : ''}`} />
-                </button>
-              )}
             </div>
 
-            <div className="space-y-4 pt-2">
-              {/* Problems solved aggregate */}
-              <div className="flex justify-between items-end">
-                <div>
-                  <span className="text-[10px] text-gray-400 uppercase tracking-wider">solved problems</span>
-                  <h4 className="text-3xl font-black text-gray-900 dark:text-white">{totalSolved}</h4>
-                </div>
-                <div className="text-right">
-                  <span className="text-[10px] text-gray-400 uppercase tracking-wider block">contributions</span>
-                  <span className="text-sm font-bold text-violet-500">{codingStats.github_contributions} commits</span>
-                </div>
-              </div>
-
-              {/* Platform breakdown */}
-              <div className="space-y-2.5 pt-2 border-t border-black/5 dark:border-white/5 text-xs font-semibold">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">LeetCode</span>
-                  <span className="text-gray-800 dark:text-gray-200">{codingStats.leetcode_solved} solved</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">HackerRank</span>
-                  <span className="text-gray-800 dark:text-gray-200">{codingStats.hackerrank_solved} solved</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Codeforces</span>
-                  <span className="text-gray-800 dark:text-gray-200">{codingStats.codeforces_solved} solved</span>
-                </div>
-              </div>
-
-              {/* Language breakdown progress bars */}
-              <div className="pt-2 border-t border-black/5 dark:border-white/5 space-y-2">
-                <span className="text-[10px] text-gray-400 uppercase tracking-widest block">language distribution</span>
-                <div className="space-y-1.5">
-                  {Object.entries(codingStats.languages_json).map(([lang, pct]) => (
-                    <div key={lang} className="space-y-0.5">
-                      <div className="flex justify-between text-[10px] font-bold">
-                        <span className="text-gray-600 dark:text-gray-400">{lang}</span>
-                        <span className="text-gray-500">{pct}%</span>
-                      </div>
-                      <div className="w-full bg-black/5 dark:bg-white/5 h-1.5 rounded-full overflow-hidden">
-                        <div className="bg-gradient-to-r from-violet-500 to-rose-400 h-full rounded-full" style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <div className="flex flex-col items-center justify-center py-8 px-4 text-center border border-dashed border-black/10 dark:border-white/10 rounded-2xl bg-black/[0.01] dark:bg-white/[0.01]">
+              <GitBranch className="h-8 w-8 text-gray-400 dark:text-gray-500 mb-2 stroke-1" />
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">
+                Connect coding profiles to track coding progress.
+              </p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
+                Future integrations: GitHub, LeetCode, Codeforces, HackerRank
+              </p>
             </div>
           </Card>
 
@@ -468,6 +550,26 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
                 <span className="text-xl font-bold text-cyan-400">{Math.round(focusStats.monthlyMinutes / 60)}h {focusStats.monthlyMinutes % 60}m</span>
               </div>
             </div>
+
+            {/* Collaborative Focus Session stats */}
+            <div className="pt-2 border-t border-black/5 dark:border-white/5 flex justify-between items-center text-xs">
+              <span className="text-gray-400 font-semibold lowercase">collaborative sessions:</span>
+              <span className="font-bold text-gray-800 dark:text-gray-200">{focusStats.collaborativeSessions} session{focusStats.collaborativeSessions !== 1 ? 's' : ''}</span>
+            </div>
+
+            {/* Goal breakdown tags */}
+            {focusStats.goalBreakdown && Object.keys(focusStats.goalBreakdown).length > 0 && (
+              <div className="pt-2.5 border-t border-black/5 dark:border-white/5 space-y-1.5">
+                <span className="text-[10px] text-gray-400 uppercase tracking-wider block">focus goals breakdown</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {Object.entries(focusStats.goalBreakdown).map(([goal, count]) => (
+                    <span key={goal} className="text-[9px] font-bold bg-[#faf8f5] dark:bg-[#121216] border border-black/5 dark:border-white/5 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full lowercase">
+                      {goal}: {count}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Weekly trend chart */}
             <div className="pt-2 border-t border-black/5 dark:border-white/5 space-y-2">
@@ -552,35 +654,260 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
               Learning Roadmap
             </h3>
 
-            <div className="space-y-3 pt-2">
-              {careerProfile.learning_roadmap.split('\n').filter(Boolean).map((line, idx) => {
-                const match = line.match(/^-\s*\[([ x/]+)\]\s*(.*)$/)
-                if (!match) return <p key={idx} className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed pl-2">{line}</p>
+            <div className="space-y-6 pt-2">
+              {localStages.map((stage) => {
+                const stageItems = roadmapItems.filter(item => item.stage === stage)
                 
-                const checked = match[1].toLowerCase().includes('x')
-                const text = match[2]
-
                 return (
-                  <div key={idx} className="flex items-start gap-3 text-xs leading-relaxed group">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      disabled={isReadOnly}
-                      onChange={(e) => handleRoadmapToggle(idx, line, e.target.checked)}
-                      className="mt-1 h-3.5 w-3.5 rounded border-black/10 text-violet-600 focus:ring-violet-500 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
-                      id={`roadmap-item-${idx}`}
-                    />
-                    <label
-                      htmlFor={`roadmap-item-${idx}`}
-                      className={`font-semibold cursor-pointer ${
-                        checked ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'
-                      }`}
-                    >
-                      {text}
-                    </label>
+                  <div key={stage} className="space-y-2.5">
+                    {/* Stage Header */}
+                    <div className="border-b border-black/5 dark:border-white/5 pb-1.5 flex items-center justify-between group/stage">
+                      <span className="text-[11px] font-bold text-gray-800 dark:text-gray-200 lowercase tracking-wide">
+                        {stage}
+                      </span>
+                      {!isReadOnly && localStages.length > 1 && (
+                        <button
+                          onClick={() => handleDeleteStage(stage)}
+                          className="opacity-0 group-hover/stage:opacity-100 transition-opacity p-1 rounded hover:bg-rose-500/10 text-gray-400 hover:text-rose-500 cursor-pointer"
+                          title={`Delete stage "${stage}"`}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Goals under this stage */}
+                    <div className="space-y-1">
+                      {stageItems.length > 0 ? (
+                        stageItems.map((item) => {
+                          const globalIdx = roadmapItems.findIndex(i => i.id === item.id)
+                          return (
+                            <div key={item.id} className="group/item flex items-center justify-between gap-2 text-xs py-1 px-2 rounded-xl hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-all">
+                              {editingItemId === item.id ? (
+                                <div className="flex flex-col gap-2 w-full">
+                                  <input
+                                    type="text"
+                                    value={editingItemTitle}
+                                    onChange={(e) => setEditingItemTitle(e.target.value)}
+                                    className="w-full bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-lg px-2.5 py-1 text-gray-800 dark:text-white font-semibold text-xs"
+                                    placeholder="Goal title"
+                                  />
+                                  <div className="flex items-center gap-2">
+                                    <select
+                                      value={editingItemStage}
+                                      onChange={(e) => setEditingItemStage(e.target.value)}
+                                      className="bg-[#fefdfb] dark:bg-[#1c1f26] border border-black/5 dark:border-white/5 rounded-lg px-2 py-1 text-gray-800 dark:text-white font-semibold text-[10px]"
+                                    >
+                                      {localStages.map(s => (
+                                        <option key={s} value={s}>{s}</option>
+                                      ))}
+                                    </select>
+                                    <div className="flex items-center gap-1.5 ml-auto">
+                                      <button
+                                        onClick={() => handleSaveEdit(item.id)}
+                                        className="p-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 cursor-pointer"
+                                        title="Save"
+                                      >
+                                        <Check className="h-3.5 w-3.5" />
+                                      </button>
+                                      <button
+                                        onClick={handleCancelEdit}
+                                        className="p-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 cursor-pointer"
+                                        title="Cancel"
+                                      >
+                                        <X className="h-3.5 w-3.5" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                                    <input
+                                      type="checkbox"
+                                      checked={item.completed}
+                                      disabled={isReadOnly}
+                                      onChange={() => handleToggleGoal(item)}
+                                      className="mt-0.5 h-3.5 w-3.5 rounded border-black/10 text-violet-600 focus:ring-violet-500 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                                      id={`goal-item-${item.id}`}
+                                    />
+                                    <label
+                                      htmlFor={`goal-item-${item.id}`}
+                                      className={`font-semibold cursor-pointer truncate ${
+                                        item.completed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'
+                                      }`}
+                                    >
+                                      {item.title}
+                                    </label>
+                                  </div>
+                                  
+                                  {!isReadOnly && (
+                                    <div className="flex items-center gap-0.5 opacity-0 group-hover/item:opacity-100 transition-all ml-2 shrink-0">
+                                      <button
+                                        onClick={() => handleStartEdit(item)}
+                                        className="p-0.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 cursor-pointer"
+                                        title="Edit goal"
+                                      >
+                                        <Edit3 className="h-3.5 w-3.5" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleMoveItem(globalIdx, 'up')}
+                                        disabled={globalIdx === 0}
+                                        className="p-0.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
+                                        title="Move Up"
+                                      >
+                                        <ChevronUp className="h-3.5 w-3.5" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleMoveItem(globalIdx, 'down')}
+                                        disabled={globalIdx === roadmapItems.length - 1}
+                                        className="p-0.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
+                                        title="Move Down"
+                                      >
+                                        <ChevronDown className="h-3.5 w-3.5" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteGoal(item.id, item.title)}
+                                        className="p-0.5 rounded-lg hover:bg-rose-500/10 text-gray-400 hover:text-rose-500 cursor-pointer"
+                                        title="Delete goal"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          )
+                        })
+                      ) : (
+                        <p className="text-[10px] text-gray-500 font-medium pl-2 italic">No goals added yet.</p>
+                      )}
+                    </div>
+
+                    {/* Add goal inside this stage */}
+                    {!isReadOnly && (
+                      <div className="flex items-center gap-1.5 mt-1 px-1">
+                        <input
+                          type="text"
+                          placeholder={`+ add goal to ${stage}...`}
+                          value={newGoalTitles[stage] || ''}
+                          onChange={(e) => setNewGoalTitles(prev => ({ ...prev, [stage]: e.target.value }))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleAddGoal(stage)
+                          }}
+                          className="w-full bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 rounded-xl px-2.5 py-1 text-gray-800 dark:text-white font-semibold text-[10px] focus:outline-none focus:border-violet-500/30"
+                        />
+                        <button
+                          onClick={() => handleAddGoal(stage)}
+                          className="glass-button p-1 rounded-xl text-xs font-bold cursor-pointer shrink-0"
+                          title="Add goal"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )
               })}
+
+              {/* Add New Stage section */}
+              {!isReadOnly && (
+                <div className="pt-2 border-t border-black/5 dark:border-white/5">
+                  {showAddStage ? (
+                    <form onSubmit={handleAddStage} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Stage name (e.g. Backend Roadmap)..."
+                        value={newStageName}
+                        onChange={(e) => setNewStageName(e.target.value)}
+                        className="w-full bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 rounded-xl px-3 py-1.5 text-gray-800 dark:text-white font-semibold text-xs focus:outline-none focus:border-violet-500/30"
+                        autoFocus
+                      />
+                      <button
+                        type="submit"
+                        className="glass-button px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer shrink-0"
+                      >
+                        Add
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddStage(false)}
+                        className="p-1 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 cursor-pointer"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </form>
+                  ) : (
+                    <button
+                      onClick={() => setShowAddStage(true)}
+                      className="w-full border border-dashed border-black/10 dark:border-white/10 rounded-2xl py-2 px-3 hover:bg-black/[0.01] dark:hover:bg-white/[0.01] transition-all text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Add New Stage</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Community Achievements Card */}
+          <Card className="p-6 space-y-4">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                <Trophy className="h-4 w-4 text-amber-500" />
+                Community Achievements
+              </h3>
+              
+              {!isReadOnly && (
+                <div className="flex items-center gap-1">
+                  <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">visibility:</span>
+                  <select
+                    value={careerProfile.achievement_visibility || 'public'}
+                    onChange={(e) => {
+                      updateCareerProfile({ achievement_visibility: e.target.value })
+                      addActivityLog('career_update', `Updated achievements visibility to ${e.target.value}.`)
+                    }}
+                    className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-lg px-2 py-0.5 text-gray-800 dark:text-white font-semibold text-[10px] focus:outline-none focus:ring-1 focus:ring-violet-500"
+                  >
+                    <option value="public" className="bg-[#fefdfb] dark:bg-[#1c1f26]">Public</option>
+                    <option value="workspace" className="bg-[#fefdfb] dark:bg-[#1c1f26]">Workspace</option>
+                    <option value="friends" className="bg-[#fefdfb] dark:bg-[#1c1f26]">Friends</option>
+                    <option value="private" className="bg-[#fefdfb] dark:bg-[#1c1f26]">Private</option>
+                  </select>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3 pt-1 max-h-[220px] overflow-y-auto pr-1 scrollbar-thin">
+              {communityAchievements.length > 0 ? (
+                communityAchievements.slice(0, 8).map((ach) => {
+                  const avatarSymbol = ach.profiles?.username?.slice(0, 2).toUpperCase() || 'EX'
+                  
+                  return (
+                    <div key={ach.id} className="flex items-start gap-2.5 text-xs py-1.5 border-b border-black/[0.03] dark:border-white/[0.03] last:border-b-0">
+                      <div className="h-6 w-6 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center text-[9px] font-black shrink-0">
+                        {avatarSymbol}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-gray-700 dark:text-gray-300 font-medium">
+                          <span className="font-bold text-gray-900 dark:text-white lowercase">@{ach.profiles?.username || 'Explorer'}</span>{' '}
+                          <span className="text-gray-500">{ach.verb}</span>{' '}
+                          <span className="font-bold text-amber-500">{ach.title}</span>
+                        </p>
+                        <span className="text-[9px] text-gray-400 font-semibold block mt-0.5">
+                          {new Date(ach.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })
+              ) : (
+                <div className="text-center py-6 text-xs text-gray-500 border border-dashed border-black/10 dark:border-white/10 rounded-2xl bg-black/[0.01] dark:bg-white/[0.01]">
+                  No recent milestones shared.
+                </div>
+              )}
             </div>
           </Card>
 
@@ -675,6 +1002,17 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
                   value={goalsInput}
                   onChange={(e) => setGoalsInput(e.target.value)}
                   placeholder="Solve 300 DSA problems, Polish LinkedIn"
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl px-3.5 py-2.5 text-gray-800 dark:text-white focus:outline-none focus:border-violet-500/50"
+                />
+              </div>
+
+              <div>
+                <label className="text-gray-400 block mb-1">Certifications (comma separated)</label>
+                <input
+                  type="text"
+                  value={certificationsInput}
+                  onChange={(e) => setCertificationsInput(e.target.value)}
+                  placeholder="AWS Solutions Architect, Google Cloud Developer"
                   className="w-full bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl px-3.5 py-2.5 text-gray-800 dark:text-white focus:outline-none focus:border-violet-500/50"
                 />
               </div>
