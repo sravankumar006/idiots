@@ -105,7 +105,7 @@ export default function UploadButton({
       <button
         onClick={() => setIsOpen(!isOpen)}
         disabled={disabled}
-        className="p-2 rounded-xl bg-black/5 dark:bg-white/2 hover:bg-black/10 dark:hover:bg-white/5 border border-black/5 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white hover:border-black/10 dark:hover:border-white/10 active:scale-95 transition-all duration-200 cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
+        className="h-11 w-11 flex items-center justify-center rounded-xl bg-black/5 dark:bg-white/2 hover:bg-black/10 dark:hover:bg-white/5 border border-black/5 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white hover:border-black/10 dark:hover:border-white/10 active:scale-95 transition-all duration-200 cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
         title="Share media or sticker"
       >
         <Paperclip className="h-4.5 w-4.5" />

@@ -462,15 +462,19 @@ export default function MessageBubble({
         className={`flex gap-3 group relative max-w-[75%] animate-slideUpFade focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 focus-visible:ring-offset-2 rounded-xl transition-all duration-1000 ${
           isSelf ? 'ml-auto flex-row-reverse' : ''
         } ${glow ? 'ring-2 ring-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.6)] bg-violet-500/10' : ''}`}
-        // Long-press (touch) for mobile action sheet
-        onTouchStart={() => {
-          swipeHandlers.onTouchStart // also handled by swipe hook
+        // Long-press (touch) for mobile action sheet + Swipe reply
+        onTouchStart={(e) => {
+          swipeHandlers.onTouchStart(e)
           handleTouchStartLongPress()
         }}
-        onTouchEnd={() => {
+        onTouchEnd={(e) => {
+          swipeHandlers.onTouchEnd(e)
           handleTouchEndLongPress()
         }}
-        onTouchMove={handleTouchEndLongPress} // cancel long-press if finger moves
+        onTouchMove={(e) => {
+          swipeHandlers.onTouchMove(e)
+          handleTouchEndLongPress()
+        }}
       >
         {/* Swipe-to-reply wrapper — handles the horizontal translation */}
         <div
@@ -479,7 +483,6 @@ export default function MessageBubble({
             transform: swipeOffset > 0 ? `translateX(${swipeOffset}px)` : undefined,
             transition: isSwiping ? 'none' : 'transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
           }}
-          {...swipeHandlers}
         >
           {/* Swipe reply indicator (appears behind bubble while swiping) */}
           {swipeOffset > 8 && (

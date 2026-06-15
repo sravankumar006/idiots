@@ -10,6 +10,8 @@ import { UserProfile } from '@/types'
 import { useTheme } from 'next-themes'
 import { useNotifications } from '@/hooks/useNotifications'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
+import UserActionSheet from './UserActionSheet'
+
 
 const PATH_TITLES: Record<string, string> = {
   '/dashboard': 'home',
@@ -43,6 +45,8 @@ export default function Topbar({
 
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const [userSheetOpen, setUserSheetOpen] = useState(false)
+
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -138,18 +142,22 @@ useEffect(() => {
   }
 
   return (
-    <header className="glass-panel border-b border-black/5 dark:border-white/5 h-16 flex items-center justify-between px-6 shrink-0 sticky top-0 z-30 select-none">
+    <>
+      <header className="glass-panel border-b border-black/5 dark:border-white/5 h-16 flex items-center justify-between px-6 shrink-0 sticky top-0 z-30 select-none">
       
       {/* Left: Route Title */}
       <div className="flex items-center gap-3">
         <button
-          onClick={onToggleMobileMenu}
-          className="md:hidden flex items-center justify-center h-9 w-9 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-800 dark:hover:text-white transition-all cursor-pointer shrink-0 border-none bg-transparent"
-          title="Open menu"
-          aria-label="Open menu"
+          onClick={() => setUserSheetOpen(true)}
+          className="md:hidden flex items-center justify-center h-9 w-9 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer shrink-0 border-none bg-transparent"
+          title="Open profile menu"
+          aria-label="Open profile menu"
         >
-          <Menu className="h-4.5 w-4.5" />
+          <div className="h-7 w-7 rounded-lg bg-gradient-to-tr from-logo-start to-logo-end flex items-center justify-center text-[10px] font-black text-black shadow-sm hover:scale-105 active:scale-95 transition-transform">
+            IS
+          </div>
         </button>
+
 
         <div className="flex items-center gap-2">
           <Sparkles className="h-4.5 w-4.5 text-violet-400 animate-pulse" />
@@ -463,14 +471,13 @@ useEffect(() => {
           <Users className="h-4 w-4" />
         </button>
 
-        {/* User Quick Profile Icon */}
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-logo-start to-logo-end flex items-center justify-center text-xs font-bold text-black border border-white/10 shadow-md">
-            {profile.username.substring(0, 2).toUpperCase()}
-          </div>
-        </div>
+        {/* User Quick Profile Icon removed */}
       </div>
 
-    </header>
+      </header>
+      {userSheetOpen && (
+        <UserActionSheet profile={profile} onClose={() => setUserSheetOpen(false)} />
+      )}
+    </>
   )
 }

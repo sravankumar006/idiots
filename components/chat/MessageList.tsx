@@ -179,7 +179,7 @@ export default function MessageList({
                 </span>
               </div>
             )}
-            <div className={`${groupPosition === 'last' || groupPosition === 'single' ? 'mb-4' : 'mb-1'}`}>
+            <div className={`${groupPosition === 'last' || groupPosition === 'single' ? 'mb-4' : 'mb-0.5'}`}>
               <MemoizedBubble
                 message={msg}
                 activeUserId={activeUser?.id || ''}

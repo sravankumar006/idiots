@@ -99,7 +99,12 @@ export default function MessageInput({
   }, [replyTo])
 
   return (
-    <div className="shrink-0 px-3 pb-3 md:px-8 md:pb-6 pt-2 bg-transparent">
+    <div 
+      className="shrink-0 px-3 pb-3 md:px-8 md:pb-6 pt-2 bg-transparent"
+      style={{
+        paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+      }}
+    >
 
       {/* Category selector row (above pill, visible if studyModeActive is true) */}
       {studyModeActive && (
@@ -116,7 +121,7 @@ export default function MessageInput({
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(isSelected ? null : cat.id)}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold tracking-wide transition-all duration-200 border cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-[10.5px] font-bold tracking-wide transition-all duration-200 border cursor-pointer min-h-[36px] ${
                   isSelected
                     ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400 shadow-sm shadow-amber-500/5'
                     : 'bg-white/40 dark:bg-[#16181d]/40 border-black/5 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/8'
@@ -145,7 +150,7 @@ export default function MessageInput({
         } ${replyTo || draftFile ? 'rounded-t-2xl' : ''}`}
       >
         {/* Attachment button */}
-        <div className="flex items-center pl-3 pb-2.5 shrink-0">
+        <div className="flex items-center pl-3 pb-1.5 shrink-0">
           <UploadButton
             onFileSelect={setDraftFile}
             onSendSticker={(stickerUrl) => onSendMessage('', { stickerUrl, type: 'sticker' })}
@@ -170,11 +175,11 @@ export default function MessageInput({
         />
 
         {/* Send button */}
-        <div className="flex items-center pr-2.5 pb-2 shrink-0">
+        <div className="flex items-center pr-2.5 pb-1.5 shrink-0">
           <button
             onClick={handleSend}
             disabled={!hasContent || disabled}
-            className={`flex items-center justify-center h-9 w-9 rounded-full transition-all duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
+            className={`flex items-center justify-center h-11 w-11 rounded-full transition-all duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
               hasContent && !disabled
                 ? 'bg-indigo-500 hover:bg-indigo-600 active:scale-90 shadow-sm text-white'
                 : 'bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
@@ -182,7 +187,7 @@ export default function MessageInput({
             title="Send message (Enter)"
             aria-label="Send message"
           >
-            <Send className="h-4 w-4" style={{ transform: 'translateX(1px)' }} />
+            <Send className="h-4.5 w-4.5" style={{ transform: 'translateX(1px)' }} />
           </button>
         </div>
       </div>

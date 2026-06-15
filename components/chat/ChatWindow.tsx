@@ -187,15 +187,20 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack, hig
 
   return (
     <DragDropZone onFileDrop={setDraftFile}>
-      <div className={`flex flex-col h-full relative overflow-hidden transition-all duration-500 ${
-        isGeneralRoom
-          ? 'bg-[#faf6f2] dark:bg-[#0e0d10]'
-          : (isFocusRoom
-              ? 'bg-[#fafaf6] dark:bg-[#0a0a0d]'
-              : (effectiveStudyModeActive
-                  ? 'bg-[#f6f3eb] dark:bg-[#0c0c0f]'
-                  : 'bg-[#f0ede8] dark:bg-[#0f0f12]'))
-      }`}>
+      <div 
+        className={`flex flex-col relative overflow-hidden transition-all duration-500 ${
+          isGeneralRoom
+            ? 'bg-[#faf6f2] dark:bg-[#0e0d10]'
+            : (isFocusRoom
+                ? 'bg-[#fafaf6] dark:bg-[#0a0a0d]'
+                : (effectiveStudyModeActive
+                    ? 'bg-[#f6f3eb] dark:bg-[#0c0c0f]'
+                    : 'bg-[#f0ede8] dark:bg-[#0f0f12]'))
+        }`}
+        style={{
+          height: 'var(--visual-viewport-height, 100dvh)'
+        }}
+      >
 
         {/* ── Subtle background texture ── */}
         <div 
@@ -219,15 +224,21 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack, hig
         {/* ══════════════════════════════════════
             STICKY HEADER
             ══════════════════════════════════════ */}
-        <header className={`relative z-10 flex items-center gap-3 px-4 shrink-0 backdrop-blur-xl border-b transition-all duration-500 ${
-          isGeneralRoom
-            ? 'bg-[#faf6f2]/90 dark:bg-[#141318]/90 py-2.5 h-auto border-black/5 dark:border-white/[0.05]'
-            : (isFocusRoom
-                ? 'bg-[#fafaf6]/90 dark:bg-[#0e0e12]/90 py-2.5 h-auto border-amber-500/10 shadow-[0_1px_10px_rgba(245,158,11,0.01)]'
-                : (effectiveStudyModeActive
-                    ? 'bg-[#faf8f4]/90 dark:bg-[#121216]/90 border-amber-500/10 shadow-[0_1px_10px_rgba(245,158,11,0.02)] h-14'
-                    : 'bg-[#faf9f6]/80 dark:bg-[#16181d]/80 border-black/5 dark:border-white/[0.05] h-14'))
-        }`}>
+        <header 
+          className={`relative z-10 flex items-center gap-3 px-4 shrink-0 backdrop-blur-xl border-b transition-all duration-500 h-14 ${
+            isGeneralRoom
+              ? 'bg-[#faf6f2]/90 dark:bg-[#141318]/90 sm:h-auto border-black/5 dark:border-white/[0.05] py-2 sm:py-2.5'
+              : (isFocusRoom
+                  ? 'bg-[#fafaf6]/90 dark:bg-[#0e0e12]/90 sm:h-auto border-amber-500/10 shadow-[0_1px_10px_rgba(245,158,11,0.01)] py-2 sm:py-2.5'
+                  : (effectiveStudyModeActive
+                      ? 'bg-[#faf8f4]/90 dark:bg-[#121216]/90 border-amber-500/10 shadow-[0_1px_10px_rgba(245,158,11,0.02)]'
+                      : 'bg-[#faf9f6]/80 dark:bg-[#16181d]/80 border-black/5 dark:border-white/[0.05]'))
+          }`}
+          style={{
+            paddingTop: 'calc(0.5rem + env(safe-area-inset-top, 0px))',
+            height: 'calc(3.5rem + env(safe-area-inset-top, 0px))', // h-14 on mobile + safe area top
+          }}
+        >
 
           {/* Back arrow — mobile only */}
           {onBack && (
@@ -251,25 +262,34 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack, hig
               {cleanName}
             </p>
             {isGeneralRoom && (
-              <p className="text-[10.5px] text-gray-500 dark:text-gray-400 font-medium mt-1 leading-tight max-w-[280px] sm:max-w-md md:max-w-lg truncate lowercase">
+              <p className="hidden sm:block text-[10.5px] text-gray-500 dark:text-gray-400 font-medium mt-1 leading-tight max-w-[280px] sm:max-w-md md:max-w-lg truncate lowercase">
                 community discussions, planning and daily conversations.
               </p>
             )}
             {isFocusRoom && (
-              <p className="text-[10.5px] text-gray-500 dark:text-gray-400 font-medium mt-1 leading-tight max-w-[280px] sm:max-w-md md:max-w-lg truncate lowercase">
+              <p className="hidden sm:block text-[10.5px] text-gray-500 dark:text-gray-400 font-medium mt-1 leading-tight max-w-[280px] sm:max-w-md md:max-w-lg truncate lowercase">
                 collaborative study space
               </p>
             )}
-            <div className="flex items-center gap-1.5 mt-1">
+            <div className="flex items-center gap-1.5 mt-0.5 sm:mt-1">
               <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
                 isFocusRoom
                   ? (activeStudyMembers > 0 ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400')
                   : (effectiveStudyModeActive ? 'bg-amber-400' : 'bg-emerald-400')
               }`} />
-              <span className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold lowercase">
+              
+              {/* Desktop Status */}
+              <span className="hidden sm:inline text-[10px] text-gray-500 dark:text-gray-400 font-semibold lowercase">
                 {isGeneralRoom && `${onlineCount} ${onlineCount === 1 ? 'member' : 'members'} online • ${activeCount} active`}
                 {isFocusRoom && `${activeStudyMembers} active study members • ${focusRoomStats.activeSessions} active sessions • ${focusRoomStats.todayHours}h focused today`}
                 {!isGeneralRoom && !isFocusRoom && (effectiveStudyModeActive ? 'zen study session' : `${onlineCount} ${onlineCount === 1 ? 'person' : 'people'} here`)}
+              </span>
+
+              {/* Mobile Status */}
+              <span className="sm:hidden text-[10px] text-gray-500 dark:text-gray-400 font-semibold lowercase truncate">
+                {isGeneralRoom && `${onlineCount} online • ${activeCount} active`}
+                {isFocusRoom && `${activeStudyMembers} studying • ${focusRoomStats.activeSessions} live`}
+                {!isGeneralRoom && !isFocusRoom && (effectiveStudyModeActive ? 'zen study' : `${onlineCount} here`)}
               </span>
             </div>
           </div>

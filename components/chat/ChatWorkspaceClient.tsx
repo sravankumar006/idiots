@@ -15,6 +15,8 @@ import ChatWindow from './ChatWindow'
 import SharedAILogsRoom from './SharedAILogsRoom'
 import EmptyState from './EmptyState'
 import { Button } from '@/components/ui/Button'
+import MobileNav from '@/components/layout/MobileNav'
+
 
 // ——— Avatar palette ———
 const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
@@ -329,21 +331,22 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
             {friends.map((f) => {
               const av = AVATAR_MAP[f.avatar || 'avatar-cyber-ghost'] || AVATAR_MAP['avatar-cyber-ghost']
               return (
-                <div 
-                  key={f.id} 
-                  className={`flex items-center gap-2.5 rounded-xl group relative transition-all duration-150 ${
+                <Link
+                  key={f.id}
+                  href={`/space/${f.username}`}
+                  className={`flex items-center gap-2.5 rounded-xl group relative transition-all duration-150 cursor-pointer hover:bg-black/[0.04] dark:hover:bg-white/[0.04] ${
                     isCollapsed ? 'h-10 w-10 justify-center p-0' : 'px-3 py-2 w-full'
                   }`}
-                  title={isCollapsed ? f.username : undefined}
+                  title={isCollapsed ? f.username : `View ${f.username}'s profile`}
                 >
                   <div className="relative shrink-0">
-                    <div className={`h-7 w-7 rounded-full bg-gradient-to-br ${av.gradient} flex items-center justify-center text-[9px] font-semibold text-white shadow-sm`}>
+                    <div className={`h-7 w-7 rounded-full bg-gradient-to-br ${av.gradient} flex items-center justify-center text-[9px] font-semibold text-white shadow-sm group-hover:scale-105 transition-transform duration-150`}>
                       {av.symbol}
                     </div>
                     <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-400 border-2 border-white dark:border-[#0a0b14] shadow-sm" />
                   </div>
                   {!isCollapsed && (
-                    <span className="text-xs text-gray-600 dark:text-gray-400 font-medium truncate lowercase animate-fadeIn">
+                    <span className="text-xs text-gray-600 dark:text-gray-400 font-medium truncate lowercase animate-fadeIn group-hover:text-gray-900 dark:group-hover:text-gray-100 transition-colors duration-150">
                       {f.username}
                     </span>
                   )}
@@ -353,7 +356,7 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
                       {f.username}
                     </div>
                   )}
-                </div>
+                </Link>
               )
             })}
             {friends.length === 0 && !isCollapsed && (
@@ -434,8 +437,12 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
           MOBILE SIDEBAR (full screen, hidden when chat is open)
           ═══════════════════════════════════════════ */}
       {mobileView === 'sidebar' && (
-        <div className="md:hidden flex flex-col w-full h-full bg-[#faf9f6] dark:bg-[#16181d]">
+        <div 
+          className="md:hidden flex flex-col w-full h-full bg-[#faf9f6] dark:bg-[#16181d]"
+          style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}
+        >
           <SidebarContent isDesktop={false} />
+          <MobileNav profile={activeProfile || undefined} />
         </div>
       )}
 

@@ -9,6 +9,8 @@ import Sidebar from './Sidebar'
 import Topbar from './Topbar'
 import RightPanel from './RightPanel'
 import MobileNav from './MobileNav'
+import useVisualViewport from '@/hooks/useVisualViewport'
+
 
 interface PlatformLayoutProps {
   profile: UserProfile
@@ -19,6 +21,8 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  useVisualViewport()
+
   
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(false)
