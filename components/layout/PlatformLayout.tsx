@@ -150,7 +150,7 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
         <div className="flex-1 flex overflow-hidden relative">
           
           {/* Core Page Content area */}
-          <main className="flex-1 overflow-y-auto px-4 py-6 md:p-6 pb-24 md:pb-6 relative min-w-0">
+          <main className="flex-1 overflow-y-auto px-4 py-6 md:p-6 pb-14 md:pb-6 relative min-w-0">
             {children}
           </main>
 
