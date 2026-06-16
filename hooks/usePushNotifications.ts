@@ -44,12 +44,32 @@ export function usePushNotifications() {
       const app = getApps().length === 0 ? initializeApp(config) : getApp()
       const messaging = getMessaging(app)
 
-      // 4. Register FCM Service Worker
-      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+      // 4. Register FCM Service Worker with dynamic config passed as query parameters
+      const queryParams = new URLSearchParams({
+        apiKey: config.apiKey || '',
+        authDomain: config.authDomain || '',
+        projectId: config.projectId || '',
+        storageBucket: config.storageBucket || '',
+        messagingSenderId: config.messagingSenderId || '',
+        appId: config.appId || '',
+        vapidKey: config.vapidKey || ''
+      }).toString()
+
+      const registration = await navigator.serviceWorker.register(`/firebase-messaging-sw.js?${queryParams}`, {
         scope: '/'
       })
 
       // 5. Retrieve FCM token
+      const isVapidPlaceholder = !config.vapidKey || 
+                                 config.vapidKey.includes('placeholder') || 
+                                 config.vapidKey.includes('your-')
+
+      if (isVapidPlaceholder) {
+        console.warn('FCM VAPID key is missing or set to a placeholder. Please configure NEXT_PUBLIC_FIREBASE_VAPID_KEY in your .env.local file to enable notifications when the tab is closed.')
+        setLoading(false)
+        return null
+      }
+
       const fcmToken = await getToken(messaging, {
         vapidKey: config.vapidKey || undefined,
         serviceWorkerRegistration: registration

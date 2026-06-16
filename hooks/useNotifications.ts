@@ -110,6 +110,23 @@ export function useNotifications(userId: string | null | undefined) {
           if (payload.eventType === 'INSERT') {
             const newNotif = payload.new as NotificationItem
             setNotifications(prev => [newNotif, ...prev])
+
+            // Trigger OS/browser notification in the foreground if permission is granted
+            if (
+              typeof window !== 'undefined' &&
+              'Notification' in window &&
+              Notification.permission === 'granted'
+            ) {
+              try {
+                new Notification(newNotif.title, {
+                  body: newNotif.body,
+                  icon: '/logo.png',
+                  tag: newNotif.id
+                })
+              } catch (err) {
+                console.error('Failed to trigger native Notification in foreground:', err)
+              }
+            }
           } else if (payload.eventType === 'UPDATE') {
             const updatedNotif = payload.new as NotificationItem
             setNotifications(prev =>
