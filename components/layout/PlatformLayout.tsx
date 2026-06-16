@@ -31,6 +31,42 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
   const [isFocusLocked, setIsFocusLocked] = useState(false)
   const [checkingFocus, setCheckingFocus] = useState(true)
 
+  const [isNavigating, setIsNavigating] = useState(false)
+
+  // Listen for global link clicks to detect pending navigations on the initial page
+  useEffect(() => {
+    const handleGlobalClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      const anchor = target.closest('a')
+      
+      if (anchor) {
+        const href = anchor.getAttribute('href')
+        const targetAttr = anchor.getAttribute('target')
+        
+        // Only trigger on internal route changes that aren't page anchors or target="_blank"
+        if (
+          href && 
+          href.startsWith('/') && 
+          !href.startsWith('/#') && 
+          href !== pathname && 
+          targetAttr !== '_blank'
+        ) {
+          setIsNavigating(true)
+        }
+      }
+    }
+
+    document.addEventListener('click', handleGlobalClick)
+    return () => {
+      document.removeEventListener('click', handleGlobalClick)
+    }
+  }, [pathname])
+
+  // Reset loader when pathname updates (navigation completes)
+  useEffect(() => {
+    setIsNavigating(false)
+  }, [pathname])
+
   useEffect(() => {
     if (pathname === '/growth/focus') {
       setIsFocusLocked(false)
@@ -74,8 +110,89 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
   // While checking focus, show a blank loader screen to prevent visual content flashes of chat/us
   if (checkingFocus && pathname !== '/growth/focus') {
     return (
-      <div className="relative h-full w-full flex items-center justify-center bg-background text-foreground">
-        <div className="h-6 w-6 rounded-full border-2 border-amber-500/20 border-t-amber-500 animate-spin" />
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-neo-bg transition-colors duration-300">
+        <div className="relative flex items-center justify-center p-8 rounded-full bg-neo-bg shadow-neo select-none">
+          <svg 
+            width="80" 
+            height="80" 
+            viewBox="0 0 100 100" 
+            className="select-none"
+          >
+            <defs>
+              <linearGradient id="tg-outer-focus" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#7c3aed" />
+                <stop offset="100%" stopColor="#a855f7" />
+              </linearGradient>
+              <linearGradient id="tg-inner-focus" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#5b21b6" />
+                <stop offset="100%" stopColor="#7c3aed" />
+              </linearGradient>
+            </defs>
+
+            <g className="animate-spin" style={{ transformOrigin: '50px 50px' }}>
+              {/* Outer triangle solid base */}
+              <polygon 
+                points="50,10 84.64,70 15.36,70" 
+                fill="url(#tg-outer-focus)"
+              />
+
+              {/* Outer highlights & shadows */}
+              {/* Top-Left Highlight (White/Light) */}
+              <line 
+                x1="15.36" y1="70" x2="50" y2="10" 
+                stroke="rgba(255, 255, 255, 0.65)" 
+                strokeWidth="3" 
+                strokeLinecap="round"
+              />
+              {/* Top-Right Shadow (Dark) */}
+              <line 
+                x1="50" y1="10" x2="84.64" y2="70" 
+                stroke="rgba(0, 0, 0, 0.25)" 
+                strokeWidth="3" 
+                strokeLinecap="round"
+              />
+              {/* Bottom Shadow (Dark) */}
+              <line 
+                x1="15.36" y1="70" x2="84.64" y2="70" 
+                stroke="rgba(0, 0, 0, 0.25)" 
+                strokeWidth="3" 
+                strokeLinecap="round"
+              />
+
+              {/* Inner recessed (inset) triangle base */}
+              <polygon 
+                points="50,30 67.32,60 32.68,60" 
+                fill="url(#tg-inner-focus)"
+              />
+
+              {/* Inner highlights & shadows (reversed for inset effect) */}
+              {/* Inner Top-Left Shadow (Dark) */}
+              <line 
+                x1="32.68" y1="60" x2="50" y2="30" 
+                stroke="rgba(0, 0, 0, 0.3)" 
+                strokeWidth="2.5" 
+                strokeLinecap="round"
+              />
+              {/* Inner Top-Right Highlight (Light) */}
+              <line 
+                x1="50" y1="30" x2="67.32" y2="60" 
+                stroke="rgba(255, 255, 255, 0.3)" 
+                strokeWidth="2.5" 
+                strokeLinecap="round"
+              />
+              {/* Inner Bottom Highlight (Light) */}
+              <line 
+                x1="32.68" y1="60" x2="67.32" y2="60" 
+                stroke="rgba(255, 255, 255, 0.3)" 
+                strokeWidth="2.5" 
+                strokeLinecap="round"
+              />
+            </g>
+          </svg>
+        </div>
+        <p className="mt-6 text-[10px] font-black tracking-widest text-neo-secondary uppercase leading-none select-none animate-pulse">
+          establishing secure node connections
+        </p>
       </div>
     )
   }
@@ -111,70 +228,115 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
 
   const isChatPage = pathname === '/chat'
 
-  // Standard full-screen layout for chat (2-column Telegram split style)
-  if (isChatPage) {
+  const renderLayoutContent = () => {
+    if (isChatPage) {
+      return (
+        <div 
+          className="relative flex bg-background text-foreground overflow-hidden font-sans transition-colors duration-300 w-full"
+          style={{ height: 'var(--visual-viewport-height, 100dvh)' }}
+        >
+          <main className="flex-1 overflow-hidden relative min-w-0 h-full">
+            {children}
+          </main>
+        </div>
+      )
+    }
+
     return (
       <div 
         className="relative flex bg-background text-foreground overflow-hidden font-sans transition-colors duration-300 w-full"
         style={{ height: 'var(--visual-viewport-height, 100dvh)' }}
       >
-        <main className="flex-1 overflow-hidden relative min-w-0 h-full">
-          {children}
-        </main>
+        {/* 1. Desktop & Tablet Sidebar */}
+        <div className="hidden md:flex h-full shrink-0">
+          <Sidebar 
+            isCollapsed={isSidebarCollapsed} 
+            setIsCollapsed={setIsSidebarCollapsed} 
+            profile={profile}
+          />
+        </div>
+
+        {/* 3. Main Workspace Container */}
+        <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+          
+          {/* Top Header Bar */}
+          <Topbar 
+            profile={profile} 
+            rightPanelOpen={isRightPanelOpen} 
+            setRightPanelOpen={setIsRightPanelOpen} 
+            onToggleMobileMenu={() => setMobileMenuOpen(true)}
+          />
+
+          {/* Content & Right Panel Viewport */}
+          <div className="flex-1 flex overflow-hidden relative">
+            
+            {/* Core Page Content area */}
+            <main className="flex-1 overflow-y-auto px-4 py-6 md:p-6 pb-6 relative min-w-0 mb-[calc(3rem+env(safe-area-inset-bottom,0px))] md:mb-0">
+              {children}
+            </main>
+
+            {/* Optional Right Panel (Desktop/Tablet inspect sidebar) */}
+            <RightPanel 
+              profile={profile} 
+              isOpen={isRightPanelOpen} 
+            />
+
+          </div>
+
+          {/* Mobile Bottom Tab Navbar */}
+          <MobileNav profile={profile} drawerOpen={mobileMenuOpen} setDrawerOpen={setMobileMenuOpen} />
+
+        </div>
+
       </div>
     )
   }
 
-  // General layout for dashboard, settings, and other pages
   return (
-    <div 
-      className="relative flex bg-background text-foreground overflow-hidden font-sans transition-colors duration-300 w-full"
-      style={{ height: 'var(--visual-viewport-height, 100dvh)' }}
-    >
-      
-      {/* 1. Desktop & Tablet Sidebar */}
-      <div className="hidden md:flex h-full shrink-0">
-        <Sidebar 
-          isCollapsed={isSidebarCollapsed} 
-          setIsCollapsed={setIsSidebarCollapsed} 
-          profile={profile}
-        />
-      </div>
+    <>
+      {isNavigating && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2 bg-white/95 dark:bg-[#181922]/95 backdrop-blur-md shadow-neo-high rounded-full border border-white/40 dark:border-white/5 flex items-center gap-2.5 animate-fadeIn select-none">
+          <svg 
+            width="20" 
+            height="20" 
+            viewBox="0 0 100 100" 
+            className="select-none"
+          >
+            <defs>
+              <linearGradient id="tg-outer-nav" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#7c3aed" />
+                <stop offset="100%" stopColor="#a855f7" />
+              </linearGradient>
+              <linearGradient id="tg-inner-nav" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#5b21b6" />
+                <stop offset="100%" stopColor="#7c3aed" />
+              </linearGradient>
+            </defs>
 
-
-
-      {/* 3. Main Workspace Container */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        
-        {/* Top Header Bar */}
-        <Topbar 
-          profile={profile} 
-          rightPanelOpen={isRightPanelOpen} 
-          setRightPanelOpen={setIsRightPanelOpen} 
-          onToggleMobileMenu={() => setMobileMenuOpen(true)}
-        />
-
-        {/* Content & Right Panel Viewport */}
-        <div className="flex-1 flex overflow-hidden relative">
-          
-          {/* Core Page Content area */}
-          <main className="flex-1 overflow-y-auto px-4 py-6 md:p-6 pb-6 relative min-w-0 mb-[calc(3rem+env(safe-area-inset-bottom,0px))] md:mb-0">
-            {children}
-          </main>
-
-          {/* Optional Right Panel (Desktop/Tablet inspect sidebar) */}
-          <RightPanel 
-            profile={profile} 
-            isOpen={isRightPanelOpen} 
-          />
-
+            <g className="animate-spin" style={{ transformOrigin: '50px 50px' }}>
+              {/* Outer triangle base */}
+              <polygon 
+                points="50,10 84.64,70 15.36,70" 
+                fill="url(#tg-outer-nav)"
+              />
+              {/* Outer highlights & shadows */}
+              <line x1="15.36" y1="70" x2="50" y2="10" stroke="rgba(255, 255, 255, 0.65)" strokeWidth="3" strokeLinecap="round" />
+              <line x1="50" y1="10" x2="84.64" y2="70" stroke="rgba(0, 0, 0, 0.25)" strokeWidth="3" strokeLinecap="round" />
+              <line x1="15.36" y1="70" x2="84.64" y2="70" stroke="rgba(0, 0, 0, 0.25)" strokeWidth="3" strokeLinecap="round" />
+              
+              {/* Inner recessed (inset) triangle base */}
+              <polygon points="50,30 67.32,60 32.68,60" fill="url(#tg-inner-nav)" />
+              <line x1="32.68" y1="60" x2="50" y2="30" stroke="rgba(0, 0, 0, 0.3)" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="50" y1="30" x2="67.32" y2="60" stroke="rgba(255, 255, 255, 0.3)" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="32.68" y1="60" x2="67.32" y2="60" stroke="rgba(255, 255, 255, 0.3)" strokeWidth="2.5" strokeLinecap="round" />
+            </g>
+          </svg>
+          <span className="text-[9px] font-black tracking-widest text-[#7c3aed] dark:text-violet-400 uppercase">
+            syncing...
+          </span>
         </div>
-
-        {/* Mobile Bottom Tab Navbar */}
-        <MobileNav profile={profile} drawerOpen={mobileMenuOpen} setDrawerOpen={setMobileMenuOpen} />
-
-      </div>
-
-    </div>
+      )}
+      {renderLayoutContent()}
+    </>
   )
 }
