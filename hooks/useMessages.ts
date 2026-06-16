@@ -221,6 +221,49 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
               }
             })
         }
+
+        // 3. Trigger General Room notification for other members of the workspace
+        try {
+          // Fetch group name first
+          const { data: groupData } = await supabase
+            .from('groups')
+            .select('group_name')
+            .eq('id', groupId)
+            .single()
+
+          const groupName = groupData?.group_name || 'chat'
+          const cleanGroupName = groupName.replace('#', '').toLowerCase()
+
+          // Fetch other profiles to notify
+          const { data: otherProfiles } = await supabase
+            .from('profiles')
+            .select('id, username')
+            .neq('id', activeUser.id)
+
+          if (otherProfiles && otherProfiles.length > 0) {
+            otherProfiles.forEach(p => {
+              const wasNotifiedViaReply = activeReply && activeReply.sender_id === p.id
+              const wasNotifiedViaMention = usernames.some(u => u.toLowerCase() === p.username.toLowerCase())
+
+              if (!wasNotifiedViaReply && !wasNotifiedViaMention) {
+                fetch('/api/notifications/trigger', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    userId: p.id,
+                    title: `@${activeUser.username} in #${cleanGroupName}`,
+                    body: text.trim() || (isSticker ? 'Sent a sticker' : 'Sent an attachment'),
+                    category: 'chat',
+                    type: 'message',
+                    relatedId: data.id
+                  })
+                }).catch(err => console.error('Failed to trigger message notification:', err))
+              }
+            })
+          }
+        } catch (err) {
+          console.error('Failed to dispatch group message notifications:', err)
+        }
       }
 
       // --- AI INTEGRATION: Detect @rocky and trigger shared AI ---
