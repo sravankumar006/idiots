@@ -16,9 +16,10 @@ import {
   Activity,
   CornerDownLeft,
   Settings,
-  Heart,
   Database,
-  Trash2
+  Trash2,
+  Maximize,
+  Minimize
 } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -77,6 +78,7 @@ export default function AiPage() {
   const [personalPrompt, setPersonalPrompt] = useState('')
   const [personalMessages, setPersonalMessages] = useState<ChatMessage[]>([])
   const [isTyping, setIsTyping] = useState(false)
+  const [isChatFullscreen, setIsChatFullscreen] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   // Tab 2: Shared Logs Archive States
@@ -573,8 +575,22 @@ export default function AiPage() {
 
   return (
     <PageContainer>
+      {/* Fullscreen Override Styles */}
+      {isChatFullscreen && (
+        <style>{`
+          /* Hide Topbar entirely */
+          #topbar-container { display: none !important; }
+          
+          /* Remove PageContainer constraints to stretch edge-to-edge */
+          .max-w-6xl { max-width: 100% !important; padding: 0 !important; }
+          
+          /* Remove main padding so chat touches the very edges */
+          main { padding: 0 !important; }
+        `}</style>
+      )}
+
       {/* Immersive Header & Tab Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-black/5 dark:border-white/5 select-none">
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-black/5 dark:border-white/5 select-none ${isChatFullscreen ? 'hidden' : 'flex'}`}>
         <div className="space-y-1">
           <h2 className="text-xl font-extrabold text-gray-900 dark:text-white tracking-wide uppercase flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-violet-400" />
@@ -586,13 +602,13 @@ export default function AiPage() {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex bg-black/10 dark:bg-white/3 p-1 rounded-2xl border border-black/5 dark:border-white/5 shrink-0 self-start sm:self-center">
+        <div className="flex neo-inset-panel p-1 rounded-2xl border-none shrink-0 self-start sm:self-center">
           <button
             onClick={() => setActiveTab('consultant')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'consultant'
-                ? 'bg-violet-500/10 text-violet-600 dark:text-white border-l-2 border-violet-400'
-                : 'text-gray-400 hover:text-gray-200'
+                ? 'bg-neo-bg shadow-neo text-[#fb864b] border-none'
+                : 'text-neo-secondary hover:text-neo-text'
             }`}
           >
             <User className="h-3.5 w-3.5" />
@@ -602,8 +618,8 @@ export default function AiPage() {
             onClick={() => setActiveTab('logs')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'logs'
-                ? 'bg-violet-500/10 text-violet-600 dark:text-white border-l-2 border-violet-400'
-                : 'text-gray-400 hover:text-gray-200'
+                ? 'bg-neo-bg shadow-neo text-[#fb864b] border-none'
+                : 'text-neo-secondary hover:text-neo-text'
             }`}
           >
             <MessageSquare className="h-3.5 w-3.5" />
@@ -613,8 +629,8 @@ export default function AiPage() {
             onClick={() => setActiveTab('memory')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'memory'
-                ? 'bg-violet-500/10 text-violet-600 dark:text-white border-l-2 border-violet-400'
-                : 'text-gray-400 hover:text-gray-200'
+                ? 'bg-neo-bg shadow-neo text-[#fb864b] border-none'
+                : 'text-neo-secondary hover:text-neo-text'
             }`}
           >
             <Database className="h-3.5 w-3.5" />
@@ -627,13 +643,13 @@ export default function AiPage() {
       {/* TAB 1: PERSONAL AI CONSULTANT                                  */}
       {/* ============================================================== */}
       {activeTab === 'consultant' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className={`grid grid-cols-1 ${isChatFullscreen ? 'lg:grid-cols-1 h-[100dvh] gap-0' : 'lg:grid-cols-3 gap-6'}`}>
           {/* Diagnostic Sidebar */}
-          <div className="space-y-4 select-none">
+          <div className={`space-y-4 select-none ${isChatFullscreen ? 'hidden' : 'block'}`}>
             {/* AI Config & Settings Panel */}
             <Card className="p-6 space-y-4 hover:border-violet-500/10">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/5 pb-3">
-                <Settings className="h-4 w-4 text-violet-400" />
+              <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-black/5 dark:border-white/5 pb-3">
+                <Settings className="h-4 w-4 text-[#fb864b]" />
                 AI Config & Settings
               </h3>
               
@@ -652,7 +668,7 @@ export default function AiPage() {
                     id="ai-provider-select"
                     value={selectedProvider}
                     onChange={(e) => handleProviderChange(e.target.value)}
-                    className="w-full appearance-none bg-black/20 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl py-2.5 px-3 text-xs text-gray-750 dark:text-gray-200 font-bold focus:outline-none focus:border-violet-500/30 transition-all cursor-pointer"
+                    className="w-full appearance-none neo-inset-panel border-none rounded-xl py-2.5 px-3 text-xs text-gray-900 dark:text-gray-200 font-bold focus:outline-none transition-all cursor-pointer"
                   >
                     <option value="auto">Auto (Gemini + Fallbacks)</option>
                     <option value="gemini">Google Gemini</option>
@@ -670,15 +686,15 @@ export default function AiPage() {
 
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500 font-semibold">Logs Location</span>
-                  <span className="text-gray-300 font-semibold lowercase">ai_logs (room: null)</span>
+                  <span className="text-gray-900 dark:text-gray-300 font-semibold lowercase">ai_logs (room: null)</span>
                 </div>
               </div>
             </Card>
 
             {/* AI Systems Monitor Panel */}
             <Card className="p-6 space-y-4 hover:border-emerald-500/10">
-              <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-3">
+                <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                   <Activity className="h-4 w-4 text-emerald-400" />
                   AI Systems Monitor
                 </h3>
@@ -711,9 +727,9 @@ export default function AiPage() {
                     }
 
                     return (
-                      <div key={provider.name} className="space-y-1.5 pb-3 border-b border-white/5 last:border-0 last:pb-0">
+                      <div key={provider.name} className="space-y-1.5 pb-3 border-b border-black/5 dark:border-white/5 last:border-0 last:pb-0">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-gray-200">{provider.displayName}</span>
+                          <span className="text-xs font-bold text-gray-900 dark:text-gray-200">{provider.displayName}</span>
                           <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border flex items-center gap-1 ${statusColor}`}>
                             <span className={`h-1 w-1 rounded-full ${statusDot}`} />
                             {provider.configured ? provider.health : 'Not Configured'}
@@ -724,11 +740,11 @@ export default function AiPage() {
                           <div className="grid grid-cols-2 gap-2 text-[10px] text-gray-400 font-semibold">
                             <div>
                               <span className="text-gray-600 block">Success Rate</span>
-                              <span className="text-gray-300 font-bold">{provider.stats.successRate}%</span>
+                              <span className="text-gray-900 dark:text-gray-300 font-bold">{provider.stats.successRate}%</span>
                             </div>
                             <div>
                               <span className="text-gray-600 block">Avg Latency</span>
-                              <span className="text-gray-300 font-bold">
+                              <span className="text-gray-900 dark:text-gray-300 font-bold">
                                 {provider.stats.avgLatencyMs > 0 ? `${(provider.stats.avgLatencyMs / 1000).toFixed(2)}s` : '0.00s'}
                               </span>
                             </div>
@@ -743,7 +759,7 @@ export default function AiPage() {
 
             {/* Prompt Presets */}
             <Card className="p-6 space-y-4 hover:border-rose-500/10">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2 border-b border-white/5 pb-3">
+              <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-black/5 dark:border-white/5 pb-3">
                 <Brain className="h-4 w-4 text-rose-400" />
                 Prompt Presets
               </h3>
@@ -752,7 +768,7 @@ export default function AiPage() {
                   <button
                     key={idx}
                     onClick={() => setPersonalPrompt(preset)}
-                    className="w-full text-left p-3 rounded-xl bg-white/2 hover:bg-white/5 border border-white/5 text-[11px] font-semibold text-gray-400 hover:text-white transition-all cursor-pointer leading-normal"
+                    className="w-full text-left p-3 rounded-xl neo-inset-panel border-none text-[11px] font-semibold text-neo-secondary hover:text-neo-text transition-all cursor-pointer leading-normal"
                   >
                     {preset}
                   </button>
@@ -762,8 +778,24 @@ export default function AiPage() {
           </div>
 
           {/* Dialogue Space */}
-          <div className="lg:col-span-2 flex flex-col h-[600px]">
-            <Card className="flex-1 p-0 flex flex-col overflow-hidden hover:border-white/5">
+          <div className={`flex flex-col transition-all duration-300 ${
+            isChatFullscreen 
+              ? 'col-span-1 h-[100dvh] w-full p-0 md:p-0'
+              : 'lg:col-span-2 h-[600px] relative'
+          }`}>
+            <Card className={`flex-1 flex flex-col overflow-hidden hover:border-white/5 relative ${isChatFullscreen ? 'rounded-none border-none neo-panel shadow-none p-0' : 'p-0'}`}>
+              {/* Chat Header for Fullscreen Toggle */}
+              <div className="flex items-center justify-between p-4 border-b border-black/5 dark:border-white/5 shrink-0 select-none">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Companion Active</span>
+                <button
+                  onClick={() => setIsChatFullscreen(!isChatFullscreen)}
+                  className="p-2 rounded-xl text-neo-secondary hover:text-neo-text hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer border-none"
+                  title={isChatFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                >
+                  {isChatFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+                </button>
+              </div>
+
               {/* Messages viewport */}
               <div className="flex-1 overflow-y-auto p-6 space-y-5">
                 {personalMessages.length === 0 ? (
@@ -802,13 +834,13 @@ export default function AiPage() {
                           <span className="text-[10px] font-bold text-gray-500 block">
                             {isSelf ? 'You' : 'Companion'}
                           </span>
-                          <div className={`p-4 rounded-2xl text-[13px] leading-relaxed border w-fit max-w-full ${
+                          <div className={`p-4 rounded-2xl text-[13px] leading-relaxed w-fit max-w-full ${
                             isSelf 
-                              ? 'bg-[#6366f1] text-white border-black/5 dark:bg-[#5b5fcf] dark:border-white/5 rounded-tr-none' 
-                              : 'bg-[#1c1f26] text-gray-200 border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.1)] dark:bg-[#16181d] dark:border-indigo-400/20 rounded-tl-none'
+                              ? 'bg-neo-bg shadow-neo text-[#fb864b] border-none rounded-tr-none' 
+                              : 'neo-inset-panel text-neo-text border-none rounded-tl-none'
                           }`}>
                             {!isSelf ? (
-                              <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-xl prose-code:text-indigo-300 break-words leading-relaxed text-gray-300">
+                              <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:neo-inset-panel prose-pre:border-none prose-pre:rounded-xl break-words leading-relaxed text-gray-800 dark:text-gray-300">
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                   {msg.message}
                                 </ReactMarkdown>
@@ -831,13 +863,13 @@ export default function AiPage() {
                     </div>
                     <div className="space-y-1 flex flex-col items-start">
                       <span className="text-[10px] font-bold text-gray-500 block">Companion</span>
-                      <div className="px-4 py-3 bg-[#1c1f26] dark:bg-[#16181d] rounded-2xl border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.05)] rounded-tl-none flex items-center gap-2 w-fit max-w-full">
+                      <div className="px-4 py-3 neo-inset-panel border-none rounded-2xl rounded-tl-none flex items-center gap-2 w-fit max-w-full">
                         <div className="flex gap-1 items-center">
                           <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" style={{ animationDelay: '0ms' }} />
                           <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" style={{ animationDelay: '150ms' }} />
                           <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" style={{ animationDelay: '300ms' }} />
                         </div>
-                        <span className="text-xs text-indigo-300/80 font-medium animate-pulse ml-1">
+                        <span className="text-xs text-neo-secondary font-medium animate-pulse ml-1">
                           {personalMessages[personalMessages.length - 1]?.message ? 'IS AI is generating a response...' : 'IS AI is thinking...'}
                         </span>
                       </div>
@@ -849,7 +881,7 @@ export default function AiPage() {
               </div>
 
               {/* Chat Input form */}
-              <form onSubmit={handleSendPersonal} className="p-4 border-t border-white/5 shrink-0 bg-[#0a0b15]/40 select-none">
+              <form onSubmit={handleSendPersonal} className="p-4 border-t border-black/5 dark:border-white/5 shrink-0 glass-panel border-none select-none">
                 <div className="relative flex items-center">
                   <input
                     type="text"
@@ -857,12 +889,12 @@ export default function AiPage() {
                     value={personalPrompt}
                     onChange={(e) => setPersonalPrompt(e.target.value)}
                     disabled={isTyping}
-                    className="w-full bg-white/2 border border-white/5 rounded-2xl py-3.5 pl-4 pr-16 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-violet-500/40 transition-all font-semibold"
+                    className="w-full neo-inset-panel border-none rounded-2xl py-3.5 pl-4 pr-16 text-xs text-gray-900 dark:text-white placeholder:text-gray-500 focus:outline-none transition-all font-semibold"
                   />
                   <button
                     type="submit"
                     disabled={isTyping}
-                    className="absolute right-2 py-1.5 px-3 rounded-lg bg-violet-500/15 hover:bg-violet-500/30 border border-violet-500/25 text-violet-300 transition-all cursor-pointer flex items-center gap-1 text-[10px] font-bold"
+                    className="absolute right-2 py-1.5 px-3 rounded-lg bg-neo-bg shadow-neo border-none text-[#fb864b] hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-neo-inset transition-all cursor-pointer flex items-center gap-1 text-[10px] font-bold"
                   >
                     <span>Query</span>
                     <CornerDownLeft className="h-3 w-3" />
@@ -932,7 +964,7 @@ export default function AiPage() {
                 placeholder="Search group prompt or response contents..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#0a0b15]/40 glass-panel border border-black/5 dark:border-white/5 rounded-2xl py-3 pl-11 pr-4 text-xs text-gray-900 dark:text-white placeholder:text-gray-500 focus:outline-none focus:border-violet-500/30 transition-all font-semibold"
+                className="w-full neo-inset-panel border-none rounded-2xl py-3 pl-11 pr-4 text-xs text-gray-900 dark:text-white placeholder:text-gray-500 focus:outline-none transition-all font-semibold"
               />
             </div>
 
@@ -942,7 +974,7 @@ export default function AiPage() {
               <select
                 value={selectedGroup}
                 onChange={(e) => setSelectedGroup(e.target.value)}
-                className="w-full appearance-none bg-[#0a0b15]/40 glass-panel border border-black/5 dark:border-white/5 rounded-2xl py-3 pl-11 pr-4 text-xs text-gray-700 dark:text-gray-300 font-semibold focus:outline-none focus:border-violet-500/30 transition-all cursor-pointer"
+                className="w-full appearance-none neo-inset-panel border-none rounded-2xl py-3 pl-11 pr-4 text-xs text-gray-900 dark:text-gray-300 font-semibold focus:outline-none transition-all cursor-pointer"
               >
                 <option value="all">all rooms</option>
                 {uniqueGroups.map(([id, name]) => (
@@ -957,7 +989,7 @@ export default function AiPage() {
               <select
                 value={selectedUser}
                 onChange={(e) => setSelectedUser(e.target.value)}
-                className="w-full appearance-none bg-[#0a0b15]/40 glass-panel border border-black/5 dark:border-white/5 rounded-2xl py-3 pl-11 pr-4 text-xs text-gray-700 dark:text-gray-300 font-semibold focus:outline-none focus:border-violet-500/30 transition-all cursor-pointer"
+                className="w-full appearance-none neo-inset-panel border-none rounded-2xl py-3 pl-11 pr-4 text-xs text-gray-900 dark:text-gray-300 font-semibold focus:outline-none transition-all cursor-pointer"
               >
                 <option value="all">all users</option>
                 {uniqueUsers.map(([id, name]) => (
@@ -977,9 +1009,9 @@ export default function AiPage() {
                 <span className="text-xs font-semibold text-gray-500 tracking-wider">indexing shared intelligence logs...</span>
               </div>
             ) : filteredLogs.length === 0 ? (
-              <Card className="flex flex-col items-center justify-center text-center py-24 select-none border border-black/5 dark:border-white/5">
-                <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-violet-500/10 to-rose-500/10 border border-violet-500/20 flex items-center justify-center mb-4">
-                  <Brain className="h-6 w-6 text-violet-400 animate-pulse" />
+              <Card className="flex flex-col items-center justify-center text-center py-24 select-none border-none">
+                <div className="h-12 w-12 rounded-2xl neo-inset-panel border-none flex items-center justify-center mb-4">
+                  <Brain className="h-6 w-6 text-[#fb864b] animate-pulse" />
                 </div>
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-1">No companion logs found</h3>
                 <p className="text-xs text-gray-500 max-w-sm font-semibold leading-relaxed">
@@ -1025,10 +1057,10 @@ export default function AiPage() {
                   <Card 
                     key={log.id} 
                     id={`ai-log-${log.id}`}
-                    className={`p-6 md:p-8 space-y-5 hover:border-white/10 shadow-sm relative overflow-hidden transition-all duration-1000 ${
+                    className={`p-6 md:p-8 space-y-5 hover:border-white/10 shadow-sm relative overflow-hidden transition-all duration-1000 border-none ${
                       glowingLogId === log.id 
-                        ? 'ring-2 ring-violet-500 border-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.6)] bg-violet-500/10'
-                        : 'border-black/5 dark:border-white/5 hover:shadow-[0_0_20px_rgba(139,92,246,0.03)]'
+                        ? 'ring-2 ring-violet-500 shadow-neo'
+                        : ''
                     }`}
                   >
                     {/* Log Meta Header */}
@@ -1089,9 +1121,9 @@ export default function AiPage() {
                     </div>
 
                     {/* Question/Prompt Section */}
-                    <div className="bg-black/5 dark:bg-white/[0.02] border border-black/5 dark:border-white/5 rounded-2xl p-4 space-y-1.5">
-                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block select-none">Query prompt</span>
-                      <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">
+                    <div className="neo-inset-panel border-none rounded-2xl p-4 space-y-1.5">
+                      <span className="text-[10px] font-bold text-neo-secondary uppercase tracking-widest block select-none">Query prompt</span>
+                      <p className="text-xs font-semibold text-neo-text whitespace-pre-wrap leading-relaxed">
                         {log.prompt}
                       </p>
                     </div>
@@ -1149,7 +1181,7 @@ export default function AiPage() {
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                 <Database className="h-4 w-4 text-violet-400" />
                 Contextual Memories
               </h3>
@@ -1181,8 +1213,8 @@ export default function AiPage() {
                         </span>
                       </div>
                       <div>
-                        <h4 className="text-xs font-bold text-gray-200">{mem.title}</h4>
-                        <p className="text-xs text-gray-400 mt-1 leading-relaxed">{mem.content}</p>
+                        <h4 className="text-xs font-bold text-gray-900 dark:text-gray-200">{mem.title}</h4>
+                        <p className="text-xs text-neo-secondary mt-1 leading-relaxed">{mem.content}</p>
                       </div>
                     </Card>
                   ))}
@@ -1191,7 +1223,7 @@ export default function AiPage() {
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                 <Activity className="h-4 w-4 text-emerald-400" />
                 Conversation Summaries
               </h3>
@@ -1206,11 +1238,11 @@ export default function AiPage() {
                 <div className="space-y-4">
                   {summaries.map((sum) => (
                     <Card key={sum.id} className="p-5 space-y-2 border border-white/5">
-                      <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                      <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-2">
                         <span className="text-[10px] font-bold text-gray-500 uppercase">Context Sync</span>
                         <span className="text-[10px] text-gray-500">{new Date(sum.created_at).toLocaleDateString()}</span>
                       </div>
-                      <p className="text-xs text-gray-300 leading-relaxed font-medium">
+                      <p className="text-xs text-gray-900 dark:text-gray-300 leading-relaxed font-medium">
                         {sum.summary}
                       </p>
                     </Card>

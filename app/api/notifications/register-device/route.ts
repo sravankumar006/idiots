@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 
 export async function POST(req: Request) {
   try {
@@ -15,15 +16,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.warn("Supabase admin credentials are not set.");
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    }
+
+    const adminClient = createAdminClient(supabaseUrl, supabaseServiceKey)
+
     // Clean up if this token was previously registered by another user (prevent cross-user notifications)
-    await supabase
+    await adminClient
       .from('user_devices')
       .delete()
       .eq('fcm_token', fcmToken)
       .neq('user_id', user.id)
 
     // Upsert the token for the current user
-    const { error } = await supabase
+    const { error } = await adminClient
       .from('user_devices')
       .upsert({
         user_id: user.id,

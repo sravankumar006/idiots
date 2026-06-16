@@ -76,12 +76,12 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: Sideba
           isSubItem ? 'pl-8' : ''
         } ${
           isActive 
-            ? 'bg-neo-bg shadow-neo-inset text-[#7c3aed] font-bold rounded-full dark:text-shadow-[0_0_8px_rgba(124,58,237,0.4)]' 
+            ? 'bg-neo-bg shadow-neo-inset text-[#fb864b] font-bold rounded-full dark:text-shadow-[0_0_8px_rgba(124,58,237,0.4)]' 
             : 'bg-transparent text-neo-secondary rounded-full hover:bg-neo-bg hover:shadow-neo hover:-translate-y-0.5 active:shadow-neo-inset active:translate-y-0.5'
         }`}
       >
         <Icon className={`h-4.5 w-4.5 shrink-0 transition-transform duration-300 group-hover:scale-105 ${
-          isActive ? 'text-[#7c3aed]' : 'text-gray-400 dark:text-gray-500 group-hover:text-violet-600 dark:group-hover:text-violet-300'
+          isActive ? 'text-[#fb864b]' : 'text-gray-400 dark:text-gray-500 group-hover:text-violet-600 dark:group-hover:text-violet-300'
         }`} />
         
         {!isCollapsed && (
@@ -110,7 +110,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: Sideba
         {!isCollapsed && (
           <div className="w-full bg-neo-bg shadow-neo-inset px-4 py-2 rounded-full flex items-center justify-between gap-3 transition-all duration-300">
             <div className="flex items-center gap-2.5 animate-fadeIn">
-              <div className="h-8 w-8 rounded-full bg-neo-bg shadow-neo flex items-center justify-center text-[#7c3aed] font-extrabold text-[10px] hover:shadow-neo hover:-translate-y-0.5 active:shadow-neo-inset active:translate-y-0.5 transition-all duration-300 cursor-pointer">
+              <div className="h-8 w-8 rounded-full bg-neo-bg shadow-neo flex items-center justify-center text-[#fb864b] font-extrabold text-[10px] hover:shadow-neo hover:-translate-y-0.5 active:shadow-neo-inset active:translate-y-0.5 transition-all duration-300 cursor-pointer">
                 is
               </div>
               <span className="font-extrabold tracking-wider text-xs text-neo-secondary lowercase leading-none mt-0.5">
@@ -120,7 +120,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: Sideba
             
             <button 
               onClick={() => setIsCollapsed(true)}
-              className="w-7 h-7 rounded-full bg-neo-bg shadow-neo flex items-center justify-center text-neo-secondary hover:text-[#7c3aed] hover:shadow-neo active:shadow-neo-inset transition-all duration-300 cursor-pointer border-none"
+              className="w-7 h-7 rounded-full bg-neo-bg shadow-neo flex items-center justify-center text-neo-secondary hover:text-[#fb864b] hover:shadow-neo active:shadow-neo-inset transition-all duration-300 cursor-pointer border-none"
               title="Collapse Sidebar"
               suppressHydrationWarning
             >
@@ -132,7 +132,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: Sideba
         {isCollapsed && (
           <button 
             onClick={() => setIsCollapsed(false)}
-            className="h-10 w-10 rounded-full bg-neo-bg shadow-neo flex items-center justify-center text-[#7c3aed] hover:shadow-neo hover:-translate-y-0.5 active:shadow-neo-inset active:translate-y-0.5 transition-all duration-300 cursor-pointer border-none"
+            className="h-10 w-10 rounded-full bg-neo-bg shadow-neo flex items-center justify-center text-[#fb864b] hover:shadow-neo hover:-translate-y-0.5 active:shadow-neo-inset active:translate-y-0.5 transition-all duration-300 cursor-pointer border-none"
             title="Expand Sidebar"
             suppressHydrationWarning
           >
@@ -158,12 +158,12 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: Sideba
                 suppressHydrationWarning
                 className={`w-full flex items-center justify-between py-3.5 px-4 font-bold text-xs transition-all duration-300 ease-out cursor-pointer ${
                   pathname.startsWith('/us')
-                    ? 'bg-neo-bg shadow-neo-inset text-[#7c3aed] font-bold rounded-full'
+                    ? 'bg-neo-bg shadow-neo-inset text-[#fb864b] font-bold rounded-full'
                     : 'bg-transparent text-neo-secondary rounded-full hover:bg-neo-bg hover:shadow-neo hover:-translate-y-0.5 active:shadow-neo-inset active:translate-y-0.5'
                 }`}
               >
                 <div className="flex items-center gap-3.5">
-                  <Users className={`h-4.5 w-4.5 ${pathname.startsWith('/us') ? 'text-[#7c3aed]' : 'text-gray-400 dark:text-gray-500'}`} />
+                  <Users className={`h-4.5 w-4.5 ${pathname.startsWith('/us') ? 'text-[#fb864b]' : 'text-gray-400 dark:text-gray-500'}`} />
                   <span className="lowercase leading-none mt-0.5">Us</span>
                 </div>
                 <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-300 ${usExpanded ? 'rotate-180' : ''}`} />
@@ -192,12 +192,12 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: Sideba
                 suppressHydrationWarning
                 className={`w-full flex items-center justify-between py-3.5 px-4 font-bold text-xs transition-all duration-300 ease-out cursor-pointer ${
                   pathname.startsWith('/growth')
-                    ? 'bg-neo-bg shadow-neo-inset text-[#7c3aed] font-bold rounded-full'
+                    ? 'bg-neo-bg shadow-neo-inset text-[#fb864b] font-bold rounded-full'
                     : 'bg-transparent text-neo-secondary rounded-full hover:bg-neo-bg hover:shadow-neo hover:-translate-y-0.5 active:shadow-neo-inset active:translate-y-0.5'
                 }`}
               >
                 <div className="flex items-center gap-3.5">
-                  <Compass className={`h-4.5 w-4.5 ${pathname.startsWith('/growth') ? 'text-[#7c3aed]' : 'text-gray-400 dark:text-gray-500'}`} />
+                  <Compass className={`h-4.5 w-4.5 ${pathname.startsWith('/growth') ? 'text-[#fb864b]' : 'text-gray-400 dark:text-gray-500'}`} />
                   <span className="lowercase leading-none mt-0.5">Growth</span>
                 </div>
                 <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-300 ${growthExpanded ? 'rotate-180' : ''}`} />

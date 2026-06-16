@@ -178,7 +178,7 @@ export default function StudyPanel({
   }
 
   return (
-    <div className="w-80 border-l border-black/5 dark:border-white/[0.05] bg-[#faf8f5] dark:bg-[#121216] flex flex-col h-full overflow-y-auto shrink-0 select-none animate-fadeIn">
+    <div className="w-80 border-l border-black/5 dark:border-white/[0.05] neo-inset-panel flex flex-col h-full overflow-y-auto shrink-0 select-none animate-fadeIn">
       
       {/* ── Header ── */}
       <div className="p-4 border-b border-black/5 dark:border-white/[0.05] flex items-center justify-between">
@@ -464,7 +464,7 @@ export default function StudyPanel({
           <div className="bg-white dark:bg-[#18181f] rounded-2xl p-4 border border-black/5 dark:border-white/[0.05] shadow-sm space-y-4">
             
             {/* Lofi Radio Panel */}
-            <div className="flex items-center justify-between gap-3 p-2 bg-[#faf8f5] dark:bg-[#121216] rounded-xl border border-black/5 dark:border-white/5">
+            <div className="flex items-center justify-between gap-3 p-2 neo-inset-panel rounded-xl border border-black/5 dark:border-white/5">
               <div className="flex items-center gap-2 min-w-0">
                 <div className={`h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0 ${lofiPlaying ? 'animate-spin-slow' : ''}`}>
                   <Music className="h-4 w-4" />

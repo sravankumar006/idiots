@@ -143,9 +143,10 @@ useEffect(() => {
 
   return (
     <>
-      <header className="glass-panel border-b border-black/5 dark:border-white/5 h-16 flex items-center justify-between px-6 shrink-0 sticky top-0 z-30 select-none">
+      <div className="pt-4 px-4 md:px-6 shrink-0 z-40 bg-transparent relative">
+        <header className="h-16 flex items-center justify-between px-4 md:px-6 select-none neo-panel rounded-3xl border-none w-full shadow-neo">
       
-      {/* Left: Route Title */}
+      {/* Left: Mobile Menu Trigger & Title */}
       <div className="flex items-center gap-3">
         <button
           onClick={() => setUserSheetOpen(true)}
@@ -181,8 +182,8 @@ useEffect(() => {
       {/* Right: Quick Interactions */}
       <div className="flex items-center gap-4">
         {/* Status Indicator */}
-        <div className="hidden lg:flex items-center gap-2 bg-neo-bg shadow-neo-inset py-1.5 px-3 rounded-full text-[10px] font-bold text-[#7c3aed] lowercase">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#7c3aed] animate-pulse dark:shadow-[0_0_6px_rgba(139,92,246,0.5)]" />
+        <div className="hidden lg:flex items-center gap-2 bg-neo-bg shadow-neo-inset py-1.5 px-3 rounded-full text-[10px] font-bold text-[#fb864b] lowercase">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#fb864b] animate-pulse dark:shadow-[0_0_6px_rgba(139,92,246,0.5)]" />
           <span>connected & synced</span>
         </div>
 
@@ -210,7 +211,7 @@ useEffect(() => {
             aria-label="Notifications"
             className={`relative p-2.5 rounded-full transition-all duration-300 cursor-pointer border-none ${
               dropdownOpen 
-                ? 'bg-neo-bg shadow-neo-inset text-[#7c3aed]' 
+                ? 'bg-neo-bg shadow-neo-inset text-[#fb864b]' 
                 : 'bg-neo-bg shadow-neo text-neo-secondary hover:shadow-neo hover:-translate-y-0.5 active:shadow-neo-inset active:translate-y-0.5'
             }`}
             title="Notifications"
@@ -475,8 +476,13 @@ useEffect(() => {
       </div>
 
       </header>
+      </div>
       {userSheetOpen && (
-        <UserActionSheet profile={profile} onClose={() => setUserSheetOpen(false)} />
+        <UserActionSheet 
+          profile={profile} 
+          isOpen={userSheetOpen}
+          onClose={() => setUserSheetOpen(false)} 
+        />
       )}
     </>
   )

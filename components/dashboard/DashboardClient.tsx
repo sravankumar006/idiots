@@ -483,7 +483,7 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
                 {careerProfile.certifications && careerProfile.certifications.length > 0 ? (
                   <div className="flex flex-col gap-1.5">
                     {careerProfile.certifications.map((cert) => (
-                      <div key={cert} className="flex items-center gap-2 bg-[#faf8f5] dark:bg-[#121216] border border-black/5 dark:border-white/5 p-2 rounded-xl">
+                      <div key={cert} className="flex items-center gap-2 neo-inset-panel p-2 rounded-xl">
                         <Award className="h-4 w-4 text-amber-500 shrink-0" />
                         <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">{cert}</span>
                       </div>
@@ -533,19 +533,19 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
             </h3>
             
             <div className="grid grid-cols-2 gap-4 pt-2">
-              <div className="bg-[#faf8f5] dark:bg-[#121216] border border-black/5 dark:border-white/5 p-3 rounded-2xl">
+              <div className="neo-inset-panel p-3 rounded-2xl">
                 <span className="text-[9px] text-gray-400 uppercase tracking-wider block">completed hours</span>
                 <span className="text-xl font-bold text-gray-900 dark:text-white">{focusStats.totalHours || studyHours}h</span>
               </div>
-              <div className="bg-[#faf8f5] dark:bg-[#121216] border border-black/5 dark:border-white/5 p-3 rounded-2xl">
+              <div className="neo-inset-panel p-3 rounded-2xl">
                 <span className="text-[9px] text-gray-400 uppercase tracking-wider block">pomodoros done</span>
                 <span className="text-xl font-bold text-gray-900 dark:text-white">{studyStats.completed_pomodoros}</span>
               </div>
-              <div className="bg-[#faf8f5] dark:bg-[#121216] border border-black/5 dark:border-white/5 p-3 rounded-2xl">
+              <div className="neo-inset-panel p-3 rounded-2xl">
                 <span className="text-[9px] text-gray-400 uppercase tracking-wider block">weekly focus</span>
                 <span className="text-xl font-bold text-amber-500">{Math.round(focusStats.weeklyMinutes / 60)}h {focusStats.weeklyMinutes % 60}m</span>
               </div>
-              <div className="bg-[#faf8f5] dark:bg-[#121216] border border-black/5 dark:border-white/5 p-3 rounded-2xl">
+              <div className="neo-inset-panel p-3 rounded-2xl">
                 <span className="text-[9px] text-gray-400 uppercase tracking-wider block">monthly focus</span>
                 <span className="text-xl font-bold text-cyan-400">{Math.round(focusStats.monthlyMinutes / 60)}h {focusStats.monthlyMinutes % 60}m</span>
               </div>
@@ -563,7 +563,7 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
                 <span className="text-[10px] text-gray-400 uppercase tracking-wider block">focus goals breakdown</span>
                 <div className="flex flex-wrap gap-1.5">
                   {Object.entries(focusStats.goalBreakdown).map(([goal, count]) => (
-                    <span key={goal} className="text-[9px] font-bold bg-[#faf8f5] dark:bg-[#121216] border border-black/5 dark:border-white/5 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full lowercase">
+                    <span key={goal} className="text-[9px] font-bold neo-inset-panel text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full lowercase">
                       {goal}: {count}
                     </span>
                   ))}
@@ -594,7 +594,7 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
                 <span className="text-[10px] text-gray-400 uppercase tracking-wider block">recent accomplishments</span>
                 <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1 scrollbar-thin">
                   {focusSessions.filter(s => s.accomplishments).slice(0, 3).map((s) => (
-                    <div key={s.id} className="bg-[#faf8f5] dark:bg-[#121216] border border-black/5 dark:border-white/5 p-2.5 rounded-xl text-[11px] leading-relaxed">
+                    <div key={s.id} className="neo-inset-panel p-2.5 rounded-xl text-[11px] leading-relaxed">
                       <div className="flex justify-between items-center mb-0.5">
                         <span className="font-bold text-gray-800 dark:text-gray-200 lowercase">{s.goal}</span>
                         <span className="text-[9px] text-amber-500 font-bold">{s.actual_minutes}m</span>
@@ -626,7 +626,7 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
                 <p className="text-xs text-gray-400 font-medium text-center py-2">no projects established yet.</p>
               ) : (
                 projects.slice(0, 2).map((proj) => (
-                  <Link key={proj.id} href={`/growth/creative/${proj.id}`} className="block bg-[#faf8f5] dark:bg-[#121216] border border-black/5 dark:border-white/5 p-3 rounded-2xl hover:border-violet-500/30 transition-all group">
+                  <Link key={proj.id} href={`/growth/creative/${proj.id}`} className="block neo-inset-panel p-3 rounded-2xl hover:border-violet-500/30 transition-all group">
                     <div className="flex items-center justify-between text-xs mb-1.5">
                       <span className="font-bold text-gray-800 dark:text-gray-200 group-hover:text-violet-500 transition-colors lowercase">{proj.name}</span>
                       <span className="text-[9px] text-gray-400 font-semibold">{proj.progress}%</span>

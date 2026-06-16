@@ -18,11 +18,11 @@ import { useDashboardData } from '@/hooks/useDashboardData'
 
 // presets
 const WALLPAPERS = [
-  { id: 'starry-night', name: 'starry night 🌌', css: 'bg-gradient-to-b from-slate-50 via-sky-50 to-white dark:from-[#0b0c15] dark:via-[#111324] dark:to-[#07080f]' },
-  { id: 'cozy-study', name: 'warm study room 🕯️', css: 'bg-gradient-to-b from-orange-50 via-amber-50 to-white dark:from-[#1c1815] dark:via-[#241e1a] dark:to-[#141210]' },
-  { id: 'rainy-window', name: 'rainy window 🌧️', css: 'bg-gradient-to-b from-slate-100 via-blue-50 to-white dark:from-[#0f121d] dark:via-[#181d2f] dark:to-[#0c0e17]' },
-  { id: 'forest-cabin', name: 'forest cabin 🌲', css: 'bg-gradient-to-b from-emerald-50 via-teal-50 to-white dark:from-[#0a1410] dark:via-[#10221a] dark:to-[#060c09]' },
-  { id: 'sunset-vibe', name: 'neon sunset 🌇', css: 'bg-gradient-to-b from-rose-50 via-orange-50 to-white dark:from-[#1b0d21] dark:via-[#2f132e] dark:to-[#120716]' },
+  { id: 'starry-night', name: 'starry night 🌌', css: '' },
+  { id: 'cozy-study', name: 'warm study room 🕯️', css: '' },
+  { id: 'rainy-window', name: 'rainy window 🌧️', css: '' },
+  { id: 'forest-cabin', name: 'forest cabin 🌲', css: '' },
+  { id: 'sunset-vibe', name: 'neon sunset 🌇', css: '' },
 ]
 
 const THEMES: Record<string, { label: string; glow: string; text: string; bg: string; button: string }> = {
@@ -387,7 +387,7 @@ export default function SpacePage({ params }: SpacePageProps) {
         )}
         
         {/* Navigation / space information header */}
-        <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/60 dark:bg-white/5 border border-black/5 dark:border-white/5 shadow-sm dark:shadow-none p-4 rounded-3xl backdrop-blur-xl">
+        <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 glass-panel border-none p-4 rounded-3xl">
           <div className="flex items-center gap-3">
             <div className={`h-11 w-11 rounded-full bg-gradient-to-tr from-violet-500 to-rose-400 flex items-center justify-center shadow-lg font-bold text-black text-sm`}>
               {targetProfile?.username.slice(0, 2).toUpperCase()}
@@ -426,7 +426,7 @@ export default function SpacePage({ params }: SpacePageProps) {
             {!isReadOnly && (
               <button
                 onClick={openConfigModal}
-                className="py-2 px-3.5 rounded-xl bg-violet-500/20 border border-violet-500/30 text-[11px] font-bold text-violet-300 hover:bg-violet-500/30 transition-all flex items-center gap-1.5 cursor-pointer"
+                className="py-2 px-3.5 rounded-xl bg-neo-bg shadow-neo border-none text-[11px] font-bold text-[#fb864b] hover:shadow-neo hover:-translate-y-0.5 active:shadow-neo-inset active:translate-y-0.5 transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <Settings2 className="h-3.5 w-3.5" />
                 <span>Room Settings</span>
@@ -442,7 +442,7 @@ export default function SpacePage({ params }: SpacePageProps) {
           <div className="lg:col-span-2 space-y-6">
             
             {/* Ambient sound deck */}
-            <Card className="p-6 relative overflow-hidden backdrop-blur-md bg-white/60 dark:bg-black/25 border-black/5 dark:border-white/5 shadow-sm dark:shadow-none">
+            <Card className="p-6 relative overflow-hidden glass-panel border-none">
               <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
                 <Volume2 className="h-4 w-4 text-violet-400" />
                 room ambience generator
@@ -458,12 +458,12 @@ export default function SpacePage({ params }: SpacePageProps) {
                       key={sound.id}
                       disabled={isReadOnly}
                       onClick={() => updateSpaceData({ ambient_sound: sound.id })}
-                      className={`flex items-center gap-3 p-3 rounded-2xl border transition-all text-xs font-bold ${
+                      className={`flex items-center gap-3 p-3 rounded-2xl border-none transition-all text-xs font-bold ${
                         isReadOnly ? 'cursor-default' : 'cursor-pointer'
                       } ${
                         isActive
-                          ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 shadow-md'
-                          : 'bg-white/3 border-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-white hover:bg-white/8'
+                          ? 'bg-neo-bg shadow-neo-inset text-[#fb864b]'
+                          : 'bg-neo-bg shadow-neo text-neo-secondary hover:-translate-y-0.5 active:shadow-neo-inset active:translate-y-0.5'
                       }`}
                     >
                       <IconObj className={`h-4.5 w-4.5 shrink-0 ${isActive && ambientPlaying ? 'animate-pulse text-violet-400' : ''}`} />
@@ -513,7 +513,7 @@ export default function SpacePage({ params }: SpacePageProps) {
                 // 1. Mood Widget
                 if (widgetKey === 'mood') {
                   return (
-                    <Card key="mood" className="p-6 relative overflow-hidden backdrop-blur-md bg-white/60 dark:bg-black/25 border-black/5 dark:border-white/5 shadow-sm dark:shadow-none group">
+                    <Card key="mood" className="p-6 relative overflow-hidden glass-panel border-none group">
                       {!isReadOnly && (
                         <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => moveWidget(idx, 'up')} className="p-1 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-white cursor-pointer"><ChevronUp className="h-3.5 w-3.5" /></button>
@@ -539,19 +539,19 @@ export default function SpacePage({ params }: SpacePageProps) {
                           </div>
 
                           <div className="flex gap-4">
-                            <div className="bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-3 rounded-2xl flex-1 text-center">
-                              <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase block font-bold">mood</span>
+                            <div className="neo-inset-panel border-none p-3 rounded-2xl flex-1 text-center">
+                              <span className="text-[9px] text-neo-secondary uppercase block font-bold">mood</span>
                               <span className="text-lg font-black text-rose-400">
                                 {latestMood ? (latestMood.mood_value !== undefined ? latestMood.mood_value : latestMood.mood_rating * 10) : 50}/100
                               </span>
                             </div>
-                            <div className="bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-3 rounded-2xl flex-1 text-center">
-                              <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase block font-bold">energy</span>
+                            <div className="neo-inset-panel border-none p-3 rounded-2xl flex-1 text-center">
+                              <span className="text-[9px] text-neo-secondary uppercase block font-bold">energy</span>
                               <span className="text-lg font-black text-amber-400">{latestMood?.energy_level || 5}/10</span>
                             </div>
-                            <div className="bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-3 rounded-2xl flex-1 text-center">
-                              <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase block font-bold">focus</span>
-                              <span className="text-lg font-black text-violet-400">{latestMood?.focus_level || 5}/10</span>
+                            <div className="neo-inset-panel border-none p-3 rounded-2xl flex-1 text-center">
+                              <span className="text-[9px] text-neo-secondary uppercase block font-bold">focus</span>
+                              <span className="text-lg font-black text-[#fb864b]">{latestMood?.focus_level || 5}/10</span>
                             </div>
                           </div>
 
@@ -624,7 +624,7 @@ export default function SpacePage({ params }: SpacePageProps) {
                 // 2. Favorite Quote
                 if (widgetKey === 'quote') {
                   return (
-                    <Card key="quote" className="p-6 relative overflow-hidden backdrop-blur-md bg-white/60 dark:bg-black/25 border-black/5 dark:border-white/5 shadow-sm dark:shadow-none group">
+                    <Card key="quote" className="p-6 relative overflow-hidden glass-panel border-none group">
                       {!isReadOnly && (
                         <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => moveWidget(idx, 'up')} className="p-1 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-white cursor-pointer"><ChevronUp className="h-3.5 w-3.5" /></button>
@@ -649,7 +649,7 @@ export default function SpacePage({ params }: SpacePageProps) {
                 // 3. Music player
                 if (widgetKey === 'music') {
                   return (
-                    <Card key="music" className="p-6 relative overflow-hidden backdrop-blur-md bg-white/60 dark:bg-black/25 border-black/5 dark:border-white/5 shadow-sm dark:shadow-none group">
+                    <Card key="music" className="p-6 relative overflow-hidden glass-panel border-none group">
                       {!isReadOnly && (
                         <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => moveWidget(idx, 'up')} className="p-1 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-white cursor-pointer"><ChevronUp className="h-3.5 w-3.5" /></button>
@@ -663,7 +663,7 @@ export default function SpacePage({ params }: SpacePageProps) {
                       </h3>
 
                       {spaceData.song_url ? (
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-4 rounded-2xl">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 neo-inset-panel border-none p-4 rounded-2xl">
                           <div className="flex items-center gap-3">
                             <div className={`h-11 w-11 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg font-bold text-black ${songPlaying ? 'animate-spin-slow' : ''}`}>
                               <Music className="h-5 w-5" />
@@ -708,7 +708,7 @@ export default function SpacePage({ params }: SpacePageProps) {
                 // 4. Personal Goals
                 if (widgetKey === 'goals') {
                   return (
-                    <Card key="goals" className="p-6 relative overflow-hidden backdrop-blur-md bg-white/60 dark:bg-black/25 border-black/5 dark:border-white/5 shadow-sm dark:shadow-none group">
+                    <Card key="goals" className="p-6 relative overflow-hidden glass-panel border-none group">
                       {!isReadOnly && (
                         <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => moveWidget(idx, 'up')} className="p-1 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-white cursor-pointer"><ChevronUp className="h-3.5 w-3.5" /></button>
@@ -726,7 +726,7 @@ export default function SpacePage({ params }: SpacePageProps) {
                           <div className="space-y-2.5">
                             {spaceData.coding_goals && spaceData.coding_goals.length > 0 ? (
                               spaceData.coding_goals.map((g, i) => (
-                                <div key={i} className="flex items-center gap-2.5 bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-2.5 rounded-xl">
+                                <div key={i} className="flex items-center gap-2.5 neo-inset-panel border-none p-2.5 rounded-xl">
                                   <CheckCircle2 className="h-4 w-4 text-sky-400 shrink-0" />
                                   <span className="text-gray-800 dark:text-gray-200">{g}</span>
                                 </div>
@@ -746,7 +746,7 @@ export default function SpacePage({ params }: SpacePageProps) {
                           <div className="space-y-2.5">
                             {spaceData.study_goals && spaceData.study_goals.length > 0 ? (
                               spaceData.study_goals.map((g, i) => (
-                                <div key={i} className="flex items-center gap-2.5 bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-2.5 rounded-xl">
+                                <div key={i} className="flex items-center gap-2.5 neo-inset-panel border-none p-2.5 rounded-xl">
                                   <CheckCircle2 className="h-4 w-4 text-violet-400 shrink-0" />
                                   <span className="text-gray-800 dark:text-gray-200">{g}</span>
                                 </div>
@@ -764,7 +764,7 @@ export default function SpacePage({ params }: SpacePageProps) {
                 // 5. Study Streaks
                 if (widgetKey === 'streak' && studyStats) {
                   return (
-                    <Card key="streak" className="p-6 relative overflow-hidden backdrop-blur-md bg-white/60 dark:bg-black/25 border-black/5 dark:border-white/5 shadow-sm dark:shadow-none group">
+                    <Card key="streak" className="p-6 relative overflow-hidden glass-panel border-none group">
                       {!isReadOnly && (
                         <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => moveWidget(idx, 'up')} className="p-1 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-white cursor-pointer"><ChevronUp className="h-3.5 w-3.5" /></button>
@@ -778,12 +778,12 @@ export default function SpacePage({ params }: SpacePageProps) {
                       </h3>
 
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-3 rounded-2xl text-center">
-                          <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase block font-bold">active streak</span>
+                        <div className="neo-inset-panel border-none p-3 rounded-2xl text-center">
+                          <span className="text-[9px] text-neo-secondary uppercase block font-bold">active streak</span>
                           <span className="text-xl font-black text-orange-400">{studyStats.current_streak} days 🔥</span>
                         </div>
-                        <div className="bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-3 rounded-2xl text-center">
-                          <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase block font-bold">study total</span>
+                        <div className="neo-inset-panel border-none p-3 rounded-2xl text-center">
+                          <span className="text-[9px] text-neo-secondary uppercase block font-bold">study total</span>
                           <span className="text-xl font-black text-emerald-400">{(studyStats.total_study_minutes / 60).toFixed(1)} hrs</span>
                         </div>
                       </div>
@@ -794,7 +794,7 @@ export default function SpacePage({ params }: SpacePageProps) {
                 // 6. Coding contributions Solved
                 if (widgetKey === 'contributions' && codingStats) {
                   return (
-                    <Card key="contributions" className="p-6 relative overflow-hidden backdrop-blur-md bg-white/60 dark:bg-black/25 border-black/5 dark:border-white/5 shadow-sm dark:shadow-none group">
+                    <Card key="contributions" className="p-6 relative overflow-hidden glass-panel border-none group">
                       {!isReadOnly && (
                         <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => moveWidget(idx, 'up')} className="p-1 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-white cursor-pointer"><ChevronUp className="h-3.5 w-3.5" /></button>
@@ -808,12 +808,12 @@ export default function SpacePage({ params }: SpacePageProps) {
                       </h3>
 
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-3 rounded-2xl text-center">
-                          <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase block font-bold">DSA Solved</span>
-                          <span className="text-xl font-black text-violet-400">{totalSolved}</span>
+                        <div className="neo-inset-panel border-none p-3 rounded-2xl text-center">
+                          <span className="text-[9px] text-neo-secondary uppercase block font-bold">DSA Solved</span>
+                          <span className="text-xl font-black text-[#fb864b]">{totalSolved}</span>
                         </div>
-                        <div className="bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-3 rounded-2xl text-center">
-                          <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase block font-bold">Commits</span>
+                        <div className="neo-inset-panel border-none p-3 rounded-2xl text-center">
+                          <span className="text-[9px] text-neo-secondary uppercase block font-bold">Commits</span>
                           <span className="text-xl font-black text-cyan-400">{codingStats.github_contributions}</span>
                         </div>
                       </div>
@@ -831,7 +831,7 @@ export default function SpacePage({ params }: SpacePageProps) {
           <div className="space-y-6">
             
             {/* Presence user detail card */}
-            <Card className="p-6 backdrop-blur-md bg-white/60 dark:bg-black/25 border-black/5 dark:border-white/5 shadow-sm dark:shadow-none text-center flex flex-col items-center">
+            <Card className="p-6 glass-panel border-none text-center flex flex-col items-center">
               <div className="relative mb-3.5">
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-tr from-violet-500/20 to-rose-500/20 blur-md opacity-70" />
                 <div className={`h-16 w-16 rounded-2xl bg-gradient-to-tr from-violet-500 to-rose-400 flex items-center justify-center text-xl font-black text-black border border-white/10 relative z-10 shadow-lg`}>
@@ -866,7 +866,7 @@ export default function SpacePage({ params }: SpacePageProps) {
             </Card>
 
             {/* Pinned moments scrapbook preview */}
-            <Card className="p-6 backdrop-blur-md bg-white/60 dark:bg-black/25 border-black/5 dark:border-white/5 shadow-sm dark:shadow-none space-y-4">
+            <Card className="p-6 glass-panel border-none space-y-4">
               <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                 <Award className="h-4 w-4 text-violet-400" />
                 recent vault entries
@@ -875,8 +875,8 @@ export default function SpacePage({ params }: SpacePageProps) {
               <div className="space-y-3">
                 {vaultItems && vaultItems.length > 0 ? (
                   vaultItems.slice(0, 3).map((item) => (
-                    <div key={item.id} className="bg-white/80 dark:bg-white/5 border border-black/5 dark:border-white/5 p-3 rounded-2xl text-xs space-y-1">
-                      <span className="text-[9px] text-gray-500 font-bold block">
+                    <div key={item.id} className="neo-inset-panel border-none p-3 rounded-2xl text-xs space-y-1">
+                      <span className="text-[9px] text-neo-secondary font-bold block">
                         {new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </span>
                       <p className="font-bold text-gray-900 dark:text-white lowercase">{item.title}</p>
@@ -905,10 +905,10 @@ export default function SpacePage({ params }: SpacePageProps) {
         {/* Modal: Customize Room Settings */}
         {showConfig && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadeIn">
-            <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setShowConfig(false)} />
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowConfig(false)} />
             
-            <div className="relative w-full max-w-lg bg-white dark:bg-white dark:bg-[#141520] border border-black/10 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 animate-scaleIn text-xs font-bold max-h-[90vh] overflow-y-auto">
-              <h3 className="text-sm font-extrabold text-gray-900 dark:text-white lowercase border-b border-white/5 pb-3">
+            <div className="relative w-full max-w-lg glass-panel border-none rounded-3xl p-6 sm:p-8 shadow-2xl z-10 animate-scaleIn text-xs font-bold max-h-[90vh] overflow-y-auto">
+              <h3 className="text-sm font-extrabold text-gray-900 dark:text-white lowercase border-b border-black/5 pb-3">
                 configure digital room settings
               </h3>
 
