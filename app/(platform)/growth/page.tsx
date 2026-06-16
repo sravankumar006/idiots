@@ -1,11 +1,19 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
-import Link from 'next/link'
+import React, { useState, useEffect } from 'react'
 import {
-  Zap, Play, Clock, FolderHeart, Sparkles, Brain, Code, Award, Flame, 
-  ChevronRight, CheckCircle2, Circle, AlertCircle, ArrowRight, BookOpen
+  Clock,
+  FolderHeart,
+  ArrowRight,
+  Flame,
+  Zap,
+  Award,
+  Sparkles,
+  ChevronRight,
+  Code,
+  GraduationCap
 } from 'lucide-react'
+import Link from 'next/link'
 import PageContainer from '@/components/layout/PageContainer'
 import SectionHeader from '@/components/layout/SectionHeader'
 import { Card } from '@/components/ui/Card'
@@ -16,80 +24,41 @@ import { UserProfile } from '@/types'
 
 export default function GrowthPage() {
   const supabase = createClient()
-  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [activeProfile, setActiveProfile] = useState<UserProfile | null>(null)
 
-  // Get active session profile
   useEffect(() => {
-    async function loadProfile() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
-          if (prof) setProfile(prof as UserProfile)
+    const getSession = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
+        if (prof) {
+          setActiveProfile(prof as UserProfile)
         }
-      } catch (err) {
-        console.error("Failed to load user profile in growth:", err)
       }
     }
-    loadProfile()
+    getSession()
   }, [supabase])
 
-  // Fetch dashboard data & projects
-  const { studyStats, careerProfile, loading: dashLoading, roadmapItems: dbRoadmapItems = [], focusStats } = useDashboardData(profile)
-  const { projects, loading: projLoading } = useProjectsData(profile)
+  const {
+    loading: dashLoading,
+    focusStats,
+    studyStats,
+    focusSessions = []
+  } = useDashboardData(activeProfile)
 
-  const loading = dashLoading || projLoading
+  const {
+    projects,
+    loading: projectsLoading
+  } = useProjectsData(activeProfile)
 
-  // Format roadmap items from database
-  const roadmapItems = useMemo(() => {
-    return dbRoadmapItems.map((item) => ({
-      id: item.id,
-      label: item.title,
-      status: (item.completed ? 'completed' : 'todo') as 'completed' | 'progress' | 'todo'
-    }))
-  }, [dbRoadmapItems])
+  const isLoading = dashLoading || projectsLoading || !activeProfile
 
-  // Calculate roadmap completion percentage
-  const roadmapProgress = useMemo(() => {
-    if (roadmapItems.length === 0) return 0
-    const completed = roadmapItems.filter(item => item.status === 'completed').length
-    return Math.min(100, Math.round((completed / roadmapItems.length) * 100))
-  }, [roadmapItems])
-
-  // AI Study recommendation engine by Rocky
-  const rockyInsight = useMemo(() => {
-    const hours = studyStats?.total_study_minutes ? Math.floor(studyStats.total_study_minutes / 60) : 0
-    const streak = studyStats?.current_streak || 1
-
-    if (hours === 0) {
-      return {
-        tip: "Initialize your first focus flow session! Even 15 minutes of uninterrupted compiling boosts momentum.",
-        action: "Launch a 25-minute Pomodoro",
-        url: "/growth/focus"
-      }
-    }
-
-    if (streak >= 3) {
-      return {
-        tip: `You are on a ${streak}-day study streak! Rocky recommends reviewing your collaborative project milestones today to maintain synergy.`,
-        action: "Check project tasks",
-        url: "/growth/creative"
-      }
-    }
-
-    return {
-      tip: "Your cognitive bandwidth peaks after 45 minutes of focus. Try working in a 45/15 cycle with low-fi ambient sounds today.",
-      action: "Start 45m focus session",
-      url: "/growth/focus"
-    }
-  }, [studyStats])
-
-  if (loading) {
+  if (isLoading) {
     return (
       <PageContainer>
         <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
-          <div className="h-8 w-8 rounded-full border-4 border-violet-500/20 border-t-violet-500 animate-spin" />
-          <p className="text-xs font-semibold text-gray-500 lowercase">syncing growth coordinates...</p>
+          <div className="h-8 w-8 rounded-full border-4 border-amber-500/20 border-t-amber-500 animate-spin" />
+          <p className="text-xs font-semibold text-gray-500 lowercase">establishing secure growth node...</p>
         </div>
       </PageContainer>
     )
@@ -97,208 +66,167 @@ export default function GrowthPage() {
 
   return (
     <PageContainer>
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <SectionHeader 
-          title="growth dashboard" 
-          description="Track your cognitive focus streaks, active creative room projects, and roadmap milestones."
-        />
+      <SectionHeader
+        title="growth space"
+        description="synchronize your study workflow and manage workspace nodes"
+      />
 
-        {/* Quick Streaks */}
-        <div className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/25 rounded-2xl">
-          <Flame className="h-4.5 w-4.5 text-orange-400 fill-orange-500/25 animate-pulse" />
-          <span className="text-xs font-bold text-orange-300">
-            {(focusStats?.streak !== undefined ? focusStats.streak : studyStats?.current_streak) || 1} Day Streak
-          </span>
-        </div>
-      </div>
-
-      {/* Grid: 3 Column Dashboard Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
-        
-        {/* Left column (Focus Console Widget) & AI Insights */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+        {/* ========================================================
+            1. ZEN FOCUS DECK
+            ======================================================== */}
+        <Card glowColor="purple" className="flex flex-col justify-between space-y-6 relative overflow-hidden group min-h-[420px]">
+          {/* Accent ambient glow */}
+          <div className="absolute -top-12 -right-12 h-36 w-36 rounded-full bg-violet-500/10 dark:bg-violet-500/5 blur-3xl group-hover:scale-125 transition-transform duration-500 pointer-events-none" />
           
-          {/* Focus Console Preview */}
-          <Card className="p-6 relative bg-gradient-to-br from-violet-500/5 via-violet-500/0 to-transparent border-white/5 overflow-hidden">
-            <div className="absolute top-[-100px] left-[-100px] h-[250px] w-[250px] rounded-full bg-violet-500/5 blur-[80px] pointer-events-none" />
-            
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative z-10">
-              <div className="space-y-1">
-                <span className="text-[9px] font-black text-violet-400 uppercase tracking-widest block">zen focus launcher</span>
-                <h3 className="text-sm font-extrabold text-white lowercase">Focus Console</h3>
-              </div>
-              
-              <Link href="/growth/focus">
-                <button className="glass-button py-2 px-4 rounded-xl text-[10px] font-extrabold uppercase flex items-center gap-1.5 cursor-pointer">
-                  <Play className="h-3.5 w-3.5 fill-current" />
-                  <span>Enter Focus Deck</span>
-                </button>
-              </Link>
-            </div>
-
-            {/* Focus Stats Display */}
-            <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-white/5 relative z-10">
-              <div className="space-y-1">
-                <span className="text-[10px] text-gray-500 font-bold lowercase block">focus hours</span>
-                <span className="text-xl font-extrabold text-white">
-                  {focusStats?.totalHours !== undefined ? focusStats.totalHours : (studyStats?.total_study_minutes ? Math.round((studyStats.total_study_minutes / 60) * 10) / 10 : 0)}h
-                </span>
-              </div>
-              
-              <div className="space-y-1">
-                <span className="text-[10px] text-gray-500 font-bold lowercase block">sessions done</span>
-                <span className="text-xl font-extrabold text-white">
-                  {focusStats?.totalSessions !== undefined ? focusStats.totalSessions : (studyStats?.completed_pomodoros || 0)}
-                </span>
-              </div>
-
-              <div className="space-y-1">
-                <span className="text-[10px] text-gray-500 font-bold lowercase block">mind help calls</span>
-                <span className="text-xl font-extrabold text-white">
-                  {studyStats?.ai_sessions_count || 0}
-                </span>
-              </div>
-            </div>
-          </Card>
-
-          {/* AI companion study insights */}
-          <Card className="p-6 relative border-amber-500/10 bg-amber-500/2 overflow-hidden">
-            <div className="absolute top-0 right-0 h-24 w-24 rounded-full bg-amber-500/5 blur-xl pointer-events-none" />
-            <div className="flex items-start gap-4">
-              <div className="h-10 w-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-400 shrink-0">
-                <Sparkles className="h-5 w-5 animate-pulse" />
-              </div>
-              <div className="space-y-1 flex-1">
-                <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest block">companion insight from rocky</span>
-                <h4 className="text-xs font-extrabold text-white lowercase">Recommended action</h4>
-                <p className="text-xs text-gray-400 leading-relaxed font-semibold">
-                  "{rockyInsight.tip}"
-                </p>
-                <div className="pt-2">
-                  <Link href={rockyInsight.url} className="text-[10px] text-amber-400 font-bold hover:underline flex items-center gap-1">
-                    <span>{rockyInsight.action}</span>
-                    <ArrowRight className="h-3 w-3" />
-                  </Link>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-violet-500/10 flex items-center justify-center text-[#7c3aed]">
+                  <Clock className="h-5 w-5 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-gray-900 dark:text-white lowercase">
+                    zen focus
+                  </h3>
+                  <span className="text-[10px] text-neo-muted font-bold uppercase tracking-wider block mt-0.5">
+                    deep work environment
+                  </span>
                 </div>
               </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Right column (Learning Roadmap Progress) */}
-        <div className="space-y-6">
-          <Card className="p-6 space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-emerald-400" />
-                learning roadmap
-              </h3>
-              <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20 font-black">
-                {roadmapProgress}%
-              </span>
+              
+              {/* Daily Streak node */}
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-[10px] font-black text-rose-500">
+                <Flame className="h-3.5 w-3.5 fill-rose-500 animate-bounce" />
+                <span>{studyStats?.current_streak || 0} days streak</span>
+              </div>
             </div>
 
-            {/* Progress Bar */}
-            <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden">
-              <div 
-                className="bg-emerald-400 h-full rounded-full transition-all duration-500" 
-                style={{ width: `${roadmapProgress}%` }}
-              />
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
+              Enter a high-bandwidth focus deck to write code, study topics, or read research materials. Includes ambient noise environments, customizable durations, and strict blockades to restrict crew notifications during deep flow state cycles.
+            </p>
+
+            {/* Focus Metrics Panel */}
+            <div className="grid grid-cols-3 gap-3 pt-3">
+              <div className="bg-neo-bg shadow-neo-inset-shallow p-3 rounded-2xl text-center">
+                <span className="text-[9px] text-neo-muted font-extrabold uppercase tracking-wider block mb-1">Total Hours</span>
+                <span className="text-sm font-bold text-gray-800 dark:text-white">
+                  {focusStats?.totalHours || 0}h
+                </span>
+              </div>
+              <div className="bg-neo-bg shadow-neo-inset-shallow p-3 rounded-2xl text-center">
+                <span className="text-[9px] text-neo-muted font-extrabold uppercase tracking-wider block mb-1">Sessions Done</span>
+                <span className="text-sm font-bold text-gray-800 dark:text-white">
+                  {focusStats?.totalSessions || 0}
+                </span>
+              </div>
+              <div className="bg-neo-bg shadow-neo-inset-shallow p-3 rounded-2xl text-center">
+                <span className="text-[9px] text-neo-muted font-extrabold uppercase tracking-wider block mb-1">Completed Mins</span>
+                <span className="text-sm font-bold text-gray-800 dark:text-white">
+                  {Math.round((focusStats?.weeklyMinutes || 0) + (focusStats?.monthlyMinutes || 0))}m
+                </span>
+              </div>
             </div>
 
-            {/* Checklist Items */}
-            <div className="space-y-3 pt-2 text-xs">
-              {roadmapItems.length > 0 ? (
-                roadmapItems.map((item) => (
-                  <div key={item.id} className="flex items-start gap-2.5 font-semibold text-gray-400">
-                    {item.status === 'completed' ? (
-                      <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-                    ) : item.status === 'progress' ? (
-                      <Clock className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-                    ) : (
-                      <Circle className="h-4 w-4 text-gray-600 shrink-0 mt-0.5" />
-                    )}
-                    <span className={`leading-relaxed ${item.status === 'completed' ? 'line-through text-gray-600' : 'text-gray-300'}`}>
-                      {item.label}
-                    </span>
-                  </div>
-                ))
+            {/* Focus History Preview */}
+            {focusSessions.length > 0 && (
+              <div className="pt-2 space-y-2">
+                <span className="text-[9px] text-neo-muted font-extrabold uppercase tracking-wider block">Recent Accomplishments</span>
+                <div className="space-y-1.5 max-h-[100px] overflow-y-auto pr-1 scrollbar-thin">
+                  {focusSessions.filter(s => s.accomplishments).slice(0, 2).map((s) => (
+                    <div key={s.id} className="bg-neo-bg shadow-neo-shallow px-3 py-2 rounded-xl text-[10px] flex justify-between items-center font-semibold text-gray-600 dark:text-gray-400">
+                      <span className="truncate flex-1 pr-4 lowercase">{s.goal}: {s.accomplishments}</span>
+                      <span className="text-violet-500 font-bold shrink-0">{s.actual_minutes}m</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="pt-6">
+            <Link href="/growth/focus" className="block w-full">
+              <button className="w-full py-3.5 bg-white/20 dark:bg-white/[0.03] backdrop-blur-md border border-white/40 dark:border-white/10 text-violet-600 dark:text-violet-400 rounded-2xl text-xs font-black lowercase tracking-wide cursor-pointer transition-all duration-300 transform hover:scale-[1.01] hover:bg-white/30 dark:hover:bg-white/[0.06] hover:border-white/60 dark:hover:border-white/20 active:translate-y-0.5 flex items-center justify-center gap-1.5 shadow-sm">
+                <span>Start Focus Session</span>
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </Link>
+          </div>
+        </Card>
+
+        {/* ========================================================
+            2. CREATIVE ROOMS
+            ======================================================== */}
+        <Card glowColor="cyan" className="flex flex-col justify-between space-y-6 relative overflow-hidden group min-h-[420px]">
+          {/* Accent ambient glow */}
+          <div className="absolute -top-12 -right-12 h-36 w-36 rounded-full bg-cyan-500/10 dark:bg-cyan-500/5 blur-3xl group-hover:scale-125 transition-transform duration-500 pointer-events-none" />
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-500">
+                  <FolderHeart className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-gray-900 dark:text-white lowercase">
+                    creative rooms
+                  </h3>
+                  <span className="text-[10px] text-neo-muted font-bold uppercase tracking-wider block mt-0.5">
+                    collaborative workspaces
+                  </span>
+                </div>
+              </div>
+
+              {/* Counter tag */}
+              <div className="px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-[10px] font-black text-cyan-500">
+                <span>{projects.length} Rooms active</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
+              Launch shared development boards where your crew can coordinate codebase targets, write markdown documentation, review roadmap checklists, and link live project repositories directly to GitHub integrations.
+            </p>
+
+            {/* Projects list preview */}
+            <div className="pt-2 space-y-2">
+              <span className="text-[9px] text-neo-muted font-extrabold uppercase tracking-wider block">Active Rooms</span>
+              {projects.length === 0 ? (
+                <div className="text-center py-4 border border-dashed border-black/10 dark:border-white/10 rounded-2xl bg-black/[0.01] dark:bg-white/[0.01]">
+                  <span className="text-[10px] text-gray-400 font-bold lowercase">No active workspaces established</span>
+                </div>
               ) : (
-                <div className="text-center py-6 text-gray-500 font-bold border border-dashed border-white/10 rounded-2xl">
-                  No roadmap goals set. Update it in Dashboard settings!
+                <div className="space-y-2 max-h-[145px] overflow-y-auto pr-1 scrollbar-thin">
+                  {projects.slice(0, 2).map((project) => (
+                    <Link key={project.id} href={`/growth/creative/${project.id}`} className="block">
+                      <div className="bg-neo-bg shadow-neo-shallow hover:shadow-neo px-3 py-2.5 rounded-xl border border-transparent hover:border-cyan-500/15 transition-all text-xs font-semibold text-gray-700 dark:text-gray-300">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-extrabold text-[11px] text-gray-900 dark:text-white lowercase group-hover:text-cyan-500 transition-colors">
+                            {project.name}
+                          </span>
+                          <span className="text-[9px] text-cyan-500 font-black">{project.progress}% completed</span>
+                        </div>
+                        {/* Progress track */}
+                        <div className="w-full bg-black/5 dark:bg-white/5 h-1.5 rounded-full overflow-hidden">
+                          <div className="bg-gradient-to-r from-cyan-400 to-indigo-500 h-full rounded-full" style={{ width: `${project.progress}%` }} />
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
               )}
             </div>
-          </Card>
-        </div>
+          </div>
+
+          <div className="pt-6">
+            <Link href="/growth/creative" className="block w-full">
+              <button className="w-full py-3.5 bg-white/20 dark:bg-white/[0.03] backdrop-blur-md border border-white/40 dark:border-white/10 text-cyan-600 dark:text-cyan-400 rounded-2xl text-xs font-black lowercase tracking-wide cursor-pointer transition-all duration-300 transform hover:scale-[1.01] hover:bg-white/30 dark:hover:bg-white/[0.06] hover:border-white/60 dark:hover:border-white/20 active:translate-y-0.5 flex items-center justify-center gap-1.5 shadow-sm">
+                <span>Enter Creative Rooms</span>
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </Link>
+          </div>
+        </Card>
       </div>
-
-      {/* Collaborative Creative Rooms Overview (Full Width Bottom Grid) */}
-      <div className="mt-10 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FolderHeart className="h-4.5 w-4.5 text-rose-400" />
-            <h3 className="text-sm font-extrabold text-white lowercase tracking-wide">
-              active creative rooms
-            </h3>
-          </div>
-          <Link href="/growth/creative" className="text-[10px] text-rose-400 font-bold hover:underline">
-            view all rooms →
-          </Link>
-        </div>
-
-        {projects.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {projects.slice(0, 4).map((project) => (
-              <Link key={project.id} href={`/growth/creative/${project.id}`}>
-                <Card className="p-6 bg-white/2 border-white/5 hover:border-rose-500/25 transition-all duration-300 relative group overflow-hidden">
-                  <div className="absolute inset-y-0 left-0 w-[3px] bg-rose-500/0 group-hover:bg-rose-500 transition-all" />
-                  
-                  <div className="flex justify-between items-start gap-4">
-                    <div className="space-y-1 min-w-0">
-                      <h4 className="text-sm font-extrabold text-white lowercase group-hover:text-rose-400 transition-colors truncate">
-                        {project.name}
-                      </h4>
-                      <p className="text-xs text-gray-400 leading-relaxed font-semibold line-clamp-2">
-                        {project.description}
-                      </p>
-                    </div>
-                    
-                    <span className="text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded-full font-black">
-                      {project.progress}%
-                    </span>
-                  </div>
-
-                  {/* Tech stack badges */}
-                  <div className="flex flex-wrap gap-1.5 mt-4">
-                    {project.tech_stack.map((tech) => (
-                      <span key={tech} className="px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-[9px] text-gray-500 font-bold">
-                        {tech}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Progress bar inside project card */}
-                  <div className="mt-4 pt-4 border-t border-white/5">
-                    <div className="w-full bg-white/5 rounded-full h-1 overflow-hidden">
-                      <div 
-                        className="bg-rose-400 h-full rounded-full transition-all duration-500" 
-                        style={{ width: `${project.progress}%` }}
-                      />
-                    </div>
-                  </div>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12 text-xs text-gray-500 border border-dashed border-white/10 rounded-3xl">
-            No projects initialized yet. Create one in the Creative Rooms!
-          </div>
-        )}
-      </div>
-
     </PageContainer>
   )
 }

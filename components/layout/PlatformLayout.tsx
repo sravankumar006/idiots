@@ -107,6 +107,8 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
     )
   }
 
+
+
   const isChatPage = pathname === '/chat'
 
   // Standard full-screen layout for chat (2-column Telegram split style)

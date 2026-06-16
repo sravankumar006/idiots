@@ -172,7 +172,7 @@ useEffect(() => {
         <input 
           type="text" 
           placeholder="Search connections..." 
-          className="w-full bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl py-2 pl-4 pr-10 text-xs text-gray-800 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:border-violet-500/40 transition-all font-medium"
+          className="w-full bg-neo-bg shadow-neo-inset rounded-xl py-2.5 pl-4 pr-10 text-xs text-neo-text placeholder:text-gray-400 focus:outline-none transition-all duration-300 font-medium border-none"
           suppressHydrationWarning
         />
         <Search className="h-4 w-4 text-gray-500 absolute right-3" />
@@ -181,8 +181,8 @@ useEffect(() => {
       {/* Right: Quick Interactions */}
       <div className="flex items-center gap-4">
         {/* Status Indicator */}
-        <div className="hidden lg:flex items-center gap-2 bg-violet-500/5 border border-violet-500/10 py-1.5 px-3 rounded-full text-[10px] font-bold text-violet-400 lowercase">
-          <span className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-pulse shadow-[0_0_6px_rgba(139,92,246,0.5)]" />
+        <div className="hidden lg:flex items-center gap-2 bg-neo-bg shadow-neo-inset py-1.5 px-3 rounded-full text-[10px] font-bold text-[#7c3aed] lowercase">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#7c3aed] animate-pulse dark:shadow-[0_0_6px_rgba(139,92,246,0.5)]" />
           <span>connected & synced</span>
         </div>
 
@@ -190,14 +190,14 @@ useEffect(() => {
         {mounted && (
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-950 dark:hover:text-white transition-all cursor-pointer"
+            className="p-2.5 rounded-full bg-neo-bg shadow-neo text-neo-secondary hover:shadow-neo hover:-translate-y-0.5 active:shadow-neo-inset active:translate-y-0.5 transition-all duration-300 cursor-pointer border-none"
             title="Toggle color theme"
             suppressHydrationWarning
           >
             {theme === 'dark' ? (
-              <Sun className="h-4.5 w-4.5 text-amber-400 hover:scale-115 transition-transform duration-300" />
+              <Sun className="h-4 w-4 text-amber-400 hover:scale-115 transition-transform duration-300" />
             ) : (
-              <Moon className="h-4.5 w-4.5 text-indigo-500 hover:scale-115 transition-transform duration-300" />
+              <Moon className="h-4 w-4 text-indigo-500 hover:scale-115 transition-transform duration-300" />
             )}
           </button>
         )}
@@ -208,17 +208,17 @@ useEffect(() => {
             onClick={() => setDropdownOpen(!dropdownOpen)}
             aria-expanded={dropdownOpen}
             aria-label="Notifications"
-            className={`relative p-2 rounded-xl transition-all cursor-pointer ${
+            className={`relative p-2.5 rounded-full transition-all duration-300 cursor-pointer border-none ${
               dropdownOpen 
-                ? 'bg-violet-500/10 text-violet-400 border border-violet-500/20' 
-                : 'hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-950 dark:hover:text-white'
+                ? 'bg-neo-bg shadow-neo-inset text-[#7c3aed]' 
+                : 'bg-neo-bg shadow-neo text-neo-secondary hover:shadow-neo hover:-translate-y-0.5 active:shadow-neo-inset active:translate-y-0.5'
             }`}
             title="Notifications"
             suppressHydrationWarning
           >
-            <Bell className="h-4.5 w-4.5" />
+            <Bell className="h-4 w-4" />
             {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 h-4 w-4 flex items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white shadow-[0_0_8px_rgba(244,63,94,0.5)]">
+              <span className="absolute top-0 right-0 h-4 w-4 flex items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white shadow-[0_0_8px_rgba(244,63,94,0.5)]">
                 {unreadCount}
               </span>
             )}

@@ -25,16 +25,16 @@ export default function MobileNav({ profile, drawerOpen, setDrawerOpen }: Mobile
     { href: '/dashboard', label: 'home', icon: Home },
     { href: '/chat', label: 'chat lounge', icon: MessageSquare },
     { href: '/ai', label: 'companion', icon: Sparkles },
-    { href: '/growth', label: 'career', icon: Compass },
+    { href: '/growth', label: 'growth', icon: Compass },
     { href: '/us', label: 'us', icon: Users },
   ]
 
   return (
     <div 
-      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#faf9f6]/90 dark:bg-[#16181d]/90 backdrop-blur-xl border-t border-black/5 dark:border-white/5 px-1 flex items-center justify-around select-none shadow-[0_-2px_16px_rgba(0,0,0,0.06)]"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-neo-bg shadow-neo-high px-2 flex items-center justify-around select-none border-none transition-all duration-300"
       style={{
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        height: 'calc(3rem + env(safe-area-inset-bottom, 0px))',
+        paddingBottom: 'env(safe-area-inset-bottom, 8px)',
+        height: 'calc(3.75rem + env(safe-area-inset-bottom, 8px))',
       }}
     >
       {tabs.map((tab) => {
@@ -46,13 +46,15 @@ export default function MobileNav({ profile, drawerOpen, setDrawerOpen }: Mobile
           <Link
             key={tab.href}
             href={tab.href}
-            className={`flex flex-col items-center justify-center gap-1 flex-1 min-w-[44px] min-h-[44px] rounded-lg transition-all duration-200 ease-out ${
-              isActive ? 'text-violet-600 dark:text-violet-400' : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+            className={`flex flex-col items-center justify-center gap-1.5 flex-1 min-w-[44px] min-h-[44px] rounded-xl transition-all duration-300 ${
+              isActive 
+                ? 'bg-neo-bg shadow-neo-inset text-[#7c3aed] font-black py-1.5' 
+                : 'text-neo-secondary hover:text-neo-text'
             }`}
             style={{ minHeight: '44px' }}
           >
-            <Icon className={`h-[18px] w-[18px] transition-transform active:scale-90 ${isActive ? 'scale-110' : ''}`} />
-            <span className="text-[9px] font-semibold lowercase truncate max-w-full tracking-wide">{tab.label}</span>
+            <Icon className={`h-[18px] w-[18px] transition-all duration-300 ${isActive ? 'scale-110' : 'active:scale-95'}`} />
+            <span className="text-[9px] font-bold lowercase truncate max-w-full tracking-wide leading-none">{tab.label}</span>
           </Link>
         )
       })}
