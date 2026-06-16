@@ -426,7 +426,7 @@ export default function SpacePage({ params }: SpacePageProps) {
             {!isReadOnly && (
               <button
                 onClick={openConfigModal}
-                className="py-2 px-3.5 rounded-xl bg-neo-bg shadow-neo border-none text-[11px] font-bold text-[#fb864b] hover:shadow-neo hover:-translate-y-0.5 active:shadow-neo-inset active:translate-y-0.5 transition-all flex items-center gap-1.5 cursor-pointer"
+                className="py-2 px-3.5 rounded-xl bg-neo-bg shadow-neo border-none text-[11px] font-bold text-[#5E4545] dark:text-[#ffb4b4] hover:shadow-neo hover:-translate-y-0.5 active:shadow-neo-inset active:translate-y-0.5 transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <Settings2 className="h-3.5 w-3.5" />
                 <span>Room Settings</span>
@@ -462,7 +462,7 @@ export default function SpacePage({ params }: SpacePageProps) {
                         isReadOnly ? 'cursor-default' : 'cursor-pointer'
                       } ${
                         isActive
-                          ? 'bg-neo-bg shadow-neo-inset text-[#fb864b]'
+                          ? 'bg-neo-bg shadow-neo-inset text-[#5E4545] dark:text-[#ffb4b4]'
                           : 'bg-neo-bg shadow-neo text-neo-secondary hover:-translate-y-0.5 active:shadow-neo-inset active:translate-y-0.5'
                       }`}
                     >
@@ -551,7 +551,7 @@ export default function SpacePage({ params }: SpacePageProps) {
                             </div>
                             <div className="neo-inset-panel border-none p-3 rounded-2xl flex-1 text-center">
                               <span className="text-[9px] text-neo-secondary uppercase block font-bold">focus</span>
-                              <span className="text-lg font-black text-[#fb864b]">{latestMood?.focus_level || 5}/10</span>
+                              <span className="text-lg font-black text-[#5E4545] dark:text-[#ffb4b4]">{latestMood?.focus_level || 5}/10</span>
                             </div>
                           </div>
 
@@ -773,14 +773,14 @@ export default function SpacePage({ params }: SpacePageProps) {
                       )}
 
                       <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <Flame className="h-4 w-4 text-orange-400" />
+                        <Flame className="h-4 w-4 text-[#5E4545] dark:text-[#ffb4b4]" />
                         cozy study stats
                       </h3>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="neo-inset-panel border-none p-3 rounded-2xl text-center">
                           <span className="text-[9px] text-neo-secondary uppercase block font-bold">active streak</span>
-                          <span className="text-xl font-black text-orange-400">{studyStats.current_streak} days 🔥</span>
+                          <span className="text-xl font-black text-[#5E4545] dark:text-[#ffb4b4]">{studyStats.current_streak} days 🔥</span>
                         </div>
                         <div className="neo-inset-panel border-none p-3 rounded-2xl text-center">
                           <span className="text-[9px] text-neo-secondary uppercase block font-bold">study total</span>
@@ -810,7 +810,7 @@ export default function SpacePage({ params }: SpacePageProps) {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="neo-inset-panel border-none p-3 rounded-2xl text-center">
                           <span className="text-[9px] text-neo-secondary uppercase block font-bold">DSA Solved</span>
-                          <span className="text-xl font-black text-[#fb864b]">{totalSolved}</span>
+                          <span className="text-xl font-black text-[#5E4545] dark:text-[#ffb4b4]">{totalSolved}</span>
                         </div>
                         <div className="neo-inset-panel border-none p-3 rounded-2xl text-center">
                           <span className="text-[9px] text-neo-secondary uppercase block font-bold">Commits</span>

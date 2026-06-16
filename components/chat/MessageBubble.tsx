@@ -29,7 +29,7 @@ const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
   'avatar-cyber-ghost': { gradient: 'from-indigo-400 to-purple-500', symbol: 'CM' },
   'avatar-neon-pulse': { gradient: 'from-purple-400 to-pink-500', symbol: 'SL' },
   'avatar-alpha-wing': { gradient: 'from-emerald-400 to-teal-500', symbol: 'MM' },
-  'avatar-solar-flare': { gradient: 'from-orange-300 to-rose-400', symbol: 'WP' },
+  'avatar-solar-flare': { gradient: 'from-[#5E4545] to-[#8A6D6D] dark:from-[#ffb4b4] dark:to-[#ff8a8a]', symbol: 'WP' },
   'avatar-void-runner': { gradient: 'from-rose-400 to-pink-500', symbol: 'CB' },
   'avatar-shadow-blade': { gradient: 'from-slate-400 to-indigo-500', symbol: 'MS' },
 }
@@ -315,16 +315,10 @@ export default function MessageBubble({
               isSelf ? 'ml-auto' : ''
             } ${
               message.type === 'ai'
-                ? studyModeActive
-                  ? 'bg-[#f3f0e8] text-gray-800 border-amber-500/20 dark:bg-[#201c18] dark:text-gray-300 dark:border-amber-500/10'
-                  : 'bg-[#f0edf5] text-gray-800 border-black/5 dark:bg-[#201833] dark:text-gray-200 dark:border-white/5'
+                ? 'bg-neo-bg text-neo-text shadow-neo-inset border-none'
                 : isSelf
-                ? studyModeActive
-                  ? 'bg-[#d97706] text-white border-transparent dark:bg-[#b45309]'
-                  : `bg-violet-600 text-white dark:text-[#120E1E] border-transparent`
-                : studyModeActive
-                ? 'bg-white text-gray-800 border-amber-500/10 dark:bg-[#1A142A] dark:text-gray-200 dark:border-white/5'
-                : `bg-white text-gray-800 border-black/5 dark:bg-[#1A142A] dark:text-gray-200 dark:border-white/5 shadow-sm`
+                ? 'bg-neo-bg text-neo-text shadow-neo border-none'
+                : 'bg-neo-bg text-neo-text shadow-neo border-none'
             } ${
               // Dynamic border radius for grouping
               isSelf

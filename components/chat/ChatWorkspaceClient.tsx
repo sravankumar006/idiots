@@ -20,21 +20,21 @@ import MobileNav from '@/components/layout/MobileNav'
 
 // ——— Avatar palette ———
 const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
-  'avatar-cyber-ghost':  { gradient: 'from-indigo-400 to-purple-500',  symbol: 'CM' },
-  'avatar-neon-pulse':   { gradient: 'from-purple-400 to-pink-500',    symbol: 'SL' },
-  'avatar-alpha-wing':   { gradient: 'from-emerald-400 to-teal-500',   symbol: 'MM' },
-  'avatar-solar-flare':  { gradient: 'from-orange-300 to-rose-400',    symbol: 'WP' },
-  'avatar-void-runner':  { gradient: 'from-rose-400 to-pink-500',      symbol: 'CB' },
-  'avatar-shadow-blade': { gradient: 'from-slate-400 to-indigo-500',   symbol: 'MS' },
+  'avatar-cyber-ghost':  { gradient: 'from-[#3A3530] to-[#2B2824]',  symbol: 'CS' },
+  'avatar-neon-pulse':   { gradient: 'from-[#8A7968] to-[#5C4F42]',    symbol: 'MB' },
+  'avatar-alpha-wing':   { gradient: 'from-[#606E59] to-[#3D4739]',   symbol: 'OM' },
+  'avatar-solar-flare':  { gradient: 'from-[#A87955] to-[#704F34]',    symbol: 'WA' },
+  'avatar-void-runner':  { gradient: 'from-[#A85840] to-[#703626]',      symbol: 'BR' },
+  'avatar-shadow-blade': { gradient: 'from-[#2A2824] to-[#1C1A17]',   symbol: 'DC' },
 }
 
 const AVATAR_OPTIONS = [
-  { id: 'avatar-cyber-ghost',  name: 'Cosmic Mist',      gradient: 'from-indigo-400 to-purple-500',  symbol: 'CM' },
-  { id: 'avatar-neon-pulse',   name: 'Sweet Lavender',   gradient: 'from-purple-400 to-pink-500',    symbol: 'SL' },
-  { id: 'avatar-alpha-wing',   name: 'Moss Mint',        gradient: 'from-emerald-400 to-teal-500',   symbol: 'MM' },
-  { id: 'avatar-solar-flare',  name: 'Warm Peach',       gradient: 'from-orange-300 to-rose-400',    symbol: 'WP' },
-  { id: 'avatar-void-runner',  name: 'Cherry Blossom',   gradient: 'from-rose-400 to-pink-500',      symbol: 'CB' },
-  { id: 'avatar-shadow-blade', name: 'Moon Slate',       gradient: 'from-slate-400 to-indigo-500',   symbol: 'MS' },
+  { id: 'avatar-cyber-ghost',  name: 'Carbon Slate',     gradient: 'from-[#3A3530] to-[#2B2824]',  symbol: 'CS' },
+  { id: 'avatar-neon-pulse',   name: 'Metallic Bronze',  gradient: 'from-[#8A7968] to-[#5C4F42]',    symbol: 'MB' },
+  { id: 'avatar-alpha-wing',   name: 'Olive Moss',       gradient: 'from-[#606E59] to-[#3D4739]',   symbol: 'OM' },
+  { id: 'avatar-solar-flare',  name: 'Warm Amber',       gradient: 'from-[#A87955] to-[#704F34]',    symbol: 'WA' },
+  { id: 'avatar-void-runner',  name: 'Burnt Rust',       gradient: 'from-[#A85840] to-[#703626]',      symbol: 'BR' },
+  { id: 'avatar-shadow-blade', name: 'Deep Charcoal',    gradient: 'from-[#2A2824] to-[#1C1A17]',   symbol: 'DC' },
 ]
 
 const NAV_ITEMS = [
@@ -352,7 +352,7 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
                   )}
 
                   {isCollapsed && (
-                    <div className="absolute left-14 scale-0 group-hover:scale-100 transition-all duration-200 z-50 py-1.5 px-3 rounded-lg bg-[#faf9f6] dark:bg-[#141520] border border-black/5 dark:border-white/10 text-xs font-bold text-gray-800 dark:text-white whitespace-nowrap shadow-lg">
+                    <div className="absolute left-14 scale-0 group-hover:scale-100 transition-all duration-200 z-50 py-1.5 px-3 rounded-lg bg-neo-bg border border-black/5 dark:border-white/5 text-xs font-bold text-[var(--primary-text)] whitespace-nowrap shadow-lg">
                       {f.username}
                     </div>
                   )}
@@ -392,7 +392,7 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
               )}
 
               {isCollapsed && (
-                <div className="absolute left-14 scale-0 group-hover:scale-100 transition-all duration-200 z-50 py-1.5 px-3 rounded-lg bg-[#faf9f6] dark:bg-[#1c1f26] border border-black/5 dark:border-white/10 text-xs font-bold text-gray-800 dark:text-white whitespace-nowrap shadow-lg">
+                <div className="absolute left-14 scale-0 group-hover:scale-100 transition-all duration-200 z-50 py-1.5 px-3 rounded-lg bg-neo-bg border border-black/5 dark:border-white/5 text-xs font-bold text-[var(--primary-text)] whitespace-nowrap shadow-lg">
                   edit profile ({activeProfile?.username || 'you'})
                 </div>
               )}
@@ -420,7 +420,7 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
 
   return (
     <div 
-      className="flex bg-[#f4f3ef] dark:bg-[#0f0f12] text-gray-900 dark:text-gray-100 overflow-hidden w-full"
+      className="flex bg-neo-bg text-gray-900 dark:text-gray-100 overflow-hidden w-full"
       style={{ height: 'var(--visual-viewport-height, 100dvh)' }}
     >
 
@@ -428,7 +428,7 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
           DESKTOP SIDEBAR
           ═══════════════════════════════════════════ */}
       <aside
-        className={`hidden md:flex flex-col shrink-0 h-full min-h-0 bg-[#faf9f6] dark:bg-[#16181d] border-r border-black/6 dark:border-white/[0.05] transition-all duration-500 ease-in-out ${
+        className={`hidden md:flex flex-col shrink-0 h-full min-h-0 bg-neo-bg shadow-neo border-none transition-all duration-500 ease-in-out z-10 ${
           isSidebarCollapsed ? 'w-20' : 'w-[280px]'
         }`}
         aria-label="Sidebar"
@@ -441,7 +441,7 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
           ═══════════════════════════════════════════ */}
       {mobileView === 'sidebar' && (
         <div 
-          className="md:hidden flex flex-col w-full h-full bg-[#faf9f6] dark:bg-[#16181d]"
+          className="md:hidden flex flex-col w-full h-full bg-neo-bg z-10"
           style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}
         >
           <SidebarContent isDesktop={false} />
@@ -474,7 +474,7 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
             />
           )
         ) : (
-          <div className="flex-1 flex items-center justify-center bg-[#f0ede8] dark:bg-[#0f0f12]">
+          <div className="flex-1 flex items-center justify-center bg-neo-bg">
             <EmptyState />
           </div>
         )}

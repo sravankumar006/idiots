@@ -14,7 +14,7 @@ export const AVATAR_PRESETS = [
   { id: 'avatar-cyber-ghost', name: 'Cyber Ghost', gradient: 'from-cyan-400 to-blue-500', symbol: 'CG' },
   { id: 'avatar-neon-pulse', name: 'Neon Pulse', gradient: 'from-fuchsia-500 to-purple-600', symbol: 'NP' },
   { id: 'avatar-alpha-wing', name: 'Alpha Wing', gradient: 'from-emerald-400 to-teal-500', symbol: 'AW' },
-  { id: 'avatar-solar-flare', name: 'Solar Flare', gradient: 'from-amber-400 to-orange-500', symbol: 'SF' },
+  { id: 'avatar-solar-flare', name: 'Solar Flare', gradient: 'from-[#5E4545] to-[#8A6D6D] dark:from-[#ffb4b4] dark:to-[#ff8a8a]', symbol: 'SF' },
   { id: 'avatar-void-runner', name: 'Void Runner', gradient: 'from-pink-500 to-rose-600', symbol: 'VR' },
   { id: 'avatar-shadow-blade', name: 'Shadow Blade', gradient: 'from-slate-600 to-slate-800', symbol: 'SB' },
 ]

@@ -56,7 +56,7 @@ const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
   'avatar-cyber-ghost': { gradient: 'from-indigo-400 to-purple-500', symbol: 'CM' },
   'avatar-neon-pulse': { gradient: 'from-purple-400 to-pink-500', symbol: 'SL' },
   'avatar-alpha-wing': { gradient: 'from-emerald-400 to-teal-500', symbol: 'MM' },
-  'avatar-solar-flare': { gradient: 'from-orange-300 to-rose-400', symbol: 'WP' },
+  'avatar-solar-flare': { gradient: 'from-[#5E4545] to-[#8A6D6D] dark:from-[#ffb4b4] dark:to-[#ff8a8a]', symbol: 'WP' },
   'avatar-void-runner': { gradient: 'from-rose-400 to-pink-500', symbol: 'CB' },
   'avatar-shadow-blade': { gradient: 'from-slate-400 to-indigo-500', symbol: 'MS' },
 }
@@ -607,7 +607,7 @@ export default function AiPage() {
             onClick={() => setActiveTab('consultant')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'consultant'
-                ? 'bg-neo-bg shadow-neo text-[#fb864b] border-none'
+                ? 'bg-neo-bg shadow-neo text-[#5E4545] dark:text-[#ffb4b4] border-none'
                 : 'text-neo-secondary hover:text-neo-text'
             }`}
           >
@@ -618,7 +618,7 @@ export default function AiPage() {
             onClick={() => setActiveTab('logs')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'logs'
-                ? 'bg-neo-bg shadow-neo text-[#fb864b] border-none'
+                ? 'bg-neo-bg shadow-neo text-[#5E4545] dark:text-[#ffb4b4] border-none'
                 : 'text-neo-secondary hover:text-neo-text'
             }`}
           >
@@ -629,7 +629,7 @@ export default function AiPage() {
             onClick={() => setActiveTab('memory')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'memory'
-                ? 'bg-neo-bg shadow-neo text-[#fb864b] border-none'
+                ? 'bg-neo-bg shadow-neo text-[#5E4545] dark:text-[#ffb4b4] border-none'
                 : 'text-neo-secondary hover:text-neo-text'
             }`}
           >
@@ -649,7 +649,7 @@ export default function AiPage() {
             {/* AI Config & Settings Panel */}
             <Card className="p-6 space-y-4 hover:border-violet-500/10">
               <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-black/5 dark:border-white/5 pb-3">
-                <Settings className="h-4 w-4 text-[#fb864b]" />
+                <Settings className="h-4 w-4 text-[#5E4545] dark:text-[#ffb4b4]" />
                 AI Config & Settings
               </h3>
               
@@ -836,7 +836,7 @@ export default function AiPage() {
                           </span>
                           <div className={`p-4 rounded-2xl text-[13px] leading-relaxed w-fit max-w-full ${
                             isSelf 
-                              ? 'bg-neo-bg shadow-neo text-[#fb864b] border-none rounded-tr-none' 
+                              ? 'bg-neo-bg shadow-neo text-[#5E4545] dark:text-[#ffb4b4] border-none rounded-tr-none' 
                               : 'neo-inset-panel text-neo-text border-none rounded-tl-none'
                           }`}>
                             {!isSelf ? (
@@ -881,7 +881,7 @@ export default function AiPage() {
               </div>
 
               {/* Chat Input form */}
-              <form onSubmit={handleSendPersonal} className="p-4 border-t border-black/5 dark:border-white/5 shrink-0 glass-panel border-none select-none">
+              <form onSubmit={handleSendPersonal} className="p-4 shrink-0 bg-transparent border-none select-none">
                 <div className="relative flex items-center">
                   <input
                     type="text"
@@ -894,7 +894,7 @@ export default function AiPage() {
                   <button
                     type="submit"
                     disabled={isTyping}
-                    className="absolute right-2 py-1.5 px-3 rounded-lg bg-neo-bg shadow-neo border-none text-[#fb864b] hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-neo-inset transition-all cursor-pointer flex items-center gap-1 text-[10px] font-bold"
+                    className="absolute right-2 py-1.5 px-3 rounded-lg bg-neo-bg shadow-neo border-none text-[#5E4545] dark:text-[#ffb4b4] hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-neo-inset transition-all cursor-pointer flex items-center gap-1 text-[10px] font-bold"
                   >
                     <span>Query</span>
                     <CornerDownLeft className="h-3 w-3" />
@@ -1011,7 +1011,7 @@ export default function AiPage() {
             ) : filteredLogs.length === 0 ? (
               <Card className="flex flex-col items-center justify-center text-center py-24 select-none border-none">
                 <div className="h-12 w-12 rounded-2xl neo-inset-panel border-none flex items-center justify-center mb-4">
-                  <Brain className="h-6 w-6 text-[#fb864b] animate-pulse" />
+                  <Brain className="h-6 w-6 text-[#5E4545] dark:text-[#ffb4b4] animate-pulse" />
                 </div>
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-1">No companion logs found</h3>
                 <p className="text-xs text-gray-500 max-w-sm font-semibold leading-relaxed">

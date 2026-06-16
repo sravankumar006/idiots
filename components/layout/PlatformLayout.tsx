@@ -120,12 +120,12 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
           >
             <defs>
               <linearGradient id="tg-outer-focus" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#fb864b" />
-                <stop offset="100%" stopColor="#a855f7" />
+                <stop offset="0%" stopColor="var(--active-color)" />
+                <stop offset="100%" stopColor="var(--accent-warm)" />
               </linearGradient>
               <linearGradient id="tg-inner-focus" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#5b21b6" />
-                <stop offset="100%" stopColor="#fb864b" />
+                <stop offset="0%" stopColor="var(--accent-cool)" />
+                <stop offset="100%" stopColor="var(--active-color)" />
               </linearGradient>
             </defs>
 
@@ -259,21 +259,20 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
         {/* 3. Main Workspace Container */}
         <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
           
-          {/* Top Header Bar */}
-          <div id="topbar-container" className="pt-4 px-4 md:px-6 shrink-0 z-40 bg-transparent relative">
-            <Topbar 
-              profile={profile} 
-              rightPanelOpen={isRightPanelOpen} 
-              setRightPanelOpen={setIsRightPanelOpen} 
-              onToggleMobileMenu={() => setMobileMenuOpen(true)}
-            />
-          </div>
-
           {/* Content & Right Panel Viewport */}
           <div className="flex-1 flex overflow-hidden">
             
             {/* Core Page Content area */}
             <main className="flex-1 overflow-y-auto px-4 py-6 md:p-6 pb-6 min-w-0 mb-[calc(3rem+env(safe-area-inset-bottom,0px))] md:mb-0">
+              {/* Top Header Bar */}
+              <div id="topbar-container" className="shrink-0 z-40 bg-transparent relative mb-6 md:mb-8 -mt-6 -mx-4 md:-mt-6 md:-mx-6">
+                <Topbar 
+                  profile={profile} 
+                  rightPanelOpen={isRightPanelOpen} 
+                  setRightPanelOpen={setIsRightPanelOpen} 
+                  onToggleMobileMenu={() => setMobileMenuOpen(true)}
+                />
+              </div>
               {children}
             </main>
 
@@ -306,12 +305,12 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
           >
             <defs>
               <linearGradient id="tg-outer-nav" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#fb864b" />
+                <stop offset="0%" stopColor="#5E4545" />
                 <stop offset="100%" stopColor="#a855f7" />
               </linearGradient>
               <linearGradient id="tg-inner-nav" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#5b21b6" />
-                <stop offset="100%" stopColor="#fb864b" />
+                <stop offset="100%" stopColor="#5E4545" />
               </linearGradient>
             </defs>
 
@@ -333,7 +332,7 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
               <line x1="32.68" y1="60" x2="67.32" y2="60" stroke="rgba(255, 255, 255, 0.3)" strokeWidth="2.5" strokeLinecap="round" />
             </g>
           </svg>
-          <span className="text-[9px] font-black tracking-widest text-[#fb864b] dark:text-violet-400 uppercase">
+          <span className="text-[9px] font-black tracking-widest text-[#5E4545] dark:text-violet-400 uppercase">
             syncing...
           </span>
         </div>

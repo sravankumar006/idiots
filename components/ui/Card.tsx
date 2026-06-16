@@ -1,7 +1,7 @@
 import React, { HTMLAttributes } from 'react'
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  glowColor?: 'blue' | 'purple' | 'cyan' | 'none'
+  glowColor?: 'bronze' | 'moss' | 'neutral' | 'none' | 'blue' | 'purple' | 'cyan'
 }
 
 export function Card({
@@ -11,17 +11,17 @@ export function Card({
   ...props
 }: CardProps) {
   let glowStyle = ""
-  if (glowColor === 'blue') {
-    glowStyle = "shadow-[0_0_40px_rgba(59,130,246,0.06)] border-glow-blue/20"
-  } else if (glowColor === 'purple') {
-    glowStyle = "shadow-[0_0_40px_rgba(139,92,246,0.06)] border-glow-purple/20"
-  } else if (glowColor === 'cyan') {
-    glowStyle = "shadow-[0_0_40px_rgba(6,182,212,0.06)] border-glow-cyan/20"
+  if (glowColor === 'bronze' || glowColor === 'purple') {
+    glowStyle = "shadow-[0_0_40px_rgba(154,132,98,0.1)] border-[var(--accent-warm)]/10"
+  } else if (glowColor === 'moss' || glowColor === 'cyan' || glowColor === 'blue') {
+    glowStyle = "shadow-[0_0_40px_rgba(94,122,90,0.1)] border-[var(--accent-cool)]/10"
+  } else if (glowColor === 'neutral') {
+    glowStyle = "shadow-[0_0_40px_rgba(138,132,123,0.08)] border-[var(--active-color)]/10"
   }
 
   return (
     <div
-      className={`glass-panel rounded-3xl p-8 sm:p-10 transition-all duration-500 hover:border-white/10 ${glowStyle} ${className}`}
+      className={`bg-neo-bg shadow-neo rounded-[28px] p-6 sm:p-8 transition-all duration-300 hover:-translate-y-1 hover:shadow-neo-high ${glowStyle} ${className}`}
       {...props}
     >
       {children}

@@ -48,7 +48,7 @@ export default function MobileNav({ profile, drawerOpen, setDrawerOpen }: Mobile
             href={tab.href}
             className={`flex flex-col items-center justify-center gap-1.5 flex-1 min-w-[44px] min-h-[44px] rounded-xl transition-all duration-300 ${
               isActive 
-                ? 'bg-neo-bg shadow-neo-inset text-[#fb864b] font-black py-1.5' 
+                ? 'bg-neo-bg shadow-neo-inset text-[var(--foreground)] font-black py-1.5' 
                 : 'text-neo-secondary hover:text-neo-text'
             }`}
             style={{ minHeight: '44px' }}

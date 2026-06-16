@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   isLoading?: boolean
-  variant?: 'glass' | 'outline' | 'neon'
+  variant?: 'glass' | 'outline' | 'neon' | 'primary'
 }
 
 export function Button({
@@ -18,9 +18,9 @@ export function Button({
   
   let variantStyle = ""
   if (variant === 'outline') {
-    variantStyle = "bg-transparent border border-gray-300 dark:border-gray-700 hover:bg-black/5 dark:hover:bg-white/5 text-gray-800 dark:text-gray-200"
-  } else if (variant === 'neon') {
-    variantStyle = "bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 border border-transparent shadow-[0_4px_12px_rgba(124,58,237,0.15)] text-white"
+    variantStyle = "bg-transparent border border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5 text-[var(--foreground)]"
+  } else if (variant === 'neon' || variant === 'primary') {
+    variantStyle = "bg-[var(--active-color)] text-white hover:opacity-95 border border-[var(--active-color)]/20 shadow-[0_4px_12px_rgba(138,132,123,0.15)]"
   }
 
   return (
@@ -31,7 +31,7 @@ export function Button({
     >
       {isLoading ? (
         <>
-          <Loader2 className="h-4 w-4 animate-spin text-gray-300" />
+          <Loader2 className="h-4 w-4 animate-spin text-white" />
           <span>Processing...</span>
         </>
       ) : (

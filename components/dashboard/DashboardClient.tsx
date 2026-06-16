@@ -18,12 +18,12 @@ import { useMoodAndMemories } from '@/hooks/useMoodAndMemories'
 
 // Avatar config
 const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
-  'avatar-cyber-ghost':  { gradient: 'from-indigo-400 to-purple-500',  symbol: 'CM' },
-  'avatar-neon-pulse':   { gradient: 'from-purple-400 to-pink-500',    symbol: 'SL' },
-  'avatar-alpha-wing':   { gradient: 'from-emerald-400 to-teal-500',   symbol: 'MM' },
-  'avatar-solar-flare':  { gradient: 'from-orange-300 to-rose-400',    symbol: 'WP' },
-  'avatar-void-runner':  { gradient: 'from-rose-400 to-pink-500',      symbol: 'CB' },
-  'avatar-shadow-blade': { gradient: 'from-slate-400 to-indigo-500',   symbol: 'MS' },
+  'avatar-cyber-ghost':  { gradient: 'from-[#3A3530] to-[#2B2824]',  symbol: 'CS' },
+  'avatar-neon-pulse':   { gradient: 'from-[#8A7968] to-[#5C4F42]',    symbol: 'MB' },
+  'avatar-alpha-wing':   { gradient: 'from-[#606E59] to-[#3D4739]',   symbol: 'OM' },
+  'avatar-solar-flare':  { gradient: 'from-[#A87955] to-[#704F34]',    symbol: 'WA' },
+  'avatar-void-runner':  { gradient: 'from-[#A85840] to-[#703626]',      symbol: 'BR' },
+  'avatar-shadow-blade': { gradient: 'from-[#2A2824] to-[#1C1A17]',   symbol: 'DC' },
 }
 
 interface DashboardClientProps {
@@ -304,7 +304,7 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
     <PageContainer>
       
       {/* Group Motivation Banner */}
-      <div className="mb-6 rounded-2xl p-4 bg-gradient-to-r from-amber-500/10 via-rose-500/5 to-transparent border border-amber-500/10 flex items-center justify-between gap-4 flex-wrap">
+      <Card className="mb-6 p-4 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500">
             <Sparkles className="h-4.5 w-4.5 animate-pulse" />
@@ -325,7 +325,7 @@ export default function DashboardClient({ activeUser, targetUserId }: DashboardC
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 text-[11px] font-bold text-gray-600 dark:text-gray-300">
           study streak: <span className="text-rose-400 font-black">{focusStats.streak || studyStats.current_streak} days</span> 🔥
         </div>
-      </div>
+      </Card>
 
       <div className="flex flex-col lg:flex-row justify-between items-start gap-5">
         <SectionHeader 

@@ -651,7 +651,7 @@ Project Health Score: "${getProjectHealth().status} (${getProjectHealth().descri
       case 'ts': return 'text-sky-500'
       case 'py': return 'text-emerald-500'
       case 'cpp': return 'text-indigo-500'
-      case 'java': return 'text-orange-500'
+      case 'java': return 'text-[#5E4545] dark:text-[#ffb4b4]'
       case 'html': return 'text-rose-500'
       case 'css': return 'text-teal-500'
       case 'json': return 'text-amber-400'

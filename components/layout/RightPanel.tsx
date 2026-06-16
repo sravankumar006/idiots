@@ -46,7 +46,7 @@ export default function RightPanel({ profile, isOpen }: RightPanelProps) {
           </div>
           {/* Peer 2 */}
           <div className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-black/3 dark:hover:bg-white/3 transition-all">
-            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-[10px] font-extrabold text-black">
+            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-[#5E4545] to-[#8A6D6D] dark:from-[#ffb4b4] dark:to-[#ff8a8a] flex items-center justify-center text-[10px] font-extrabold text-black">
               SF
             </div>
             <div className="flex-1 min-w-0">

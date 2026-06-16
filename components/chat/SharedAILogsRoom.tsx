@@ -18,7 +18,7 @@ const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
   'avatar-cyber-ghost':  { gradient: 'from-indigo-400 to-purple-500',  symbol: 'CM' },
   'avatar-neon-pulse':   { gradient: 'from-purple-400 to-pink-500',    symbol: 'SL' },
   'avatar-alpha-wing':   { gradient: 'from-emerald-400 to-teal-500',   symbol: 'MM' },
-  'avatar-solar-flare':  { gradient: 'from-orange-300 to-rose-400',    symbol: 'WP' },
+  'avatar-solar-flare':  { gradient: 'from-[#5E4545] to-[#8A6D6D] dark:from-[#ffb4b4] dark:to-[#ff8a8a]',    symbol: 'WP' },
   'avatar-void-runner':  { gradient: 'from-rose-400 to-pink-500',      symbol: 'CB' },
   'avatar-shadow-blade': { gradient: 'from-slate-400 to-indigo-500',   symbol: 'MS' },
 }
@@ -100,10 +100,10 @@ export default function SharedAILogsRoom({ groupId, activeUser, onBack }: Shared
 
   return (
     <DragDropZone onFileDrop={setDraftFile}>
-      <div className="flex flex-col h-full bg-[#faf9f6] dark:bg-[#0a0b15] relative overflow-hidden">
+      <div className="flex flex-col h-full bg-neo-bg relative overflow-hidden">
         
         {/* Header */}
-        <header className="relative z-10 flex items-center justify-between gap-3 px-4 h-14 shrink-0 backdrop-blur-xl border-b bg-[#faf9f6]/80 dark:bg-[#0a0b15]/80 border-black/5 dark:border-white/[0.05]">
+        <header className="relative z-10 flex items-center justify-between gap-3 px-4 h-14 shrink-0 backdrop-blur-xl border-none shadow-neo bg-neo-bg">
           <div className="flex items-center gap-3">
             {onBack && (
               <button onClick={onBack} className="md:hidden flex items-center justify-center h-8 w-8 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-gray-500">
@@ -123,7 +123,7 @@ export default function SharedAILogsRoom({ groupId, activeUser, onBack }: Shared
         </header>
 
         {/* Workspace Toolbar */}
-        <div className="p-4 border-b border-black/5 dark:border-white/[0.05] bg-white/50 dark:bg-[#0f0f12]/50 backdrop-blur-md z-10 shrink-0">
+        <div className="p-4 border-none bg-neo-bg shadow-neo-shallow z-10 shrink-0">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-4xl mx-auto">
             <div className="sm:col-span-2 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -132,7 +132,7 @@ export default function SharedAILogsRoom({ groupId, activeUser, onBack }: Shared
                 placeholder="Search the group's AI knowledge base..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full bg-white dark:bg-[#16181d] border border-black/5 dark:border-white/5 rounded-xl py-2 pl-9 pr-4 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-violet-500/30 transition-all font-medium"
+                className="w-full bg-neo-bg shadow-neo-inset border-none rounded-xl py-2 pl-9 pr-4 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:shadow-neo transition-all font-medium"
               />
             </div>
             <div className="relative">
@@ -140,7 +140,7 @@ export default function SharedAILogsRoom({ groupId, activeUser, onBack }: Shared
               <select
                 value={selectedCategoryFilter}
                 onChange={e => setSelectedCategoryFilter(e.target.value)}
-                className="w-full appearance-none bg-white dark:bg-[#16181d] border border-black/5 dark:border-white/5 rounded-xl py-2 pl-9 pr-4 text-xs text-gray-700 dark:text-gray-300 font-semibold focus:outline-none focus:border-violet-500/30 transition-all cursor-pointer"
+                className="w-full appearance-none bg-neo-bg shadow-neo-inset border-none rounded-xl py-2 pl-9 pr-4 text-xs text-gray-700 dark:text-gray-300 font-semibold focus:outline-none focus:shadow-neo transition-all cursor-pointer"
               >
                 <option value="All">All Categories</option>
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -173,7 +173,7 @@ export default function SharedAILogsRoom({ groupId, activeUser, onBack }: Shared
                 const timeStr = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
                 return (
-                  <Card key={msg.id || idx} className={`p-4 sm:p-6 transition-all border ${isAI ? 'bg-white dark:bg-[#16181d] border-indigo-500/20 shadow-[0_4px_20px_rgba(99,102,241,0.03)]' : 'bg-gray-50 dark:bg-white/[0.02] border-black/5 dark:border-white/5 shadow-sm'}`}>
+                  <Card key={msg.id || idx} className={`p-4 sm:p-6 transition-all border-none ${isAI ? 'bg-neo-bg shadow-neo-inset' : 'bg-neo-bg shadow-neo'}`}>
                     <div className="flex items-start gap-4">
                       {/* Avatar */}
                       <div className={`h-10 w-10 rounded-xl shrink-0 flex items-center justify-center text-xs font-bold text-white shadow-sm ${isAI ? 'bg-gradient-to-br from-indigo-500 to-purple-500' : 'bg-gradient-to-br ' + avatar.gradient}`}>
@@ -208,7 +208,7 @@ export default function SharedAILogsRoom({ groupId, activeUser, onBack }: Shared
 
                         {/* File preview if user attached one */}
                         {msg.file_url && msg.type !== 'ai' && (
-                          <div className="inline-flex items-center gap-2 p-2 rounded-xl bg-white dark:bg-black/20 border border-black/5 dark:border-white/5">
+                          <div className="inline-flex items-center gap-2 p-2 rounded-xl bg-neo-bg shadow-neo-inset border-none">
                             <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500 text-[10px] font-bold uppercase">
                               {msg.type}
                             </div>
@@ -245,14 +245,14 @@ export default function SharedAILogsRoom({ groupId, activeUser, onBack }: Shared
         </div>
 
         {/* Input Area */}
-        <div className="shrink-0 px-4 pb-4 pt-2 bg-gradient-to-t from-[#faf9f6] via-[#faf9f6] to-transparent dark:from-[#0a0b15] dark:via-[#0a0b15] relative z-10">
+        <div className="shrink-0 px-4 pb-4 pt-2 bg-neo-bg relative z-10">
           <div className="max-w-4xl mx-auto">
             <FilePreview file={draftFile} onRemove={() => setDraftFile(null)} />
             
-            <form onSubmit={handleSend} className="bg-white dark:bg-[#16181d] border border-black/5 dark:border-white/5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)] rounded-2xl flex flex-col overflow-hidden transition-all focus-within:ring-2 focus-within:ring-violet-500/50">
+            <form onSubmit={handleSend} className="bg-neo-bg shadow-neo rounded-2xl flex flex-col overflow-hidden transition-all border-none focus-within:shadow-neo-inset">
               
               {/* Toolbar */}
-              <div className="flex items-center justify-between px-3 py-2 bg-gray-50/50 dark:bg-white/[0.02] border-b border-black/5 dark:border-white/5">
+              <div className="flex items-center justify-between px-3 py-2 bg-transparent border-none">
                 <div className="flex items-center gap-2">
                   <select
                     value={selectedPromptCategory}

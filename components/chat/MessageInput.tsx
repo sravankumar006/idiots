@@ -123,8 +123,8 @@ export default function MessageInput({
                 onClick={() => setSelectedCategory(isSelected ? null : cat.id)}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-[10.5px] font-bold tracking-wide transition-all duration-200 border cursor-pointer min-h-[36px] ${
                   isSelected
-                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400 shadow-sm shadow-amber-500/5'
-                    : 'bg-white/40 dark:bg-[#16181d]/40 border-black/5 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/8'
+                    ? 'bg-neo-bg shadow-neo-inset border-none text-neo-text'
+                    : 'bg-neo-bg shadow-neo-shallow border-none text-neo-text opacity-70 hover:opacity-100 hover:shadow-neo'
                 }`}
               >
                 <span>{cat.emoji}</span>
@@ -143,10 +143,10 @@ export default function MessageInput({
 
       {/* ── Pill container ── */}
       <div
-        className={`flex items-end gap-2 bg-white dark:bg-[#16181d] border border-black/[0.03] dark:border-white/[0.04] rounded-[28px] transition-all duration-300 ease-out relative z-10 ${
+        className={`flex items-end gap-2 bg-neo-bg border-none rounded-[28px] transition-all duration-300 ease-out relative z-10 ${
           isFocused
-            ? 'shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] -translate-y-0.5'
-            : 'shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.2)] hover:shadow-[0_6px_24px_rgb(0,0,0,0.05)] dark:hover:shadow-[0_6px_24px_rgb(0,0,0,0.25)]'
+            ? 'shadow-neo-inset'
+            : 'shadow-neo hover:shadow-neo-high'
         } ${replyTo || draftFile ? 'rounded-t-2xl' : ''}`}
       >
         {/* Attachment button */}

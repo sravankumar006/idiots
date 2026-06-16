@@ -143,8 +143,8 @@ useEffect(() => {
 
   return (
     <>
-      <div className="pt-4 px-4 md:px-6 shrink-0 z-40 bg-transparent relative">
-        <header className="h-16 flex items-center justify-between px-4 md:px-6 select-none neo-panel rounded-3xl border-none w-full shadow-neo">
+      <div className="pt-0.5 pl-0 pr-1 md:pt-1.5 md:pl-0.5 md:pr-1.5 shrink-0 z-40 bg-transparent relative">
+        <header className="h-16 flex items-center justify-between px-4 md:px-6 select-none glass-panel rounded-3xl border-none w-full">
       
       {/* Left: Mobile Menu Trigger & Title */}
       <div className="flex items-center gap-3">
@@ -161,7 +161,7 @@ useEffect(() => {
 
 
         <div className="flex items-center gap-2">
-          <Sparkles className="h-4.5 w-4.5 text-violet-400 animate-pulse" />
+          <Sparkles className="h-4.5 w-4.5 text-[var(--accent-warm)] animate-pulse" />
           <h1 className="text-base font-extrabold tracking-wide text-gray-900 dark:text-white">
             {pageTitle}
           </h1>
@@ -173,7 +173,7 @@ useEffect(() => {
         <input 
           type="text" 
           placeholder="Search connections..." 
-          className="w-full bg-neo-bg shadow-neo-inset rounded-xl py-2.5 pl-4 pr-10 text-xs text-neo-text placeholder:text-gray-400 focus:outline-none transition-all duration-300 font-medium border-none"
+          className="w-full glass-input rounded-xl py-2.5 pl-4 pr-10 text-xs text-neo-text placeholder:text-gray-400 focus:outline-none transition-all duration-300 font-medium"
           suppressHydrationWarning
         />
         <Search className="h-4 w-4 text-gray-500 absolute right-3" />
@@ -182,8 +182,8 @@ useEffect(() => {
       {/* Right: Quick Interactions */}
       <div className="flex items-center gap-4">
         {/* Status Indicator */}
-        <div className="hidden lg:flex items-center gap-2 bg-neo-bg shadow-neo-inset py-1.5 px-3 rounded-full text-[10px] font-bold text-[#fb864b] lowercase">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#fb864b] animate-pulse dark:shadow-[0_0_6px_rgba(139,92,246,0.5)]" />
+        <div className="hidden lg:flex items-center gap-2 bg-neo-bg shadow-neo-inset py-1.5 px-3 rounded-full text-[10px] font-bold text-[var(--foreground)] lowercase">
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--active-color)] animate-pulse" />
           <span>connected & synced</span>
         </div>
 
@@ -198,7 +198,7 @@ useEffect(() => {
             {theme === 'dark' ? (
               <Sun className="h-4 w-4 text-amber-400 hover:scale-115 transition-transform duration-300" />
             ) : (
-              <Moon className="h-4 w-4 text-indigo-500 hover:scale-115 transition-transform duration-300" />
+              <Moon className="h-4 w-4 text-gray-700 hover:scale-115 transition-transform duration-300" />
             )}
           </button>
         )}
@@ -211,7 +211,7 @@ useEffect(() => {
             aria-label="Notifications"
             className={`relative p-2.5 rounded-full transition-all duration-300 cursor-pointer border-none ${
               dropdownOpen 
-                ? 'bg-neo-bg shadow-neo-inset text-[#fb864b]' 
+                ? 'bg-neo-bg shadow-neo-inset text-[var(--active-color)]' 
                 : 'bg-neo-bg shadow-neo text-neo-secondary hover:shadow-neo hover:-translate-y-0.5 active:shadow-neo-inset active:translate-y-0.5'
             }`}
             title="Notifications"
@@ -230,7 +230,7 @@ useEffect(() => {
             isMobile ? (
               // Mobile full-screen overlay
               <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex justify-end">
-                <div className="relative w-full h-full max-w-sm bg-white dark:bg-gray-900 glass-panel border-l border-black/10 dark:border-white/5 shadow-2xl overflow-y-auto animate-slideInRight">
+                <div className="relative w-full h-full max-w-sm glass-panel shadow-2xl overflow-y-auto animate-slideInRight">
                   {/* Close button */}
                   <button
                     onClick={() => setDropdownOpen(false)}
@@ -345,7 +345,7 @@ useEffect(() => {
               </div>
             ) : (
               // Desktop popover (existing markup)
-              <div className="absolute right-0 mt-3 w-80 sm:w-96 rounded-2xl glass-panel border border-black/10 dark:border-white/5 shadow-2xl z-50 overflow-hidden animate-scaleIn select-none">
+              <div className="absolute right-0 mt-3 w-80 sm:w-96 rounded-2xl glass-panel shadow-2xl z-50 overflow-hidden animate-scaleIn select-none">
                 {/* Header */}
                 <div className="p-4 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -361,7 +361,7 @@ useEffect(() => {
                   {notifications.length > 0 && (
                     <button 
                       onClick={markAllAsRead}
-                      className="text-[10px] font-bold text-violet-500 dark:text-violet-400 hover:text-violet-600 dark:hover:text-violet-300 transition-colors bg-transparent border-none cursor-pointer"
+                      className="text-[10px] font-bold text-[var(--active-color)] hover:opacity-85 transition-colors bg-transparent border-none cursor-pointer"
                     >
                       Mark all as read
                     </button>
@@ -369,9 +369,9 @@ useEffect(() => {
                 </div>
                 {/* Permission Header */}
                 {pushPermission === 'default' && (
-                  <div className="p-3 bg-violet-500/5 dark:bg-violet-500/10 border-b border-violet-500/10 flex items-center justify-between gap-3">
+                  <div className="p-3 bg-[var(--active-color)]/5 dark:bg-[var(--active-color)]/10 border-b border-[var(--active-color)]/10 flex items-center justify-between gap-3">
                     <div className="flex items-start gap-2 min-w-0">
-                      <ShieldAlert className="h-4 w-4 text-violet-400 shrink-0 mt-0.5" />
+                      <ShieldAlert className="h-4 w-4 text-[var(--accent-warm)] shrink-0 mt-0.5" />
                       <div className="min-w-0">
                         <span className="text-[10px] font-bold text-gray-900 dark:text-white block lowercase">
                           enable push notifications
@@ -383,7 +383,7 @@ useEffect(() => {
                     </div>
                     <button
                       onClick={requestPermissionAndRegister}
-                      className="px-2.5 py-1 bg-violet-500 hover:bg-violet-600 text-white rounded-lg text-[9px] font-bold transition-all cursor-pointer shrink-0"
+                      className="px-2.5 py-1 bg-[var(--active-color)] hover:opacity-95 text-white rounded-lg text-[9px] font-bold transition-all cursor-pointer shrink-0 border-none"
                     >
                       allow
                     </button>
@@ -403,7 +403,7 @@ useEffect(() => {
                       <div 
                         key={n.id}
                         className={`p-3.5 flex items-start justify-between gap-3.5 transition-colors relative hover:bg-black/[0.02] dark:hover:bg-white/[0.01] ${
-                          !n.is_read ? 'bg-violet-500/[0.02] dark:bg-violet-500/[0.01]' : ''
+                          !n.is_read ? 'bg-[var(--active-color)]/[0.02] dark:bg-[var(--active-color)]/[0.01]' : ''
                         }`}
                       >
                         {/* Left: Category Icon */}
@@ -420,7 +420,7 @@ useEffect(() => {
                               {n.title}
                             </span>
                             {!n.is_read && (
-                              <span className="h-1.5 w-1.5 rounded-full bg-violet-500 shrink-0" />
+                              <span className="h-1.5 w-1.5 rounded-full bg-[var(--active-color)] shrink-0" />
                             )}
                           </div>
                           <p className={`text-[10px] ${!n.is_read ? 'text-gray-700 dark:text-gray-300 font-semibold' : 'text-gray-400 dark:text-gray-500'} leading-relaxed mt-0.5 break-words line-clamp-2`}>
@@ -435,7 +435,7 @@ useEffect(() => {
                           {!n.is_read && (
                             <button
                               onClick={(e) => { e.stopPropagation(); markAsRead(n.id) }}
-                              className="p-1 text-gray-400 dark:text-gray-500 hover:text-violet-500 dark:hover:text-violet-400 transition-colors bg-transparent border-none cursor-pointer"
+                              className="p-1 text-gray-400 dark:text-gray-500 hover:text-[var(--active-color)] transition-colors bg-transparent border-none cursor-pointer"
                               title="Mark as read"
                             >
                               <Check className="h-3.5 w-3.5" />

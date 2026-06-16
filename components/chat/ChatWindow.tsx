@@ -20,7 +20,7 @@ const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
   'avatar-cyber-ghost':  { gradient: 'from-indigo-400 to-purple-500',  symbol: 'CM' },
   'avatar-neon-pulse':   { gradient: 'from-purple-400 to-pink-500',    symbol: 'SL' },
   'avatar-alpha-wing':   { gradient: 'from-emerald-400 to-teal-500',   symbol: 'MM' },
-  'avatar-solar-flare':  { gradient: 'from-orange-300 to-rose-400',    symbol: 'WP' },
+  'avatar-solar-flare':  { gradient: 'from-[#5E4545] to-[#8A6D6D] dark:from-[#ffb4b4] dark:to-[#ff8a8a]',    symbol: 'WP' },
   'avatar-void-runner':  { gradient: 'from-rose-400 to-pink-500',      symbol: 'CB' },
   'avatar-shadow-blade': { gradient: 'from-slate-400 to-indigo-500',   symbol: 'MS' },
 }
@@ -31,7 +31,7 @@ const GROUP_GRADIENTS = [
   'from-indigo-400 to-blue-500',
   'from-emerald-400 to-teal-500',
   'from-rose-400 to-pink-500',
-  'from-amber-400 to-orange-500',
+  'from-[#5E4545] to-[#8A6D6D] dark:from-[#ffb4b4] dark:to-[#ff8a8a]',
 ]
 function groupGradient(id: string) {
   const hash = id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
@@ -188,15 +188,7 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack, hig
   return (
     <DragDropZone onFileDrop={setDraftFile}>
       <div 
-        className={`flex flex-col relative overflow-hidden transition-all duration-500 ${
-          isGeneralRoom
-            ? 'bg-[#faf6f2] dark:bg-[#0e0d10]'
-            : (isFocusRoom
-                ? 'bg-[#fafaf6] dark:bg-[#0a0a0d]'
-                : (effectiveStudyModeActive
-                    ? 'bg-[#f6f3eb] dark:bg-[#0c0c0f]'
-                    : 'bg-[#f0ede8] dark:bg-[#0f0f12]'))
-        }`}
+        className="flex flex-col relative overflow-hidden transition-all duration-500 bg-neo-bg"
         style={{
           height: 'var(--visual-viewport-height, 100dvh)'
         }}
@@ -225,15 +217,7 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack, hig
             STICKY HEADER
             ══════════════════════════════════════ */}
         <header 
-          className={`relative z-10 flex items-center gap-3 px-4 shrink-0 backdrop-blur-xl border-b transition-all duration-500 h-14 ${
-            isGeneralRoom
-              ? 'bg-[#faf6f2]/90 dark:bg-[#141318]/90 sm:h-auto border-black/5 dark:border-white/[0.05] py-2 sm:py-2.5'
-              : (isFocusRoom
-                  ? 'bg-[#fafaf6]/90 dark:bg-[#0e0e12]/90 sm:h-auto border-amber-500/10 shadow-[0_1px_10px_rgba(245,158,11,0.01)] py-2 sm:py-2.5'
-                  : (effectiveStudyModeActive
-                      ? 'bg-[#faf8f4]/90 dark:bg-[#121216]/90 border-amber-500/10 shadow-[0_1px_10px_rgba(245,158,11,0.02)]'
-                      : 'bg-[#faf9f6]/80 dark:bg-[#16181d]/80 border-black/5 dark:border-white/[0.05]'))
-          }`}
+          className="relative z-10 flex items-center gap-3 px-4 shrink-0 backdrop-blur-xl border-none shadow-neo bg-neo-bg transition-all duration-500 h-14"
           style={{
             paddingTop: 'calc(0.5rem + env(safe-area-inset-top, 0px))',
             height: 'calc(3.5rem + env(safe-area-inset-top, 0px))', // h-14 on mobile + safe area top
