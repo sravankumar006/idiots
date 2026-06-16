@@ -471,7 +471,6 @@ useEffect(() => {
         >
           <Users className="h-4 w-4" />
         </button>
-
         {/* User Quick Profile Icon removed */}
       </div>
 
@@ -480,7 +479,6 @@ useEffect(() => {
       {userSheetOpen && (
         <UserActionSheet 
           profile={profile} 
-          isOpen={userSheetOpen}
           onClose={() => setUserSheetOpen(false)} 
         />
       )}
