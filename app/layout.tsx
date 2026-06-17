@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import PwaHandler from "@/components/layout/PwaHandler";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta-sans",
@@ -95,6 +96,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <PwaHandler />
         </ThemeProvider>
       </body>
     </html>

@@ -103,7 +103,7 @@ export function PushNotificationProvider({ userId, children }: { userId: string;
         vapidKey: config.vapidKey || ''
       }).toString()
 
-      const registration = await navigator.serviceWorker.register(`/firebase-messaging-sw.js?${queryParams}`, {
+      const registration = await navigator.serviceWorker.register(`/sw.js?${queryParams}`, {
         scope: '/'
       })
       console.log(`[FCM Client] Service Worker successfully registered. Scope: ${registration.scope}`)
@@ -179,9 +179,19 @@ export function PushNotificationProvider({ userId, children }: { userId: string;
         setPermission(Notification.permission)
         if (Notification.permission === 'granted') {
           requestPermissionAndRegister().catch(() => {})
+        } else {
+          // Register base PWA service worker for offline support
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {})
+          }
         }
-      } else if (isIOS && !isStandalone) {
-        setError('On iOS, push notifications require adding the app to your Home Screen. Tap Share -> "Add to Home Screen" in Safari, then open the app from your home screen.')
+      } else {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('/sw.js').catch(() => {})
+        }
+        if (isIOS && !isStandalone) {
+          setError('On iOS, push notifications require adding the app to your Home Screen. Tap Share -> "Add to Home Screen" in Safari, then open the app from your home screen.')
+        }
       }
     }
   }, [userId])
