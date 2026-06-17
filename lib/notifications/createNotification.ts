@@ -39,7 +39,7 @@ export async function createNotification(params: {
   if (settings) {
     const key = `${category}_enabled` as keyof typeof settings
     if (settings[key] === false) {
-      console.log(`User ${userId} has disabled notifications for category '${category}'. Skipping database insert and push delivery.`)
+      console.log(`[TEMP LOG] User ${userId} has disabled notifications for category '${category}'. Skipping database insert and push delivery.`)
       return null
     }
   }
@@ -119,10 +119,10 @@ export async function createNotification(params: {
       .single()
 
     if (updateError) {
-      console.error("Error updating existing notification for deduplication:", updateError)
+      console.error("[TEMP LOG] Error updating existing notification for deduplication:", updateError)
     } else {
       notification = updated
-      console.log(`Notification ${notification.id} deduplicated and updated successfully.`)
+      console.log(`[TEMP LOG] Notification ${notification.id} deduplicated and updated successfully for Recipient: ${userId}`)
     }
   }
 
@@ -147,10 +147,11 @@ export async function createNotification(params: {
       .single()
 
     if (insertError) {
-      console.error("Error inserting notification record:", insertError)
+      console.error("[TEMP LOG] Error inserting notification record:", insertError)
       return null
     }
     notification = inserted
+    console.log('[TEMP LOG] Inserted new notification record in DB. ID:', notification.id, 'Recipient:', notification.user_id)
   }
 
   // 4. Trigger FCM push notification asynchronously using merged title/body

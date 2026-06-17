@@ -10,6 +10,8 @@ import Topbar from './Topbar'
 import RightPanel from './RightPanel'
 import MobileNav from './MobileNav'
 import useVisualViewport from '@/hooks/useVisualViewport'
+import { PushNotificationProvider } from '@/hooks/usePushNotifications'
+
 
 
 interface PlatformLayoutProps {
@@ -294,7 +296,7 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
   }
 
   return (
-    <>
+    <PushNotificationProvider userId={profile.id}>
       {isNavigating && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2 bg-white/95 dark:bg-[#181922]/95 backdrop-blur-md shadow-neo-high rounded-full border border-white/40 dark:border-white/5 flex items-center gap-2.5 animate-fadeIn select-none">
           <svg 
@@ -338,6 +340,6 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
         </div>
       )}
       {renderLayoutContent()}
-    </>
+    </PushNotificationProvider>
   )
 }

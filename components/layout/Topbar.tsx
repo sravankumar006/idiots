@@ -60,6 +60,7 @@ export default function Topbar({
 
   const { 
     permission: pushPermission, 
+    error: pushError,
     requestPermissionAndRegister 
   } = usePushNotifications()
 
@@ -284,6 +285,32 @@ useEffect(() => {
                         </button>
                       </div>
                     )}
+                    {pushError && (
+                      <div className="p-3 bg-rose-500/5 dark:bg-rose-500/10 border-b border-rose-500/10 flex items-start gap-2.5">
+                        <ShieldAlert className="h-4 w-4 text-rose-500 shrink-0 mt-0.5 animate-pulse" />
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[10px] font-bold text-rose-500 block lowercase">
+                            push setup issue
+                          </span>
+                          <span className="text-[9px] text-rose-700 dark:text-rose-400 font-semibold block leading-tight break-words">
+                            {pushError}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    {pushPermission === 'denied' && !pushError && (
+                      <div className="p-3 bg-rose-500/5 dark:bg-rose-500/10 border-b border-rose-500/10 flex items-start gap-2.5">
+                        <ShieldAlert className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[10px] font-bold text-gray-900 dark:text-white block lowercase">
+                            notifications blocked
+                          </span>
+                          <span className="text-[9px] text-gray-500 dark:text-gray-400 font-semibold block leading-tight">
+                            please reset site permissions in your browser address bar to receive push alerts.
+                          </span>
+                        </div>
+                      </div>
+                    )}
                     {/* Notifications List */}
                     <div className="max-h-[calc(100vh-200px)] overflow-y-auto divide-y divide-black/5 dark:divide-white/5">
                       {notifications.length === 0 ? (
@@ -387,6 +414,32 @@ useEffect(() => {
                     >
                       allow
                     </button>
+                  </div>
+                )}
+                {pushError && (
+                  <div className="p-3 bg-rose-500/5 dark:bg-rose-500/10 border-b border-rose-500/10 flex items-start gap-2.5">
+                    <ShieldAlert className="h-4 w-4 text-rose-500 shrink-0 mt-0.5 animate-pulse" />
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] font-bold text-rose-500 block lowercase">
+                        push setup issue
+                      </span>
+                      <span className="text-[9px] text-rose-700 dark:text-rose-400 font-semibold block leading-tight break-words">
+                        {pushError}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {pushPermission === 'denied' && !pushError && (
+                  <div className="p-3 bg-rose-500/5 dark:bg-rose-500/10 border-b border-rose-500/10 flex items-start gap-2.5">
+                    <ShieldAlert className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] font-bold text-gray-900 dark:text-white block lowercase">
+                        notifications blocked
+                      </span>
+                      <span className="text-[9px] text-gray-500 dark:text-gray-400 font-semibold block leading-tight">
+                        please reset site permissions in your browser address bar to receive push alerts.
+                      </span>
+                    </div>
                   </div>
                 )}
                 {/* Notifications List */}

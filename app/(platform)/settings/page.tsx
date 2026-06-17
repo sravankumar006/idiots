@@ -86,7 +86,7 @@ export default function SettingsPage() {
   }, [])
   
   const supabase = createClient()
-  const { token, permission } = usePushNotifications()
+  const { token, permission, error: pushError, requestPermissionAndRegister } = usePushNotifications()
 
   // Notification Debug States
   const [swStatus, setSwStatus] = useState<'Connected' | 'Disconnected' | 'Checking...'>('Checking...')
@@ -94,6 +94,59 @@ export default function SettingsPage() {
   const [lastRegistrationTime, setLastRegistrationTime] = useState<string | null>(null)
   const [devicePlatform, setDevicePlatform] = useState<string>('Web')
   const [sendingTest, setSendingTest] = useState(false)
+  const [repairing, setRepairing] = useState(false)
+
+  // Notification Diagnostics States
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [registeredDeviceCount, setRegisteredDeviceCount] = useState<number | null>(null)
+  const [runningDiagnostics, setRunningDiagnostics] = useState(false)
+  const [diagnosticsRun, setDiagnosticsRun] = useState(false)
+  const [diagnosticChecks, setDiagnosticChecks] = useState<{
+    permission: { status: 'pass' | 'fail' | 'warn'; message: string } | null
+    sw: { status: 'pass' | 'fail'; message: string } | null
+    firebase: { status: 'pass' | 'fail'; message: string } | null
+    token: { status: 'pass' | 'fail'; message: string } | null
+    dbRegistration: { status: 'pass' | 'fail'; message: string } | null
+    preferences: { status: 'pass' | 'warn' | 'fail'; message: string } | null
+  }>({
+    permission: null,
+    sw: null,
+    firebase: null,
+    token: null,
+    dbRegistration: null,
+    preferences: null,
+  })
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setCurrentUserId(user.id)
+      }
+    }
+    fetchUser()
+  }, [])
+
+  const handleRepairNotifications = async () => {
+    setRepairing(true)
+    try {
+      const result = await requestPermissionAndRegister()
+      if (result) {
+        alert('Push notifications successfully repaired and re-registered!')
+      } else {
+        if (Notification.permission === 'denied') {
+          alert('Notification permission is blocked by your browser. Please reset site permissions in your browser address bar to allow notifications.')
+        } else {
+          alert('Failed to repair notifications. Check browser settings or console logs.')
+        }
+      }
+    } catch (err: any) {
+      alert(`Repair failed: ${err.message || 'An unexpected error occurred.'}`)
+    } finally {
+      setRepairing(false)
+      await checkSystemHealth()
+    }
+  }
 
   const checkServiceWorker = async () => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
@@ -126,13 +179,153 @@ export default function SettingsPage() {
       if (devices && devices.length > 0) {
         setDbTokenStatus('Registered')
         setLastRegistrationTime(new Date(devices[0].created_at).toLocaleString())
+        setRegisteredDeviceCount(devices.length)
       } else {
         setDbTokenStatus('Missing')
         setLastRegistrationTime(null)
+        setRegisteredDeviceCount(0)
       }
     } catch (err) {
       console.error('Error fetching device tokens:', err)
       setDbTokenStatus('Missing')
+      setRegisteredDeviceCount(0)
+    }
+  }
+
+  const handleRunDiagnostics = async () => {
+    setRunningDiagnostics(true)
+    setDiagnosticsRun(true)
+    
+    const checks: typeof diagnosticChecks = {
+      permission: null,
+      sw: null,
+      firebase: null,
+      token: null,
+      dbRegistration: null,
+      preferences: null,
+    }
+
+    try {
+      // 1. Browser permission state
+      const perm = typeof window !== 'undefined' ? Notification.permission : 'default'
+      if (perm === 'granted') {
+        checks.permission = { status: 'pass', message: 'Notification permission is granted by browser.' }
+      } else if (perm === 'denied') {
+        checks.permission = { status: 'fail', message: 'Notification permission is blocked. Reset site settings to enable.' }
+      } else {
+        checks.permission = { status: 'warn', message: 'Notification permission has not been requested yet.' }
+      }
+
+      // 2. Service worker registration
+      let hasSW = false
+      let swScope = ''
+      if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations()
+        const match = regs.find(r => r.active && (r.active.scriptURL.includes('firebase-messaging-sw') || r.scope === '/'))
+        if (match) {
+          hasSW = true
+          swScope = match.scope
+        }
+      }
+      if (hasSW) {
+        checks.sw = { status: 'pass', message: `Service Worker active at scope: ${swScope}` }
+      } else {
+        checks.sw = { status: 'fail', message: 'Service Worker inactive or not found.' }
+      }
+
+      // 3. Firebase initialization
+      let configValid = false
+      let fcmConfig: any = null
+      try {
+        const configRes = await fetch('/api/notifications/config')
+        if (configRes.ok) {
+          fcmConfig = await configRes.json()
+          if (fcmConfig.apiKey && fcmConfig.projectId && fcmConfig.messagingSenderId && fcmConfig.appId) {
+            configValid = true
+          }
+        }
+      } catch (err) {}
+      
+      if (configValid) {
+        checks.firebase = { status: 'pass', message: 'Firebase configuration loaded and initialized successfully.' }
+      } else {
+        checks.firebase = { status: 'fail', message: 'Firebase/FCM credentials are not configured on the server.' }
+      }
+
+      // 4. FCM token availability
+      if (token) {
+        checks.token = { status: 'pass', message: `FCM Token is available: ${token.slice(0, 10)}...` }
+      } else {
+        checks.token = { status: 'fail', message: 'FCM Token is missing. Run Repair to generate one.' }
+      }
+
+      // 5. user_devices registration status
+      let isTokenInDb = false
+      let devicesCount = 0
+      let lastReg: string | null = null
+      
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: devices } = await supabase
+          .from('user_devices')
+          .select('id, fcm_token, created_at')
+          .eq('user_id', user.id)
+
+        if (devices) {
+          devicesCount = devices.length
+          if (token && devices.some(d => d.fcm_token === token)) {
+            isTokenInDb = true
+          }
+          if (devices.length > 0) {
+            const sorted = [...devices].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            lastReg = new Date(sorted[0].created_at).toLocaleString()
+          }
+        }
+      }
+      
+      setRegisteredDeviceCount(devicesCount)
+      if (lastReg) {
+        setLastRegistrationTime(lastReg)
+      }
+
+      if (isTokenInDb) {
+        checks.dbRegistration = { status: 'pass', message: `Current token registered inside public.user_devices. (Total: ${devicesCount} registered)` }
+        setDbTokenStatus('Registered')
+      } else {
+        checks.dbRegistration = { status: 'fail', message: token 
+          ? 'Current token is NOT registered in public.user_devices.' 
+          : 'Cannot check registration status: Token is missing.' 
+        }
+        setDbTokenStatus('Missing')
+      }
+
+      // 6. Notification preference status
+      let prefsValid = false
+      let muted = true
+      try {
+        const res = await fetch('/api/notifications/preferences')
+        if (res.ok) {
+          const data = await res.json()
+          prefsValid = true
+          if (data.chat_enabled || data.focus_enabled || data.ai_enabled || data.memory_enabled || data.achievement_enabled) {
+            muted = false
+          }
+        }
+      } catch (err) {}
+
+      if (!prefsValid) {
+        checks.preferences = { status: 'fail', message: 'Failed to fetch notification preferences from API.' }
+      } else if (muted) {
+        checks.preferences = { status: 'warn', message: 'All notification routes (Chat, Focus, AI, Vault, Streak) are disabled.' }
+      } else {
+        checks.preferences = { status: 'pass', message: 'Preferences retrieved. At least one notification category is active.' }
+      }
+
+    } catch (err: any) {
+      console.error('Diagnostics execution error:', err)
+    } finally {
+      setDiagnosticChecks(checks)
+      setRunningDiagnostics(false)
     }
   }
 
@@ -603,71 +796,155 @@ export default function SettingsPage() {
           <Card className="p-5 space-y-4">
             <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
               <Activity className="h-4 w-4 text-emerald-400" />
-              Notification Debug Center
+              Notification Diagnostics
             </h3>
             
             <div className="space-y-3.5 text-xs">
               <div className="flex justify-between items-center">
-                <span className="text-gray-500 font-semibold uppercase tracking-wider text-[9px]">Push Permission</span>
-                <span className={`font-bold px-2 py-0.5 rounded-full border text-[10px] ${
+                <span className="text-gray-500 font-semibold uppercase tracking-wider text-[9px]">Notification Permission</span>
+                <span className={`font-bold px-2 py-0.5 rounded-full border text-[10px] lowercase ${
                   permission === 'granted'
                     ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
                     : permission === 'denied'
                     ? 'text-rose-400 bg-rose-500/10 border-rose-500/20'
                     : 'text-amber-400 bg-amber-500/10 border-amber-500/20'
                 }`}>
-                  {permission === 'granted' ? 'Granted' : permission === 'denied' ? 'Denied' : 'Not Requested'}
+                  {permission}
                 </span>
               </div>
 
               <div className="border-t border-white/5 pt-3.5 flex justify-between items-center">
-                <span className="text-gray-500 font-semibold uppercase tracking-wider text-[9px]">Service Worker</span>
-                <span className={`font-bold px-2 py-0.5 rounded-full border text-[10px] ${
+                <span className="text-gray-500 font-semibold uppercase tracking-wider text-[9px]">Service Worker Status</span>
+                <span className={`font-bold px-2 py-0.5 rounded-full border text-[10px] lowercase ${
                   swStatus === 'Connected'
                     ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
                     : swStatus === 'Checking...'
                     ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
                     : 'text-rose-400 bg-rose-500/10 border-rose-500/20'
                 }`}>
-                  {swStatus}
+                  {swStatus === 'Connected' ? 'active' : swStatus === 'Checking...' ? 'checking' : 'inactive'}
                 </span>
               </div>
 
               <div className="border-t border-white/5 pt-3.5 flex justify-between items-center">
-                <span className="text-gray-500 font-semibold uppercase tracking-wider text-[9px]">FCM Token</span>
-                <span className={`font-bold px-2 py-0.5 rounded-full border text-[10px] ${
-                  dbTokenStatus === 'Registered'
+                <span className="text-gray-500 font-semibold uppercase tracking-wider text-[9px]">FCM Token Status</span>
+                <span className={`font-bold px-2 py-0.5 rounded-full border text-[10px] lowercase ${
+                  token
                     ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-                    : dbTokenStatus === 'Checking...'
-                    ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
                     : 'text-rose-400 bg-rose-500/10 border-rose-500/20'
                 }`}>
-                  {dbTokenStatus}
+                  {token ? 'available' : 'missing'}
+                </span>
+              </div>
+
+              <div className="border-t border-white/5 pt-3.5 flex justify-between items-center">
+                <span className="text-gray-500 font-semibold uppercase tracking-wider text-[9px]">Device Registration</span>
+                <span className={`font-bold px-2 py-0.5 rounded-full border text-[10px] lowercase ${
+                  dbTokenStatus === 'Registered'
+                    ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                    : 'text-rose-400 bg-rose-500/10 border-rose-500/20'
+                }`}>
+                  {dbTokenStatus === 'Registered' ? 'registered' : 'not registered'}
                 </span>
               </div>
 
               <div className="border-t border-white/5 pt-3.5">
-                <span className="text-gray-500 font-semibold uppercase tracking-wider text-[9px] block">Last Registration</span>
+                <span className="text-gray-500 font-semibold uppercase tracking-wider text-[9px] block">Current User ID</span>
+                <span className="text-gray-300 font-bold block mt-1 font-mono text-[10px] select-all break-all">
+                  {currentUserId || 'loading...'}
+                </span>
+              </div>
+
+              <div className="border-t border-white/5 pt-3.5 flex justify-between items-center">
+                <span className="text-gray-500 font-semibold uppercase tracking-wider text-[9px]">Registered Device Count</span>
+                <span className="text-gray-300 font-bold">
+                  {registeredDeviceCount !== null ? registeredDeviceCount : 'checking...'}
+                </span>
+              </div>
+
+              <div className="border-t border-white/5 pt-3.5">
+                <span className="text-gray-500 font-semibold uppercase tracking-wider text-[9px] block">Last Registration Timestamp</span>
                 <span className="text-gray-300 font-bold block mt-1 font-mono text-[10px]">
                   {lastRegistrationTime || 'N/A'}
                 </span>
               </div>
 
-              <div className="border-t border-white/5 pt-3.5 flex justify-between items-center">
-                <span className="text-gray-500 font-semibold uppercase tracking-wider text-[9px]">Device Platform</span>
-                <span className="text-gray-300 font-bold">
-                  {devicePlatform}
-                </span>
-              </div>
+              {/* Check results */}
+              {diagnosticsRun && (
+                <div className="border-t border-white/5 pt-3.5 space-y-2.5">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Diagnostics Report</span>
+                  
+                  {[
+                    { label: 'Browser Permission', result: diagnosticChecks.permission },
+                    { label: 'Service Worker', result: diagnosticChecks.sw },
+                    { label: 'Firebase Config', result: diagnosticChecks.firebase },
+                    { label: 'FCM Token Availability', result: diagnosticChecks.token },
+                    { label: 'DB Device Registration', result: diagnosticChecks.dbRegistration },
+                    { label: 'Notification Preferences', result: diagnosticChecks.preferences }
+                  ].map((chk, i) => {
+                    if (!chk.result) return null;
+                    const isPass = chk.result.status === 'pass';
+                    const isWarn = chk.result.status === 'warn';
+                    const color = isPass 
+                      ? 'text-emerald-400' 
+                      : isWarn 
+                      ? 'text-amber-400' 
+                      : 'text-rose-400';
+                    const icon = isPass ? '✓' : isWarn ? '⚠' : '✗';
+                    
+                    return (
+                      <div key={i} className="flex items-start gap-2 text-[10px] font-semibold leading-tight">
+                        <span className={`font-black select-none ${color}`}>{icon}</span>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-gray-300 font-bold block">{chk.label}</span>
+                          <span className="text-gray-500 text-[9px] leading-relaxed block">{chk.result.message}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
-              <div className="pt-2">
+              {permission === 'denied' && (
+                <div className="mt-2.5 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[10px] leading-relaxed font-semibold">
+                  <span className="font-bold block uppercase tracking-wider text-[8px] mb-1">site permissions blocked</span>
+                  To re-enable, click the settings/lock icon in your browser's address bar next to the URL, change "Notification" to "Allow", and try again.
+                </div>
+              )}
+
+              {pushError && (
+                <div className="mt-2.5 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[10px] leading-relaxed font-semibold">
+                  <span className="font-bold block uppercase tracking-wider text-[8px] mb-1">registration error</span>
+                  {pushError}
+                </div>
+              )}
+
+              <div className="pt-2 flex flex-col gap-2">
+                <Button 
+                  type="button" 
+                  onClick={handleRunDiagnostics} 
+                  disabled={runningDiagnostics}
+                  className="w-full bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/20 py-2 rounded-xl text-xs font-bold transition-all"
+                >
+                  {runningDiagnostics ? 'Running Checks...' : 'Run Diagnostics'}
+                </Button>
+
                 <Button 
                   type="button" 
                   onClick={handleSendTestNotification} 
-                  disabled={sendingTest}
+                  disabled={sendingTest || permission !== 'granted' || dbTokenStatus !== 'Registered'}
                   className="w-full bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/20 py-2 rounded-xl text-xs font-bold transition-all"
                 >
                   {sendingTest ? 'Sending Test...' : 'Send Test Notification'}
+                </Button>
+
+                <Button 
+                  type="button" 
+                  onClick={handleRepairNotifications} 
+                  disabled={repairing}
+                  className="w-full bg-violet-500/10 text-violet-500 hover:bg-violet-500/20 border border-violet-500/20 py-2 rounded-xl text-xs font-bold transition-all"
+                >
+                  {repairing ? 'Repairing Connection...' : 'Repair Push Notifications'}
                 </Button>
               </div>
             </div>

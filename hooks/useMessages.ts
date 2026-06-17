@@ -176,6 +176,19 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
       if (activeUser) {
         // 1. Trigger Reply notification if this message replies to someone else
         if (activeReply && activeReply.sender_id !== activeUser.id) {
+          console.log('[TEMP LOG] Dispatching reply notification request:', {
+            senderId: activeUser.id,
+            recipientId: activeReply.sender_id,
+            payload: {
+              userId: activeReply.sender_id,
+              title: `@${activeUser.username} replied to you`,
+              body: text.trim() || (isSticker ? 'Sent a sticker' : 'Sent an attachment'),
+              category: 'chat',
+              type: 'reply',
+              relatedId: data.id,
+              roomId: groupId
+            }
+          })
           fetch('/api/notifications/trigger', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -185,7 +198,8 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
               body: text.trim() || (isSticker ? 'Sent a sticker' : 'Sent an attachment'),
               category: 'chat',
               type: 'reply',
-              relatedId: data.id
+              relatedId: data.id,
+              roomId: groupId
             })
           }).catch(err => console.error('Failed to trigger reply notification:', err))
         }
@@ -204,6 +218,19 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
               if (profilesData) {
                 profilesData.forEach(p => {
                   if (p.id !== activeUser.id && (!activeReply || p.id !== activeReply.sender_id)) {
+                    console.log('[TEMP LOG] Dispatching mention notification request:', {
+                      senderId: activeUser.id,
+                      recipientId: p.id,
+                      payload: {
+                        userId: p.id,
+                        title: `@${activeUser.username} mentioned you`,
+                        body: text.trim() || 'mentioned you in chat',
+                        category: 'chat',
+                        type: 'mention',
+                        relatedId: data.id,
+                        roomId: groupId
+                      }
+                    })
                     fetch('/api/notifications/trigger', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
@@ -213,7 +240,8 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
                         body: text.trim() || 'mentioned you in chat',
                         category: 'chat',
                         type: 'mention',
-                        relatedId: data.id
+                        relatedId: data.id,
+                        roomId: groupId
                       })
                     }).catch(err => console.error('Failed to trigger mention notification:', err))
                   }
@@ -222,7 +250,7 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
             })
         }
 
-        // 3. Trigger General Room notification for other members of the workspace
+        // 3. Trigger Room/Workspace notifications for intended recipients
         try {
           // Fetch group name first
           const { data: groupData } = await supabase
@@ -234,35 +262,119 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
           const groupName = groupData?.group_name || 'chat'
           const cleanGroupName = groupName.replace('#', '').toLowerCase()
 
-          // Fetch other profiles to notify
-          const { data: otherProfiles } = await supabase
-            .from('profiles')
-            .select('id, username')
-            .neq('id', activeUser.id)
+          // A. If the room is "#general", notify all other profiles (excluding reply & mention recipients)
+          if (cleanGroupName === 'general') {
+            const { data: otherProfiles } = await supabase
+              .from('profiles')
+              .select('id, username')
+              .neq('id', activeUser.id)
 
-          if (otherProfiles && otherProfiles.length > 0) {
-            otherProfiles.forEach(p => {
-              const wasNotifiedViaReply = activeReply && activeReply.sender_id === p.id
-              const wasNotifiedViaMention = usernames.some(u => u.toLowerCase() === p.username.toLowerCase())
+            if (otherProfiles && otherProfiles.length > 0) {
+              otherProfiles.forEach(p => {
+                const wasNotifiedViaReply = activeReply && activeReply.sender_id === p.id
+                const wasNotifiedViaMention = p.username && usernames.some(u => u.toLowerCase() === p.username.toLowerCase())
 
-              if (!wasNotifiedViaReply && !wasNotifiedViaMention) {
-                fetch('/api/notifications/trigger', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    userId: p.id,
-                    title: `@${activeUser.username} in #${cleanGroupName}`,
-                    body: text.trim() || (isSticker ? 'Sent a sticker' : 'Sent an attachment'),
-                    category: 'chat',
-                    type: 'message',
-                    relatedId: data.id
+                if (!wasNotifiedViaReply && !wasNotifiedViaMention) {
+                  console.log('[TEMP LOG] Dispatching general room notification request:', {
+                    senderId: activeUser.id,
+                    recipientId: p.id,
+                    payload: {
+                      userId: p.id,
+                      title: `@${activeUser.username} in #${cleanGroupName}`,
+                      body: text.trim() || (isSticker ? 'Sent a sticker' : 'Sent an attachment'),
+                      category: 'chat',
+                      type: 'message',
+                      relatedId: data.id,
+                      roomId: groupId
+                    }
                   })
-                }).catch(err => console.error('Failed to trigger message notification:', err))
+                  fetch('/api/notifications/trigger', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      userId: p.id,
+                      title: `@${activeUser.username} in #${cleanGroupName}`,
+                      body: text.trim() || (isSticker ? 'Sent a sticker' : 'Sent an attachment'),
+                      category: 'chat',
+                      type: 'message',
+                      relatedId: data.id,
+                      roomId: groupId
+                    })
+                  }).catch(err => console.error('Failed to trigger general room message notification:', err))
+                }
+              })
+            }
+          } else {
+            // B. Check if this is a project workspace room
+            const { data: projectData } = await supabase
+              .from('projects')
+              .select('created_by')
+              .eq('id', groupId)
+              .maybeSingle()
+
+            if (projectData) {
+              // It is a project room. Fetch project contributors.
+              const { data: contribsData } = await supabase
+                .from('project_contributors')
+                .select('user_id')
+                .eq('project_id', groupId)
+
+              const memberIds = new Set<string>()
+              if (projectData.created_by) memberIds.add(projectData.created_by)
+              if (contribsData) {
+                contribsData.forEach(c => memberIds.add(c.user_id))
               }
-            })
+
+              const recipientIds = Array.from(memberIds).filter(uid => uid !== activeUser.id)
+
+              if (recipientIds.length > 0) {
+                const { data: memberProfiles } = await supabase
+                  .from('profiles')
+                  .select('id, username')
+                  .in('id', recipientIds)
+
+                if (memberProfiles && memberProfiles.length > 0) {
+                  memberProfiles.forEach(p => {
+                    const wasNotifiedViaReply = activeReply && activeReply.sender_id === p.id
+                    const wasNotifiedViaMention = p.username && usernames.some(u => u.toLowerCase() === p.username.toLowerCase())
+
+                    if (!wasNotifiedViaReply && !wasNotifiedViaMention) {
+                      console.log('[TEMP LOG] Dispatching project workspace room notification request:', {
+                        senderId: activeUser.id,
+                        recipientId: p.id,
+                        payload: {
+                          userId: p.id,
+                          title: `@${activeUser.username} in #${cleanGroupName}`,
+                          body: text.trim() || (isSticker ? 'Sent a sticker' : 'Sent an attachment'),
+                          category: 'chat',
+                          type: 'message',
+                          relatedId: data.id,
+                          roomId: groupId
+                        }
+                      })
+                      fetch('/api/notifications/trigger', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          userId: p.id,
+                          title: `@${activeUser.username} in #${cleanGroupName}`,
+                          body: text.trim() || (isSticker ? 'Sent a sticker' : 'Sent an attachment'),
+                          category: 'chat',
+                          type: 'message',
+                          relatedId: data.id,
+                          roomId: groupId
+                        })
+                      }).catch(err => console.error('Failed to trigger project workspace room notification:', err))
+                    }
+                  })
+                }
+              }
+            } else {
+              console.log(`[TEMP LOG] Group message notification skipped for non-general, non-project room: #${cleanGroupName} (${groupId})`)
+            }
           }
         } catch (err) {
-          console.error('Failed to dispatch group message notifications:', err)
+          console.error('Failed to dispatch room message notifications:', err)
         }
       }
 
@@ -565,6 +677,19 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
 
         // --- PUSH NOTIFICATION SYSTEM: Trigger notification for reactions ---
         if (activeUser && targetMsg && targetMsg.sender_id !== activeUser.id) {
+          console.log('[TEMP LOG] Dispatching reaction notification request:', {
+            senderId: activeUser.id,
+            recipientId: targetMsg.sender_id,
+            payload: {
+              userId: targetMsg.sender_id,
+              title: `@${activeUser.username} reacted to your message`,
+              body: `reacted with ${emoji} to: "${targetMsg.message || 'message'}"`,
+              category: 'chat',
+              type: 'reaction',
+              relatedId: messageId,
+              roomId: groupId
+            }
+          })
           fetch('/api/notifications/trigger', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -574,7 +699,8 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
               body: `reacted with ${emoji} to: "${targetMsg.message || 'message'}"`,
               category: 'chat',
               type: 'reaction',
-              relatedId: messageId
+              relatedId: messageId,
+              roomId: groupId
             })
           }).catch(err => console.error('Failed to trigger reaction notification:', err))
         }

@@ -16,6 +16,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // [TEMP LOG]
+    console.log('[TEMP LOG] Incoming notification trigger request:', {
+      senderUserId: user.id,
+      recipientUserId: userId,
+      payload: { title, body, category, type, relatedId, roomId, messageId }
+    })
+
     // Call server-side wrapper to create the notification and trigger FCM push
     const notification = await createNotification({
       userId,
@@ -29,6 +36,12 @@ export async function POST(req: Request) {
       roomId,
       messageId
     })
+
+    if (notification) {
+      console.log('[TEMP LOG] Notification created successfully. Recipient:', notification.user_id, 'Notification ID:', notification.id)
+    } else {
+      console.log('[TEMP LOG] Notification was NOT created (skipped or error). Target Recipient:', userId)
+    }
 
     return NextResponse.json({ success: true, notification })
   } catch (err: any) {
