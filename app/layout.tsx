@@ -55,7 +55,6 @@ export const metadata: Metadata = {
     googleBot: { index: false, follow: false },
   },
 
-  manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
