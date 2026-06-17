@@ -41,3 +41,54 @@ if (apiKey && projectId) {
 } else {
   console.warn('[firebase-messaging-sw.js] Firebase credentials not found in URL parameters. Initialization skipped.')
 }
+
+// Handle notification click event (deep-linking)
+self.addEventListener('notificationclick', (event) => {
+  console.log('[firebase-messaging-sw.js] Notification click received.', event)
+  event.notification.close()
+
+  // Extract data from the notification payload
+  const data = event.notification.data || {}
+  const category = data.category
+  const roomId = data.room_id
+
+  // Determine target path based on room_id and category
+  let targetPath = '/'
+  if (roomId) {
+    targetPath = `/us/chat/${roomId}`
+  } else if (category === 'chat') {
+    targetPath = `/us/chat`
+  } else if (category === 'focus') {
+    targetPath = `/growth/focus`
+  } else if (category === 'ai') {
+    targetPath = `/ai`
+  } else if (category === 'memory') {
+    targetPath = `/us/vault`
+  } else if (category === 'achievement') {
+    targetPath = `/growth`
+  }
+
+  const targetUrl = new URL(targetPath, self.location.origin).toString()
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // 1. Look for an existing tab of this origin
+      for (let i = 0; i < windowClients.length; i++) {
+        const client = windowClients[i]
+        const clientUrl = new URL(client.url)
+        
+        // If the tab is on the same site, navigate it to targetUrl and bring to focus
+        if (clientUrl.origin === self.location.origin && 'focus' in client) {
+          if ('navigate' in client) {
+            client.navigate(targetUrl)
+          }
+          return client.focus()
+        }
+      }
+      // 2. If no tab is open, open a new window
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl)
+      }
+    })
+  )
+})

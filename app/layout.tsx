@@ -55,9 +55,17 @@ export const metadata: Metadata = {
     googleBot: { index: false, follow: false },
   },
 
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'idiots space',
+  },
+
   icons: {
     icon: '/favicon.ico',
     shortcut: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
   },
 }
 

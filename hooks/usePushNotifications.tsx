@@ -21,11 +21,28 @@ export function PushNotificationProvider({ userId, children }: { userId: string;
   const requestPermissionAndRegister = async () => {
     console.log(`[FCM Client] Initiating push registration check for user: ${userId}`)
     
-    if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) {
-      const msg = 'Push notifications or Service Workers not supported in this browser.'
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+      const msg = 'Service Workers are not supported in this browser.'
       console.warn(`[FCM Client] ${msg}`)
       setError(msg)
       return null
+    }
+
+    const isIOS = typeof window !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const isStandalone = typeof window !== 'undefined' && (window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone);
+
+    if (!('Notification' in window)) {
+      if (isIOS && !isStandalone) {
+        const msg = 'On iOS, push notifications require adding the app to your Home Screen. Please tap Share -> "Add to Home Screen" in Safari, then launch the app from your home screen.'
+        console.warn(`[FCM Client] iOS Web Push restriction: App is not in standalone mode.`)
+        setError(msg)
+        return null
+      } else {
+        const msg = 'Push notifications are not supported in this browser.'
+        console.warn(`[FCM Client] Notification API not present in window.`)
+        setError(msg)
+        return null
+      }
     }
 
     console.log('[FCM Client] Browser supports Notifications & Service Worker.')
@@ -154,11 +171,17 @@ export function PushNotificationProvider({ userId, children }: { userId: string;
   }
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      setPermission(Notification.permission)
-      // Auto-register if permission was already granted previously
-      if (Notification.permission === 'granted') {
-        requestPermissionAndRegister().catch(() => {})
+    if (typeof window !== 'undefined') {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
+      
+      if ('Notification' in window) {
+        setPermission(Notification.permission)
+        if (Notification.permission === 'granted') {
+          requestPermissionAndRegister().catch(() => {})
+        }
+      } else if (isIOS && !isStandalone) {
+        setError('On iOS, push notifications require adding the app to your Home Screen. Tap Share -> "Add to Home Screen" in Safari, then open the app from your home screen.')
       }
     }
   }, [userId])

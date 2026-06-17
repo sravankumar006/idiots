@@ -95,6 +95,8 @@ export default function SettingsPage() {
   const [devicePlatform, setDevicePlatform] = useState<string>('Web')
   const [sendingTest, setSendingTest] = useState(false)
   const [repairing, setRepairing] = useState(false)
+  const [isMobileDevice, setIsMobileDevice] = useState(false)
+  const [activeInstallTab, setActiveInstallTab] = useState<'ios' | 'android'>('ios')
 
   // Notification Diagnostics States
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
@@ -347,6 +349,15 @@ export default function SettingsPage() {
       setDevicePlatform('PWA')
     } else {
       setDevicePlatform('Web')
+    }
+
+    const mobileCheck = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    setIsMobileDevice(mobileCheck)
+
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+      setActiveInstallTab('ios')
+    } else if (/Android/i.test(navigator.userAgent)) {
+      setActiveInstallTab('android')
     }
   }, [])
 
@@ -773,6 +784,91 @@ export default function SettingsPage() {
 
         {/* Right 1 Col: Diagnostics */}
         <div className="space-y-4">
+          {devicePlatform !== 'PWA' && devicePlatform !== 'Android' && (
+            <Card className="p-5 space-y-4 border border-violet-500/20 bg-gradient-to-br from-violet-950/10 to-transparent relative overflow-hidden">
+              <div className="absolute top-0 right-0 h-24 w-24 bg-violet-500/5 rounded-full blur-2xl pointer-events-none" />
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <Laptop className="h-4 w-4 text-violet-400 animate-pulse" />
+                Install Mobile App
+              </h3>
+              <p className="text-[11px] text-gray-400 leading-relaxed font-semibold">
+                To receive push notifications while the site is closed, please add this app to your mobile Home Screen:
+              </p>
+
+              {/* Tab Selector */}
+              <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setActiveInstallTab('ios')}
+                  className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                    activeInstallTab === 'ios'
+                      ? 'bg-violet-500/20 text-white border border-violet-500/20'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  iOS (Safari)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveInstallTab('android')}
+                  className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                    activeInstallTab === 'android'
+                      ? 'bg-violet-500/20 text-white border border-violet-500/20'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Android (Chrome)
+                </button>
+              </div>
+              
+              <div className="space-y-3 pt-1 text-xs">
+                {activeInstallTab === 'ios' ? (
+                  <div className="space-y-2.5">
+                    <div className="flex items-start gap-2.5 bg-white/2 p-3 rounded-xl border border-white/5">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/10 text-[10px] font-black text-violet-400">1</span>
+                      <span className="text-gray-300 font-semibold text-[10px]">
+                        Tap the <span className="font-bold text-white">Share</span> button in Safari (at the bottom or top of the screen).
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2.5 bg-white/2 p-3 rounded-xl border border-white/5">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/10 text-[10px] font-black text-violet-400">2</span>
+                      <span className="text-gray-300 font-semibold text-[10px]">
+                        Scroll down and select <span className="font-bold text-white">Add to Home Screen</span>.
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2.5 bg-white/2 p-3 rounded-xl border border-white/5">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/10 text-[10px] font-black text-violet-400">3</span>
+                      <span className="text-gray-300 font-semibold text-[10px]">
+                        Open the installed app from your Home Screen to enable push notifications!
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    <div className="flex items-start gap-2.5 bg-white/2 p-3 rounded-xl border border-white/5">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/10 text-[10px] font-black text-violet-400">1</span>
+                      <span className="text-gray-300 font-semibold text-[10px]">
+                        Tap the browser menu <span className="font-bold text-white">(three dots)</span> in the top-right corner.
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2.5 bg-white/2 p-3 rounded-xl border border-white/5">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/10 text-[10px] font-black text-violet-400">2</span>
+                      <span className="text-gray-300 font-semibold text-[10px]">
+                        Select <span className="font-bold text-white">Add to Home Screen</span> or <span className="font-bold text-white">Install App</span>.
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2.5 bg-white/2 p-3 rounded-xl border border-white/5">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/10 text-[10px] font-black text-violet-400">3</span>
+                      <span className="text-gray-300 font-semibold text-[10px]">
+                        Launch the app from your Home Screen to register your device.
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
           <Card className="p-5 space-y-4">
             <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
               <Database className="h-4 w-4 text-cyan-400" />
@@ -801,6 +897,13 @@ export default function SettingsPage() {
             
             <div className="space-y-3.5 text-xs">
               <div className="flex justify-between items-center">
+                <span className="text-gray-500 font-semibold uppercase tracking-wider text-[9px]">App Environment</span>
+                <span className={`font-bold px-2 py-0.5 rounded-full border text-[10px] lowercase text-violet-400 bg-violet-500/10 border-violet-500/20`}>
+                  {devicePlatform}
+                </span>
+              </div>
+
+              <div className="border-t border-white/5 pt-3.5 flex justify-between items-center">
                 <span className="text-gray-500 font-semibold uppercase tracking-wider text-[9px]">Notification Permission</span>
                 <span className={`font-bold px-2 py-0.5 rounded-full border text-[10px] lowercase ${
                   permission === 'granted'
