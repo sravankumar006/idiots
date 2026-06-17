@@ -85,7 +85,17 @@ export function subscribeToMessages(
         }
       }
     )
-    .subscribe()
+    .subscribe((status, err) => {
+      if (status === 'SUBSCRIBED') {
+        console.log(`[Realtime] Subscribed to channel: realtime-chat:${groupId}`)
+      } else if (status === 'CHANNEL_ERROR') {
+        console.warn(`[Realtime] Channel error for: realtime-chat:${groupId}. Connection lost or database issue.`, err)
+      } else if (status === 'CLOSED') {
+        console.log(`[Realtime] Channel closed for: realtime-chat:${groupId}`)
+      } else if (status === 'TIMED_OUT') {
+        console.warn(`[Realtime] Subscription timed out for: realtime-chat:${groupId}. Re-attempting connection...`)
+      }
+    })
 
   return channel
 }

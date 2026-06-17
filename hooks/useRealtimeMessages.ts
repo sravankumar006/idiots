@@ -382,12 +382,24 @@ export function useRealtimeMessages(groupId: string, activeUser: UserProfile | n
       markMessagesAsSeen(mergedMessages)
     }
 
+    // Automatically re-fetch database history on reconnect to close any disconnection gaps
+    const handleOnline = () => {
+      initData()
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', handleOnline)
+    }
+
     initData()
 
     return () => {
       active = false
       if (channel) {
         supabase.removeChannel(channel)
+      }
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('online', handleOnline)
       }
     }
   }, [groupId, activeUser, supabase, applyMessageInsert, applyReactionInsert, applySeenInsert, markMessagesAsSeen, showNotification])

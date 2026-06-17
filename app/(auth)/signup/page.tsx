@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { BackgroundGlows } from '@/components/ui/BackgroundGlows'
 
 // Cyber avatar presets to choose from during signup
-export const AVATAR_PRESETS = [
+const AVATAR_PRESETS = [
   { id: 'avatar-cyber-ghost', name: 'Cyber Ghost', gradient: 'from-cyan-400 to-blue-500', symbol: 'CG' },
   { id: 'avatar-neon-pulse', name: 'Neon Pulse', gradient: 'from-fuchsia-500 to-purple-600', symbol: 'NP' },
   { id: 'avatar-alpha-wing', name: 'Alpha Wing', gradient: 'from-emerald-400 to-teal-500', symbol: 'AW' },

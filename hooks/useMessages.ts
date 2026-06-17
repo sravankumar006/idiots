@@ -8,6 +8,7 @@ import { getPublicUrl } from '@/lib/storage/getFileUrl'
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages'
 import { deleteMessageForMe as dbDeleteForMe } from '@/lib/chat/deleteMessageForMe'
 import { clearChatForMe as dbClearChat } from '@/lib/chat/clearChatForMe'
+import { useOfflineQueue } from '@/hooks/useOfflineQueue'
 
 export function useMessages(groupId: string, activeUser: UserProfile | null) {
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null)
@@ -21,6 +22,20 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
     isLoading,
     isFallback
   } = useRealtimeMessages(groupId, activeUser)
+
+  // Initialize offline queue hook with callbacks to update UI when messages sync
+  const { enqueue } = useOfflineQueue(
+    useCallback((tempId: string, syncedMsg: ChatMessage) => {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? syncedMsg : m))
+      )
+    }, [setMessages]),
+    useCallback((tempId: string) => {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? { ...m, error: true, sending: false } : m))
+      )
+    }, [setMessages])
+  )
 
   // 1. Send Message Action (optimistic update + upload + insert)
   const sendMessage = async (
@@ -67,6 +82,29 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
       replied_message: replyTo 
         ? { id: replyTo.id, message: replyTo.message, sender_name: replyTo.profiles?.username || 'Explorer' } 
         : null
+    }
+
+    // Check if browser is offline before attempting network actions
+    if (typeof window !== 'undefined' && !navigator.onLine) {
+      if (hasFile) {
+        alert('Rich media uploads (images, documents) are not supported offline. Please reconnect to send this file.')
+        return
+      }
+
+      setMessages((prev) => [...prev, optMessage])
+      const activeReply = replyTo
+      setReplyTo(null)
+
+      enqueue({
+        tempId,
+        groupId,
+        activeUser,
+        text: text.trim() || (isSticker ? 'Sent a sticker' : ''),
+        category,
+        replyToId: activeReply ? activeReply.id : null,
+        createdAt: optMessage.created_at
+      })
+      return
     }
 
     setMessages((prev) => [...prev, optMessage])
