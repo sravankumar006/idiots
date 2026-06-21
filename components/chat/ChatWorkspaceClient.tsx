@@ -40,7 +40,7 @@ const AVATAR_OPTIONS = [
 const NAV_ITEMS = [
   { href: '/dashboard',  label: 'home',           icon: LayoutDashboard },
   { href: '/ai',         label: 'companion',      icon: Sparkles },
-  { href: '/study',      label: 'zen focus',      icon: Clock },
+  { href: '/focus',      label: 'zen focus',      icon: Clock },
   { href: '/memories',   label: 'memories',       icon: Brain },
   { href: '/projects',   label: 'creative rooms', icon: FolderHeart },
   { href: '/settings',   label: 'settings',       icon: Settings },

@@ -155,10 +155,10 @@ export default function StudyCabinDetailPage() {
 
   const everyoneReady = useMemo(() => {
     if (members.length === 0) return false
-    return members.every(m => {
-      const isOnline = presentUserIds.has(m.user_id)
-      return isOnline && (m.is_host || m.status === 'ready')
-    })
+    // Only check readiness for members who are currently online
+    const onlineMembers = members.filter(m => presentUserIds.has(m.user_id))
+    if (onlineMembers.length === 0) return false
+    return onlineMembers.every(m => m.is_host || m.status === 'ready')
   }, [members, presentUserIds])
 
   const readyCount = useMemo(() => {
@@ -167,7 +167,7 @@ export default function StudyCabinDetailPage() {
 
   const totalCount = mappedCrew.length
 
-  const canStartSession = participants.length >= 1 && everyoneReady
+  const canStartSession = everyoneReady
 
   const isHost = useMemo(() => {
     if (!activeProfile || !room) return false
@@ -1347,9 +1347,7 @@ export default function StudyCabinDetailPage() {
                 </button>
                 {!canStartSession && (
                   <p className="text-[9px] text-center font-bold text-amber-600 dark:text-amber-550/70 lowercase leading-none">
-                    {participants.length === 0
-                      ? "need at least 1 participant to start..."
-                      : "waiting for everyone to be ready..."}
+                    waiting for everyone to be ready...
                   </p>
                 )}
               </div>

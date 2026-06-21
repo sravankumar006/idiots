@@ -37,11 +37,22 @@ export function useRealtimeGroupState(groupId: string) {
       }
 
       if (data) {
+        let endsAt = data.study_timer_ends_at || null
+        let type = (data.study_timer_type as GroupState['timerType']) || 'idle'
+        let duration = data.study_timer_duration || 0
+
+        // If the timer has already expired, treat it as idle
+        if (endsAt && new Date(endsAt).getTime() <= Date.now()) {
+          endsAt = null
+          type = 'idle'
+          duration = 0
+        }
+
         setState({
           studyModeActive: !!data.study_mode_active,
-          timerEndsAt: data.study_timer_ends_at || null,
-          timerDuration: data.study_timer_duration || 0,
-          timerType: (data.study_timer_type as GroupState['timerType']) || 'idle',
+          timerEndsAt: endsAt,
+          timerDuration: duration,
+          timerType: type,
         })
       }
     } catch (e) {
@@ -132,11 +143,22 @@ export function useRealtimeGroupState(groupId: string) {
         (payload: any) => {
           if (!active) return
           const updated = payload.new
+          let endsAt = updated.study_timer_ends_at || null
+          let type = updated.study_timer_type || 'idle'
+          let duration = updated.study_timer_duration || 0
+
+          // If the timer has already expired, treat it as idle
+          if (endsAt && new Date(endsAt).getTime() <= Date.now()) {
+            endsAt = null
+            type = 'idle'
+            duration = 0
+          }
+
           setState({
             studyModeActive: updated.study_mode_active !== undefined ? !!updated.study_mode_active : false,
-            timerEndsAt: updated.study_timer_ends_at || null,
-            timerDuration: updated.study_timer_duration || 0,
-            timerType: updated.study_timer_type || 'idle',
+            timerEndsAt: endsAt,
+            timerDuration: duration,
+            timerType: type,
           })
         }
       )

@@ -241,17 +241,17 @@ export default function StudyPanel({
               
               <div className="text-center z-10">
                 <span className="text-2xl font-bold font-mono tracking-tight text-gray-800 dark:text-gray-100">
-                  {timerType !== 'idle' ? formatTime(timeLeft) : '00:00'}
+                  {timerType !== 'idle' && timeLeft > 0 ? formatTime(timeLeft) : '00:00'}
                 </span>
                 <p className="text-[9px] text-gray-400 dark:text-gray-500 lowercase mt-0.5">
-                  {timerType !== 'idle' ? timerType : 'ready'}
+                  {timerType !== 'idle' && timeLeft > 0 ? timerType : 'ready'}
                 </p>
               </div>
             </div>
           </div>
 
           {/* Timer Actions */}
-          {timerType === 'idle' ? (
+          {timerType === 'idle' || timeLeft <= 0 ? (
             <div className="grid grid-cols-2 gap-2 mt-4">
               <button
                 onClick={() => startTimer(1500, 'focus')}
