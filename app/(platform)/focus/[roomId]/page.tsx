@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo, use } from 'react'
 import { 
   Play, Pause, Clock, X, ArrowLeft, BookText, Activity, Save, CheckCircle2,
   Volume2, VolumeX, Music, Radio, Wind, Moon, CloudRain, Users, Send, Check
@@ -8,7 +8,7 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { UserProfile, StudyRoom, StudyRoomMember, StudyRoomComment, StudyRoomTimer } from '@/types'
 import { Card } from '@/components/ui/Card'
-import { useParams, useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 
 const AMBIENT_THEMES = [
   { id: 'minimal_zen', name: 'Minimal Zen', bg: 'bg-[#fdfbf7] dark:bg-[#121110]', textColor: 'text-amber-900 dark:text-amber-100', accent: 'amber', description: 'Soft amber glow and calming breathing pulse' },
@@ -36,11 +36,17 @@ const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
   'avatar-shadow-blade': { gradient: 'from-slate-400 to-indigo-500',   symbol: 'MS' },
 }
 
-export default function StudyCabinDetailPage() {
+interface PageProps {
+  params: Promise<{ roomId: string }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}
+
+export default function StudyCabinDetailPage({ params, searchParams }: PageProps) {
+  const resolvedParams = use(params)
+  const resolvedSearchParams = use(searchParams)
+  const roomId = resolvedParams.roomId
   const supabase = createClient()
   const router = useRouter()
-  const params = useParams()
-  const roomId = params.roomId as string
 
   // Core state
   const [activeProfile, setActiveProfile] = useState<UserProfile | null>(null)
@@ -103,7 +109,7 @@ export default function StudyCabinDetailPage() {
   const mappedCrew = useMemo(() => {
     // 1. Map existing members
     const memberCrew = members.map(m => {
-      const isOnline = presentUserIds.has(m.user_id)
+      const isOnline = m.user_id === activeProfile?.id || presentUserIds.has(m.user_id)
       let status: 'offline' | 'joined' | 'ready' = 'offline'
       if (isOnline) {
         if (m.is_host) {
@@ -128,8 +134,8 @@ export default function StudyCabinDetailPage() {
       return {
         id: i.id,
         user_id: i.invitee_user_id,
-        username: i.profiles?.username || 'explorer',
-        avatar: i.profiles?.avatar || 'avatar-cyber-ghost',
+        username: i.invitee_profile?.username || 'explorer',
+        avatar: i.invitee_profile?.avatar || 'avatar-cyber-ghost',
         is_host: false,
         is_pending: true,
         computedStatus: 'offline' as const
@@ -147,7 +153,7 @@ export default function StudyCabinDetailPage() {
       if (!a.is_pending && b.is_pending) return -1
       return a.username.localeCompare(b.username)
     })
-  }, [members, invitations, presentUserIds])
+  }, [members, invitations, presentUserIds, activeProfile?.id])
 
   const participants = useMemo(() => {
     return members.filter(m => m.user_id !== room?.host_user_id)
@@ -156,10 +162,11 @@ export default function StudyCabinDetailPage() {
   const everyoneReady = useMemo(() => {
     if (members.length === 0) return false
     // Only check readiness for members who are currently online
-    const onlineMembers = members.filter(m => presentUserIds.has(m.user_id))
+    // Always treat the active logged-in user as online
+    const onlineMembers = members.filter(m => m.user_id === activeProfile?.id || presentUserIds.has(m.user_id))
     if (onlineMembers.length === 0) return false
     return onlineMembers.every(m => m.is_host || m.status === 'ready')
-  }, [members, presentUserIds])
+  }, [members, presentUserIds, activeProfile?.id])
 
   const readyCount = useMemo(() => {
     return mappedCrew.filter(c => c.computedStatus === 'ready').length
@@ -856,6 +863,8 @@ export default function StudyCabinDetailPage() {
   const currentThemeConfig = AMBIENT_THEMES.find(t => t.id === selectedTheme) || AMBIENT_THEMES[0]
 
   if (isFullscreen) {
+    const activeSidebarTab = sessionTab === 'timer' ? 'chat' : sessionTab;
+
     return (
       <div className={`flex flex-col w-full h-[100dvh] select-none relative overflow-hidden ${currentThemeConfig.bg}`}>
         
@@ -911,7 +920,7 @@ export default function StudyCabinDetailPage() {
         )}
 
         {/* Active Session Header */}
-        <header className="relative z-10 flex items-center justify-between px-4 h-14 shrink-0 border-b border-white/5 bg-transparent max-w-xl mx-auto w-full">
+        <header className="relative z-10 flex items-center justify-between px-4 lg:px-6 h-14 shrink-0 border-b border-white/5 bg-transparent max-w-6xl mx-auto w-full">
           <div>
             <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none block">cabin focus active</span>
             <h3 className="text-xs font-black text-white lowercase mt-0.5">{selectedGoal}</h3>
@@ -926,13 +935,14 @@ export default function StudyCabinDetailPage() {
           </button>
         </header>
 
-        {/* Main content body (Switched via sessionTab) */}
-        <div className="flex-1 overflow-y-auto min-h-0 relative z-10 max-w-xl mx-auto w-full flex flex-col">
+        {/* Main content body (Responsive Layout) */}
+        <div className="flex-1 overflow-y-auto lg:overflow-visible min-h-0 relative z-10 max-w-6xl mx-auto w-full px-4 lg:px-6 py-4 flex flex-col lg:grid lg:grid-cols-12 gap-6">
           
-          {/* TIMER VIEW */}
-          {sessionTab === 'timer' && (
-            <div className="flex-1 flex flex-col items-center justify-center p-6 gap-8">
-              
+          {/* TIMER VIEW (Left Panel on Desktop, conditional on Mobile) */}
+          <div className={`lg:col-span-5 lg:flex lg:flex-col lg:justify-center p-6 gap-8 bg-black/25 dark:bg-white/[0.01] border border-white/5 rounded-3xl lg:h-[calc(100vh-10rem)] shadow-lg backdrop-blur-xl ${
+            sessionTab === 'timer' ? 'flex flex-col flex-1 items-center justify-center min-h-[350px]' : 'hidden'
+          }`}>
+            <div className="flex-1 flex flex-col items-center justify-center gap-8 w-full">
               {/* Circular Timer Display */}
               <div className="py-9 px-10 rounded-3xl bg-black/25 dark:bg-white/[0.02] border border-white/5 backdrop-blur-xl flex flex-col items-center justify-center relative min-w-[240px] shadow-lg">
                 <svg className="absolute inset-0 w-full h-full p-2.5 pointer-events-none" viewBox="0 0 100 100">
@@ -961,7 +971,7 @@ export default function StudyCabinDetailPage() {
                   <div className="flex items-center gap-3 w-full">
                     <button
                       onClick={handleToggleTimer}
-                      className={`flex-1 py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer shadow-md h-12 ${
+                      className={`flex-1 py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer shadow-md h-12 border-none ${
                         isActive 
                           ? 'bg-amber-500/10 border border-amber-500/30 text-amber-300 hover:bg-amber-500/20' 
                           : 'bg-white/10 hover:bg-white/15 border border-white/10 text-white'
@@ -973,7 +983,7 @@ export default function StudyCabinDetailPage() {
 
                     <button
                       onClick={handleManualEndSession}
-                      className="flex-1 py-3.5 rounded-2xl bg-emerald-550/15 border border-emerald-550/30 hover:bg-emerald-550/20 text-emerald-400 text-xs font-black uppercase tracking-wider transition-all cursor-pointer h-12"
+                      className="flex-1 py-3.5 rounded-2xl bg-emerald-550/15 border border-emerald-550/30 hover:bg-emerald-550/20 text-emerald-400 text-xs font-black uppercase tracking-wider transition-all cursor-pointer h-12 border-none"
                     >
                       end session
                     </button>
@@ -985,126 +995,160 @@ export default function StudyCabinDetailPage() {
                   </div>
                 )}
               </div>
-
             </div>
-          )}
+          </div>
 
-          {/* CREW VIEW */}
-          {sessionTab === 'crew' && (
-            <div className="flex-1 p-6 space-y-3">
-              <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">active cabin crew</h4>
-              <div className="space-y-2.5">
-                {mappedCrew.map((m) => {
-                  const av = AVATAR_MAP[m.avatar || 'avatar-cyber-ghost'] || AVATAR_MAP['avatar-cyber-ghost']
-                  let trafficLightColor = 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'
-                  if (m.computedStatus === 'ready') {
-                    trafficLightColor = 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
-                  } else if (m.computedStatus === 'joined') {
-                    trafficLightColor = 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'
-                  }
-
-                  return (
-                    <div key={m.id} className="flex items-center justify-between p-3 rounded-2xl bg-black/25 border border-white/5">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className={`h-7 w-7 rounded-full bg-gradient-to-br ${av.gradient} flex items-center justify-center text-[9px] font-bold text-white shrink-0 shadow-sm`}>
-                          {av.symbol}
-                        </div>
-                        <span className="text-xs font-semibold text-gray-200 truncate lowercase">
-                          {m.username}
-                          {m.is_host && <span className="ml-1.5 text-[7px] font-extrabold uppercase text-amber-400 tracking-wide bg-amber-500/10 px-1 rounded">host</span>}
-                          {m.is_pending && <span className="ml-1.5 text-[7px] font-extrabold uppercase text-gray-400 tracking-wide bg-white/5 px-1 rounded">invited</span>}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2.5 shrink-0">
-                        <span className="text-[9px] font-bold text-gray-400 lowercase">
-                          {m.is_pending ? 'invited' : m.computedStatus}
-                        </span>
-                        <div className={`h-2.5 w-2.5 rounded-full ${trafficLightColor}`} />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+          {/* CHAT & CREW TABS VIEW (Right Panel on Desktop, conditional on Mobile) */}
+          <div className={`lg:col-span-7 lg:flex lg:flex-col bg-black/25 dark:bg-white/[0.01] border border-white/5 rounded-3xl overflow-hidden lg:h-[calc(100vh-10rem)] shadow-lg backdrop-blur-xl ${
+            sessionTab !== 'timer' ? 'flex flex-col flex-1' : 'hidden'
+          }`}>
+            
+            {/* Sidebar Tab Selector (Desktop only) */}
+            <div className="hidden lg:flex border-b border-white/5 h-11 bg-black/20 select-none">
+              <button
+                onClick={() => setSessionTab('chat')}
+                className={`flex-1 flex items-center justify-center text-xs font-black lowercase transition-all cursor-pointer border-none bg-transparent ${
+                  activeSidebarTab === 'chat'
+                    ? 'border-b-2 border-amber-500 text-amber-500 font-bold'
+                    : 'text-gray-400 hover:text-gray-300'
+                }`}
+              >
+                lounge chat
+              </button>
+              <button
+                onClick={() => setSessionTab('crew')}
+                className={`flex-1 flex items-center justify-center text-xs font-black lowercase transition-all cursor-pointer border-none bg-transparent ${
+                  activeSidebarTab === 'crew'
+                    ? 'border-b-2 border-amber-500 text-amber-500 font-bold'
+                    : 'text-gray-400 hover:text-gray-300'
+                }`}
+              >
+                active cabin crew ({mappedCrew.length})
+              </button>
             </div>
-          )}
 
-          {/* CHAT VIEW */}
-          {sessionTab === 'chat' && (
-            <div className="flex-1 flex flex-col min-h-0 h-full">
+            {/* Tab Content */}
+            <div className="flex-1 flex flex-col min-h-0 relative">
               
-              {/* Chat Feed */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0 scrollbar-thin">
-                {comments.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-2">
-                    <BookText className="h-8 w-8 text-gray-455/40" />
-                    <p className="text-xs text-gray-400 lowercase font-semibold">chat is currently empty.</p>
-                    <p className="text-[10px] text-gray-500 lowercase leading-relaxed font-semibold">start the discussion here.</p>
-                  </div>
-                ) : (
-                  comments.map((comment) => {
-                    const isMe = comment.user_id === activeProfile?.id
-                    const av = AVATAR_MAP[comment.profiles?.avatar || 'avatar-cyber-ghost'] || AVATAR_MAP['avatar-cyber-ghost']
-
-                    return (
-                      <div key={comment.id} className={`flex gap-3 max-w-[85%] ${isMe ? 'ml-auto flex-row-reverse' : ''}`}>
-                        <div className="relative shrink-0 mt-0.5">
-                          <div className={`h-8 w-8 rounded-full bg-gradient-to-tr ${av.gradient} flex items-center justify-center text-[9px] font-bold text-white shadow-sm`}>
-                            {av.symbol}
-                          </div>
-                        </div>
-                        <div className="space-y-0.5">
-                          <div className={`flex items-center gap-1.5 text-[9px] text-gray-400 font-bold ${isMe ? 'justify-end' : ''}`}>
-                            <span>{comment.profiles?.username || 'explorer'}</span>
-                            <span>•</span>
-                            <span>{new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                          </div>
-                          <div className={`p-3 rounded-2xl text-xs font-semibold leading-relaxed border ${
-                            isMe 
-                              ? 'bg-amber-500/10 border-amber-500/20 text-gray-200 rounded-tr-none' 
-                              : 'bg-black/25 border-white/5 text-gray-200 rounded-tl-none'
-                          }`}>
-                            {comment.message}
-                          </div>
-                        </div>
+              {/* CHAT VIEW */}
+              {activeSidebarTab === 'chat' && (
+                <div className="flex-1 flex flex-col min-h-0 h-full">
+                  
+                  {/* Chat Feed */}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0 scrollbar-thin">
+                    {comments.length === 0 ? (
+                      <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-2">
+                        <BookText className="h-8 w-8 text-gray-500/40" />
+                        <p className="text-xs text-gray-400 lowercase font-semibold">chat is currently empty.</p>
+                        <p className="text-[10px] text-gray-500 lowercase leading-relaxed font-semibold">start the discussion here.</p>
                       </div>
-                    )
-                  })
-                )}
-                <div ref={chatEndRef} />
-              </div>
+                    ) : (
+                      comments.map((comment) => {
+                        const isMe = comment.user_id === activeProfile?.id
+                        const av = AVATAR_MAP[comment.profiles?.avatar || 'avatar-cyber-ghost'] || AVATAR_MAP['avatar-cyber-ghost']
 
-              {/* Input Bar */}
-              <form onSubmit={handlePostComment} className="p-3 bg-black/20 border-t border-white/5 shrink-0">
-                <div className="flex gap-2 relative">
-                  <input
-                    type="text"
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value.slice(0, 300))}
-                    placeholder="send a message to crew..."
-                    disabled={isSendingComment}
-                    className="flex-1 bg-black/40 border border-white/5 rounded-xl px-4 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-amber-500/50 transition-all font-semibold h-10"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!commentText.trim() || isSendingComment}
-                    className="w-10 h-10 flex items-center justify-center bg-amber-500 hover:bg-amber-600 text-white rounded-xl transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 shrink-0 border-none"
-                    style={{ minHeight: '40px', minWidth: '40px' }}
-                  >
-                    <Send className="h-4 w-4 fill-white" />
-                  </button>
+                        return (
+                          <div key={comment.id} className={`flex gap-3 max-w-[85%] ${isMe ? 'ml-auto flex-row-reverse' : ''}`}>
+                            <div className="relative shrink-0 mt-0.5">
+                              <div className={`h-8 w-8 rounded-full bg-gradient-to-tr ${av.gradient} flex items-center justify-center text-[9px] font-bold text-white shadow-sm`}>
+                                {av.symbol}
+                              </div>
+                            </div>
+                            <div className="space-y-0.5">
+                              <div className={`flex items-center gap-1.5 text-[9px] text-gray-400 font-bold ${isMe ? 'justify-end' : ''}`}>
+                                <span>{comment.profiles?.username || 'explorer'}</span>
+                                <span>•</span>
+                                <span>{new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                              <div className={`p-3 rounded-2xl text-xs font-semibold leading-relaxed border ${
+                                isMe 
+                                  ? 'bg-amber-500/10 border-amber-500/20 text-gray-200 rounded-tr-none' 
+                                  : 'bg-black/25 border-white/5 text-gray-200 rounded-tl-none'
+                              }`}>
+                                {comment.message}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })
+                    )}
+                    <div ref={chatEndRef} />
+                  </div>
+
+                  {/* Input Bar */}
+                  <form onSubmit={handlePostComment} className="p-3 bg-black/20 border-t border-white/5 shrink-0">
+                    <div className="flex gap-2 relative">
+                      <input
+                        type="text"
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value.slice(0, 300))}
+                        placeholder="send a message to crew..."
+                        disabled={isSendingComment}
+                        className="flex-1 bg-black/40 border border-white/5 rounded-xl px-4 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-amber-500/50 transition-all font-semibold h-10"
+                      />
+                      <button
+                        type="submit"
+                        disabled={!commentText.trim() || isSendingComment}
+                        className="w-10 h-10 flex items-center justify-center bg-amber-500 hover:bg-amber-600 text-white rounded-xl transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 shrink-0 border-none"
+                        style={{ minHeight: '40px', minWidth: '40px' }}
+                      >
+                        <Send className="h-4 w-4 fill-white" />
+                      </button>
+                    </div>
+                  </form>
                 </div>
-              </form>
+              )}
+
+              {/* CREW VIEW */}
+              {activeSidebarTab === 'crew' && (
+                <div className="flex-1 p-6 space-y-3 overflow-y-auto scrollbar-thin">
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 lg:hidden">active cabin crew</h4>
+                  <div className="space-y-2.5">
+                    {mappedCrew.map((m) => {
+                      const av = AVATAR_MAP[m.avatar || 'avatar-cyber-ghost'] || AVATAR_MAP['avatar-cyber-ghost']
+                      let trafficLightColor = 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'
+                      if (m.computedStatus === 'ready') {
+                        trafficLightColor = 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
+                      } else if (m.computedStatus === 'joined') {
+                        trafficLightColor = 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'
+                      }
+
+                      return (
+                        <div key={m.id} className="flex items-center justify-between p-3 rounded-2xl bg-black/25 border border-white/5">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className={`h-7 w-7 rounded-full bg-gradient-to-br ${av.gradient} flex items-center justify-center text-[9px] font-bold text-white shrink-0 shadow-sm`}>
+                              {av.symbol}
+                            </div>
+                            <span className="text-xs font-semibold text-gray-200 truncate lowercase">
+                              {m.username}
+                              {m.is_host && <span className="ml-1.5 text-[7px] font-extrabold uppercase text-amber-400 tracking-wide bg-amber-500/10 px-1 rounded">host</span>}
+                              {m.is_pending && <span className="ml-1.5 text-[7px] font-extrabold uppercase text-gray-400 tracking-wide bg-white/5 px-1 rounded">invited</span>}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center gap-2.5 shrink-0">
+                            <span className="text-[9px] font-bold text-gray-400 lowercase">
+                              {m.is_pending ? 'invited' : m.computedStatus}
+                            </span>
+                            <div className={`h-2.5 w-2.5 rounded-full ${trafficLightColor}`} />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
             </div>
-          )}
+          </div>
 
         </div>
 
         {/* Tab Navigation Bar (Bottom) */}
-        <footer className="relative z-10 shrink-0 h-16 border-t border-white/5 bg-black/10 dark:bg-black/25 flex items-center justify-around select-none max-w-xl mx-auto w-full">
+        <footer className="relative z-10 shrink-0 h-16 border-t border-white/5 bg-black/10 dark:bg-black/25 flex items-center justify-around select-none max-w-xl mx-auto w-full lg:hidden">
           <button
             onClick={() => setSessionTab('timer')}
-            className={`flex flex-col items-center justify-center gap-1.5 w-16 h-12 rounded-xl transition-all cursor-pointer ${
+            className={`flex flex-col items-center justify-center gap-1.5 w-16 h-12 rounded-xl transition-all cursor-pointer border-none bg-transparent ${
               sessionTab === 'timer' ? 'text-amber-500 scale-105' : 'text-gray-400 dark:text-gray-500 hover:text-gray-300'
             }`}
           >
@@ -1114,7 +1158,7 @@ export default function StudyCabinDetailPage() {
           
           <button
             onClick={() => setSessionTab('crew')}
-            className={`flex flex-col items-center justify-center gap-1.5 w-16 h-12 rounded-xl transition-all cursor-pointer ${
+            className={`flex flex-col items-center justify-center gap-1.5 w-16 h-12 rounded-xl transition-all cursor-pointer border-none bg-transparent ${
               sessionTab === 'crew' ? 'text-amber-500 scale-105' : 'text-gray-400 dark:text-gray-500 hover:text-gray-300'
             }`}
           >
@@ -1124,7 +1168,7 @@ export default function StudyCabinDetailPage() {
           
           <button
             onClick={() => setSessionTab('chat')}
-            className={`flex flex-col items-center justify-center gap-1.5 w-16 h-12 rounded-xl transition-all cursor-pointer ${
+            className={`flex flex-col items-center justify-center gap-1.5 w-16 h-12 rounded-xl transition-all cursor-pointer border-none bg-transparent ${
               sessionTab === 'chat' ? 'text-amber-500 scale-105' : 'text-gray-400 dark:text-gray-500 hover:text-gray-300'
             }`}
           >
@@ -1186,7 +1230,7 @@ export default function StudyCabinDetailPage() {
                     type="button"
                     disabled={isSubmitting}
                     onClick={handleAbandonSession}
-                    className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-405 rounded-xl cursor-pointer disabled:opacity-50 text-xs font-bold"
+                    className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-405 rounded-xl cursor-pointer disabled:opacity-50 text-xs font-bold border-none"
                   >
                     discard
                   </button>
@@ -1194,7 +1238,7 @@ export default function StudyCabinDetailPage() {
                     type="button"
                     disabled={isSubmitting || !accomplishments.trim()}
                     onClick={handleSaveCompletion}
-                    className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl shadow-md cursor-pointer flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold"
+                    className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl shadow-md cursor-pointer flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold border-none"
                   >
                     <CheckCircle2 className="h-4 w-4 shrink-0" />
                     <span>{isSubmitting ? 'saving...' : 'save cycle'}</span>
@@ -1206,7 +1250,7 @@ export default function StudyCabinDetailPage() {
         )}
 
       </div>
-    )
+    );
   }
 
   return (
@@ -1253,8 +1297,12 @@ export default function StudyCabinDetailPage() {
         </div>
       </header>
 
-      {/* Main Single Column Layout Body */}
-      <div className="flex-1 overflow-y-auto min-h-0 flex flex-col max-w-xl mx-auto w-full px-4 py-4 gap-4 scrollbar-thin">
+      {/* Responsive Grid Layout Body */}
+      <div className="flex-1 overflow-y-auto min-h-0 w-full px-4 py-4 scrollbar-thin">
+        <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 pb-12">
+          
+          {/* Setup Panel (Left/Top) */}
+          <div className="lg:col-span-5 flex flex-col gap-4">
         
         {/* Waiting Room style preview card */}
         <div className="bg-white dark:bg-[#18181f] border border-black/5 dark:border-white/5 rounded-3xl p-5 shadow-neo flex flex-col items-center justify-center gap-4 relative">
@@ -1369,7 +1417,7 @@ export default function StudyCabinDetailPage() {
         </div>
 
         {/* Crew status strip */}
-        <div className="flex justify-between items-center px-2 py-1">
+        <div className="flex justify-between items-center px-2 py-1 lg:hidden">
           <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
             readiness status
           </span>
@@ -1378,8 +1426,10 @@ export default function StudyCabinDetailPage() {
           </span>
         </div>
 
-        {/* Neomorphic Tabs for Chat and Crew */}
-        <div className="flex-1 flex flex-col min-h-[300px] bg-white/40 dark:bg-black/10 border border-black/5 dark:border-white/5 rounded-3xl overflow-hidden mb-6">
+          </div>
+
+          {/* Chat & Crew Tabs Panel (Right/Bottom) */}
+          <div className="lg:col-span-7 flex flex-col min-h-[450px] lg:h-[calc(100vh-6.5rem)] bg-white/40 dark:bg-black/10 border border-black/5 dark:border-white/5 rounded-3xl overflow-hidden mb-6">
           
           {/* Tab Selector */}
           <div className="flex border-b border-black/5 dark:border-white/5 h-11 bg-[#faf8f5]/60 dark:bg-[#15171d]/60 select-none">
@@ -1520,5 +1570,7 @@ export default function StudyCabinDetailPage() {
       </div>
 
     </div>
+
+  </div>
   )
 }

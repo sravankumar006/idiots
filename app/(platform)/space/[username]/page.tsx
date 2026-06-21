@@ -44,10 +44,12 @@ const AMBIENT_SOUNDS = [
 
 interface SpacePageProps {
   params: Promise<{ username: string }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
-export default function SpacePage({ params }: SpacePageProps) {
+export default function SpacePage({ params, searchParams }: SpacePageProps) {
   const resolvedParams = use(params)
+  const resolvedSearchParams = use(searchParams)
   const username = decodeURIComponent(resolvedParams.username)
 
   const supabase = createClient()

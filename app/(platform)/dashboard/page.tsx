@@ -11,10 +11,12 @@ export const metadata: Metadata = {
 }
 
 interface DashboardPageProps {
+  params: Promise<Record<string, never>>
   searchParams: Promise<{ userId?: string }>
 }
 
-export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+export default async function DashboardPage({ params, searchParams }: DashboardPageProps) {
+  await params
   const resolvedSearchParams = await searchParams
   const targetUserId = resolvedSearchParams.userId || null
 

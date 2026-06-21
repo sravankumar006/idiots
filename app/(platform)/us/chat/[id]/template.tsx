@@ -1,8 +1,14 @@
 'use client'
 
-import React from 'react'
+import React, { use } from 'react'
 
-export default function ChatTemplate({ children }: { children: React.ReactNode }) {
+interface ChatTemplateProps {
+  children: React.ReactNode
+  params: Promise<{ id: string }>
+}
+
+export default function ChatTemplate({ children, params }: ChatTemplateProps) {
+  const resolvedParams = use(params)
   return (
     <div className="animate-slideInRight h-full w-full">
       {children}

@@ -24,6 +24,7 @@ import Editor from '@monaco-editor/react'
 
 interface ParamsProps {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
 type TabId = 'overview' | 'code' | 'notes' | 'references' | 'activity'
@@ -54,8 +55,9 @@ const BANNER_PRESETS = [
   { name: 'Stars & Zen', url: 'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=1200&q=80' }
 ]
 
-export default function ProjectDetailPage({ params }: ParamsProps) {
+export default function ProjectDetailPage({ params, searchParams }: ParamsProps) {
   const resolvedParams = use(params)
+  const resolvedSearchParams = use(searchParams)
   const id = resolvedParams.id
   
   const router = useRouter()
