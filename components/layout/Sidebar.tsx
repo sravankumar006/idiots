@@ -117,6 +117,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: Sideba
               onClick={() => setIsCollapsed(true)}
               className="w-7 h-7 rounded-full bg-neo-bg shadow-neo flex items-center justify-center text-[var(--secondary-text)] hover:text-[var(--foreground)] hover:shadow-neo active:shadow-neo-inset transition-all duration-300 cursor-pointer border-none"
               title="Collapse Sidebar"
+              suppressHydrationWarning
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -126,6 +127,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: Sideba
             onClick={() => setIsCollapsed(false)}
             className="h-12 w-12 rounded-full bg-neo-bg shadow-neo flex items-center justify-center text-[var(--active-color)] hover:shadow-neo hover:-translate-y-0.5 active:shadow-neo-inset active:translate-y-0.5 transition-all duration-300 cursor-pointer border-none"
             title="Expand Sidebar"
+            suppressHydrationWarning
           >
             <ChevronRight className="h-5 w-5" />
           </button>

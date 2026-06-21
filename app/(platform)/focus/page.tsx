@@ -306,6 +306,7 @@ export default function StudyLoungePage() {
           <button
             onClick={() => setCreateModalOpen(true)}
             className="flex items-center justify-center gap-1.5 px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black shadow-lg transition-all duration-300 transform active:scale-95 cursor-pointer lowercase h-11 shrink-0"
+            suppressHydrationWarning
           >
             <Plus className="h-4.5 w-4.5" />
             <span>create cabin</span>
@@ -324,6 +325,7 @@ export default function StudyLoungePage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="search active cabins by name or keyword..."
               className="flex-1 bg-transparent border-none text-xs focus:outline-none placeholder:text-gray-400 dark:placeholder:text-gray-600 font-semibold h-10"
+              suppressHydrationWarning
             />
           </Card>
 

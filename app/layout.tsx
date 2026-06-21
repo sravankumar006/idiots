@@ -88,7 +88,7 @@ export default function RootLayout({
       className={`${plusJakartaSans.variable} ${geistMono.variable} h-full overflow-hidden antialiased`}
       suppressHydrationWarning
     >
-      <body className="h-full overflow-hidden bg-background text-foreground transition-colors duration-300">
+      <body className="h-full overflow-hidden bg-background text-foreground transition-colors duration-300" suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
