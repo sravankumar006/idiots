@@ -36,7 +36,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: Sideba
     { href: '/us/timeline', label: 'timeline', icon: History, group: 'us' },
     { href: '/us/vault', label: 'scrapbook vault', icon: Archive, group: 'us' },
     // Growth Group
-    { href: '/growth/focus', label: 'zen focus', icon: Clock, group: 'growth' },
+    { href: '/focus', label: 'zen focus', icon: Clock, group: 'growth' },
     { href: '/growth/creative', label: 'creative rooms', icon: FolderHeart, group: 'growth' },
     { href: '/growth/memories', label: 'memories', icon: Brain, group: 'growth' },
     // System Group

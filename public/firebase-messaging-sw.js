@@ -54,12 +54,12 @@ self.addEventListener('notificationclick', (event) => {
 
   // Determine target path based on room_id and category
   let targetPath = '/'
-  if (roomId) {
+  if (category === 'focus') {
+    targetPath = roomId ? `/focus/${roomId}` : '/focus'
+  } else if (roomId) {
     targetPath = `/us/chat/${roomId}`
   } else if (category === 'chat') {
     targetPath = `/us/chat`
-  } else if (category === 'focus') {
-    targetPath = `/growth/focus`
   } else if (category === 'ai') {
     targetPath = `/ai`
   } else if (category === 'memory') {

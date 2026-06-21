@@ -145,7 +145,7 @@ export default function GrowthPage() {
           </div>
 
           <div className="pt-6">
-            <Link href="/growth/focus" className="block w-full">
+            <Link href="/focus" className="block w-full">
               <button className="w-full py-3.5 bg-white/20 dark:bg-white/[0.03] backdrop-blur-md border border-white/40 dark:border-white/10 text-violet-600 dark:text-violet-400 rounded-2xl text-xs font-black lowercase tracking-wide cursor-pointer transition-all duration-300 transform hover:scale-[1.01] hover:bg-white/30 dark:hover:bg-white/[0.06] hover:border-white/60 dark:hover:border-white/20 active:translate-y-0.5 flex items-center justify-center gap-1.5 shadow-sm">
                 <span>Start Focus Session</span>
                 <ArrowRight className="h-4 w-4" />

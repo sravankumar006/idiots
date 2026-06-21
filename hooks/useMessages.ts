@@ -581,7 +581,16 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
     // Optimistic local update
     setMessages((prev) =>
       prev.map((m) =>
-        m.id === messageId ? { ...m, type: 'deleted', message: '' } : m
+        m.id === messageId
+          ? {
+              ...m,
+              type: 'deleted',
+              message: '',
+              file_url: null,
+              file_name: null,
+              file_size: null,
+            }
+          : m
       )
     )
 
@@ -589,18 +598,37 @@ export function useMessages(groupId: string, activeUser: UserProfile | null) {
       try {
         const localMsgsKey = `fallback_messages_${groupId}`
         const current = JSON.parse(localStorage.getItem(localMsgsKey) || '[]') as ChatMessage[]
-        const updated = current.map(m => m.id === messageId ? { ...m, type: 'deleted', message: '' } : m)
+        const updated = current.map(m =>
+          m.id === messageId
+            ? {
+                ...m,
+                type: 'deleted',
+                message: '',
+                file_url: null,
+                file_name: null,
+                file_size: null,
+              }
+            : m
+        )
         localStorage.setItem(localMsgsKey, JSON.stringify(updated))
       } catch (err) {}
       return
     }
 
     try {
-      await supabase
+      const { error } = await supabase
         .from('messages')
-        .update({ type: 'deleted', message: '' })
+        .update({
+          type: 'deleted',
+          message: '',
+          file_url: null,
+          file_name: null,
+          file_size: null,
+        })
         .eq('id', messageId)
         .eq('sender_id', activeUser.id)
+
+      if (error) throw error
     } catch (e) {
       console.error('Error deleting message globally:', e)
       setMessages((prev) =>

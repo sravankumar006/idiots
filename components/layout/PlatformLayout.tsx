@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { X, ShieldAlert } from 'lucide-react'
-import { UserProfile } from '@/types'
+import { X, ShieldAlert, Clock } from 'lucide-react'
+import { UserProfile, StudyRoomTimer } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
@@ -24,6 +24,102 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
   const router = useRouter()
   const supabase = createClient()
   useVisualViewport()
+
+  const [activeSession, setActiveSession] = useState<{ id: string; group_id: string } | null>(null)
+  const [activeRoomName, setActiveRoomName] = useState<string>('')
+  const [roomTimer, setRoomTimer] = useState<StudyRoomTimer | null>(null)
+
+  // Fetch active session and its room info
+  const fetchActiveSession = async () => {
+    try {
+      const { data: session } = await supabase
+        .from('focus_sessions')
+        .select('id, group_id, completed')
+        .eq('user_id', profile.id)
+        .eq('completed', false)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (session && session.group_id) {
+        setActiveSession({ id: session.id, group_id: session.group_id })
+        
+        // Fetch room name
+        const { data: room } = await supabase
+          .from('study_rooms')
+          .select('name')
+          .eq('id', session.group_id)
+          .maybeSingle()
+        if (room) {
+          setActiveRoomName(room.name)
+        }
+
+        // Fetch timer state
+        const { data: timer } = await supabase
+          .from('study_room_timers')
+          .select('*')
+          .eq('room_id', session.group_id)
+          .maybeSingle()
+        setRoomTimer(timer as StudyRoomTimer | null)
+      } else {
+        setActiveSession(null)
+        setActiveRoomName('')
+        setRoomTimer(null)
+      }
+    } catch (err) {
+      console.warn("Error fetching active focus session for pill:", err)
+    }
+  }
+
+  // Subscribe to focus session changes
+  useEffect(() => {
+    fetchActiveSession()
+
+    const sessionsChannel = supabase.channel(`global-sessions-listener:${profile.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'focus_sessions', filter: `user_id=eq.${profile.id}` },
+        () => {
+          fetchActiveSession()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(sessionsChannel)
+    }
+  }, [profile.id])
+
+  // Subscribe to active room's timer changes
+  useEffect(() => {
+    if (!activeSession?.group_id) {
+      setRoomTimer(null)
+      return
+    }
+
+    const fetchTimerOnly = async () => {
+      const { data } = await supabase
+        .from('study_room_timers')
+        .select('*')
+        .eq('room_id', activeSession.group_id)
+        .maybeSingle()
+      setRoomTimer(data as StudyRoomTimer | null)
+    }
+
+    const timerChannel = supabase.channel(`global-timer-listener:${activeSession.group_id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'study_room_timers', filter: `room_id=eq.${activeSession.group_id}` },
+        () => {
+          fetchTimerOnly()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(timerChannel)
+    }
+  }, [activeSession?.group_id])
 
   
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
@@ -70,7 +166,11 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
   }, [pathname])
 
   useEffect(() => {
-    if (pathname === '/growth/focus') {
+    if (
+      pathname === '/chat' ||
+      pathname === '/focus' ||
+      pathname?.startsWith('/focus/')
+    ) {
       setIsFocusLocked(false)
       setCheckingFocus(false)
       return
@@ -80,7 +180,7 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
       try {
         const { data: activeSession } = await supabase
           .from('focus_sessions')
-          .select('id, created_at')
+          .select('id, created_at, group_id')
           .eq('user_id', profile.id)
           .eq('completed', false)
           .order('created_at', { ascending: false })
@@ -94,7 +194,11 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
           
           if (hoursDiff < 4) {
             setIsFocusLocked(true)
-            router.replace('/growth/focus')
+            if (activeSession.group_id) {
+              router.replace(`/focus/${activeSession.group_id}`)
+            } else {
+              router.replace('/focus')
+            }
             return
           }
         }
@@ -110,7 +214,7 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
   }, [pathname, profile.id, router, supabase])
 
   // While checking focus, show a blank loader screen to prevent visual content flashes of chat/us
-  if (checkingFocus && pathname !== '/growth/focus') {
+  if (checkingFocus && pathname !== '/focus' && !pathname?.startsWith('/focus/')) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-neo-bg transition-colors duration-300">
         <div className="relative flex items-center justify-center p-8 rounded-full bg-neo-bg shadow-neo select-none">
@@ -200,7 +304,7 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
   }
 
   // If focus mode is active, display locking overlay
-  if (isFocusLocked && pathname !== '/growth/focus') {
+  if (isFocusLocked && pathname !== '/focus' && !pathname?.startsWith('/focus/')) {
     return (
       <div className="relative h-full w-full flex flex-col items-center justify-center bg-[#0a0b10] text-foreground font-sans p-6 select-none">
         <div className="absolute inset-0 bg-radial from-amber-500/5 to-transparent blur-3xl pointer-events-none animate-pulse" />
@@ -216,7 +320,7 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
             </p>
           </div>
           <button
-            onClick={() => router.replace('/growth/focus')}
+            onClick={() => router.replace('/focus')}
             className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-lg shadow-amber-500/10"
           >
             Return to Focus Deck
@@ -228,10 +332,12 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
 
 
 
-  const isChatPage = pathname === '/chat'
+  const isMinimalLayout = 
+    pathname === '/chat' || 
+    (pathname?.startsWith('/focus/') && pathname !== '/focus')
 
   const renderLayoutContent = () => {
-    if (isChatPage) {
+    if (isMinimalLayout) {
       return (
         <div 
           className="relative flex bg-background text-foreground overflow-hidden font-sans transition-colors duration-300 w-full"
@@ -295,6 +401,14 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
     )
   }
 
+  const isCurrentlyInRoom = useMemo(() => {
+    return activeSession?.group_id ? pathname === `/focus/${activeSession.group_id}` : false
+  }, [activeSession, pathname])
+
+  const showFloatingPill = useMemo(() => {
+    return activeSession && !isCurrentlyInRoom && roomTimer && roomTimer.status !== 'idle'
+  }, [activeSession, isCurrentlyInRoom, roomTimer])
+
   return (
     <PushNotificationProvider userId={profile.id}>
       {isNavigating && (
@@ -340,6 +454,159 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
         </div>
       )}
       {renderLayoutContent()}
+      {showFloatingPill && (
+        <FloatingSessionPill
+          roomName={activeRoomName}
+          timer={roomTimer}
+          roomId={activeSession!.group_id}
+        />
+      )}
     </PushNotificationProvider>
+  )
+}
+
+interface FloatingSessionPillProps {
+  roomName: string
+  timer: StudyRoomTimer | null
+  roomId: string
+}
+
+function FloatingSessionPill({ roomName, timer, roomId }: FloatingSessionPillProps) {
+  const router = useRouter()
+  const [mounted, setMounted] = useState(false)
+  const [position, setPosition] = useState({ x: 0, y: 0 })
+  const [isDragging, setIsDragging] = useState(false)
+  
+  const dragRef = useRef({ startX: 0, startY: 0, posX: 0, posY: 0, hasMoved: false })
+
+  useEffect(() => {
+    setMounted(true)
+    setPosition({ x: window.innerWidth - 240, y: 80 })
+  }, [])
+
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [isActive, setIsActive] = useState(false)
+  const isNoTimer = timer ? timer.duration_minutes === 0 : false
+
+  useEffect(() => {
+    if (!timer) return
+
+    if (timer.status === 'idle') {
+      setIsActive(false)
+      setElapsedSeconds(0)
+      return
+    }
+
+    if (timer.status === 'paused') {
+      setIsActive(false)
+      setElapsedSeconds(timer.elapsed_seconds)
+      return
+    }
+
+    if (timer.status === 'completed') {
+      setIsActive(false)
+      setElapsedSeconds(timer.duration_minutes * 60)
+      return
+    }
+
+    if (timer.status === 'running') {
+      setIsActive(true)
+
+      const calculateSeconds = () => {
+        if (!timer.start_time) return timer.elapsed_seconds
+        const startMs = new Date(timer.start_time).getTime()
+        const nowMs = Date.now()
+        const diffSecs = Math.floor((nowMs - startMs) / 1000)
+        return timer.elapsed_seconds + diffSecs
+      }
+
+      setElapsedSeconds(calculateSeconds())
+
+      const interval = setInterval(() => {
+        setElapsedSeconds(calculateSeconds())
+      }, 1000)
+
+      return () => clearInterval(interval)
+    }
+  }, [timer])
+
+  if (!mounted) return null
+
+  const formatTime = (totalSecs: number) => {
+    const m = Math.floor(totalSecs / 60)
+    const s = totalSecs % 60
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  }
+
+  const remainingSeconds = isNoTimer ? elapsedSeconds : Math.max(0, ((timer?.duration_minutes || 0) * 60) - elapsedSeconds)
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    setIsDragging(true)
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      posX: position.x,
+      posY: position.y,
+      hasMoved: false
+    }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return
+    const dx = e.clientX - dragRef.current.startX
+    const dy = e.clientY - dragRef.current.startY
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+      dragRef.current.hasMoved = true
+    }
+    const newX = Math.max(10, Math.min(window.innerWidth - 230, dragRef.current.posX + dx))
+    const newY = Math.max(10, Math.min(window.innerHeight - 70, dragRef.current.posY + dy))
+    setPosition({ x: newX, y: newY })
+  }
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return
+    setIsDragging(false)
+    e.currentTarget.releasePointerCapture(e.pointerId)
+    
+    if (!dragRef.current.hasMoved) {
+      router.push(`/focus/${roomId}`)
+    }
+  }
+
+  return (
+    <div
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      style={{
+        position: 'fixed',
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        touchAction: 'none',
+        zIndex: 99999
+      }}
+      className="flex items-center gap-3 w-[220px] h-14 pl-3.5 pr-4 rounded-2xl bg-white/75 dark:bg-black/70 backdrop-blur-md border border-black/5 dark:border-white/10 shadow-neo hover:shadow-neo-shallow active:scale-95 transition-transform select-none cursor-grab active:cursor-grabbing"
+    >
+      <div className="relative shrink-0 flex items-center justify-center w-7.5 h-7.5 rounded-xl bg-amber-500/10 text-amber-500">
+        <Clock className={`h-4.5 w-4.5 ${isActive ? 'animate-pulse' : ''}`} />
+        {isActive && (
+          <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+        )}
+      </div>
+
+      <div className="min-w-0 flex-1 leading-tight">
+        <div className="text-[10px] font-black text-gray-400 dark:text-gray-500 lowercase truncate leading-none mb-0.5">
+          {roomName}
+        </div>
+        <div className="text-sm font-black font-mono text-gray-850 dark:text-white leading-none">
+          {formatTime(remainingSeconds)}
+        </div>
+      </div>
+
+      <div className="flex items-center shrink-0">
+        <span className={`h-2.5 w-2.5 rounded-full ${isActive ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'}`} />
+      </div>
+    </div>
   )
 }

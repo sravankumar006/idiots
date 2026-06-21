@@ -21,7 +21,7 @@ const PATH_TITLES: Record<string, string> = {
   '/us/timeline': 'shared timeline',
   '/us/vault': 'scrapbook vault',
   '/growth': 'growth dashboard',
-  '/growth/focus': 'zen focus',
+  '/focus': 'zen focus',
   '/growth/creative': 'creative rooms',
   '/settings': 'settings',
 }
@@ -126,7 +126,11 @@ useEffect(() => {
         router.push(`/chat${queryString}`)
         break
       case 'focus':
-        router.push(`/growth/focus${queryString}`)
+        if (notification.room_id) {
+          router.push(`/focus/${notification.room_id}${queryString}`)
+        } else {
+          router.push(`/focus${queryString}`)
+        }
         break
       case 'ai':
         router.push(`/ai${queryString}`)

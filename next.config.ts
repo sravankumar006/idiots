@@ -48,7 +48,12 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/study',
-        destination: '/growth/focus',
+        destination: '/focus',
+        permanent: true,
+      },
+      {
+        source: '/growth/focus',
+        destination: '/focus',
         permanent: true,
       },
       {

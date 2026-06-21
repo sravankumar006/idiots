@@ -9,3 +9,4 @@ ALTER TABLE public.ai_logs ADD COLUMN IF NOT EXISTS error_message text;
 
 -- 2. Allow response column to be nullable (failed requests won't have a response text)
 ALTER TABLE public.ai_logs ALTER COLUMN response DROP NOT NULL;
+

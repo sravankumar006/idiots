@@ -77,3 +77,73 @@ export interface ProjectFile {
   updated_at: string
 }
 
+export interface StudyRoom {
+  id: string
+  name: string
+  description: string
+  host_user_id: string
+  room_status: 'waiting' | 'active' | 'completed'
+  is_public: boolean
+  created_at: string
+  started_at: string | null
+  ended_at: string | null
+  profiles?: {
+    username: string
+    avatar: string
+  }
+}
+
+export interface StudyRoomMember {
+  id: string
+  room_id: string
+  user_id: string
+  joined_at: string
+  is_host: boolean
+  status: 'joined' | 'ready'
+  profiles?: {
+    username: string
+    avatar: string
+  }
+}
+
+export interface StudyRoomComment {
+  id: string
+  room_id: string
+  user_id: string
+  message: string
+  created_at: string
+  profiles?: {
+    username: string
+    avatar: string
+  }
+}
+
+export interface StudyRoomInvitation {
+  id: string
+  room_id: string
+  inviter_user_id: string
+  invitee_user_id: string
+  status: 'pending' | 'accepted' | 'declined'
+  created_at: string
+  study_rooms?: {
+    name: string
+    description: string
+    host_user_id: string
+    is_public: boolean
+  }
+  inviter_profile?: {
+    username: string
+    avatar: string
+  }
+}
+
+export interface StudyRoomTimer {
+  room_id: string
+  start_time: string | null
+  duration_minutes: number
+  status: 'idle' | 'running' | 'paused' | 'completed'
+  elapsed_seconds: number
+  updated_at: string
+}
+
+

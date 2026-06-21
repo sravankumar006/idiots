@@ -280,6 +280,17 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack, hig
 
           {/* Right-side actions */}
           <div className="flex items-center gap-1 shrink-0">
+            {/* Start Focus Session CTA button (visible below lg for Focus Room) */}
+            {isFocusRoom && (
+              <button
+                onClick={() => router.push('/focus')}
+                className="lg:hidden flex items-center justify-center gap-1 px-3 rounded-full bg-neo-bg shadow-neo-shallow border border-black/5 dark:border-white/5 text-amber-600 dark:text-amber-500 text-[10.5px] font-black transition-all duration-300 transform active:scale-95 active:shadow-neo-inset-shallow cursor-pointer lowercase h-8.5"
+              >
+                <Play className="h-3.5 w-3.5 fill-amber-600 dark:fill-amber-500 shrink-0" />
+                <span>focus</span>
+              </button>
+            )}
+
             {/* Call — architecture-ready placeholder */}
             <button
               className="hidden sm:flex items-center justify-center h-8 w-8 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition-all cursor-pointer"
@@ -309,7 +320,9 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack, hig
                 {/* Study Sidebar Toggle */}
                 <button
                   onClick={() => setStudyPanelOpen(v => !v)}
-                  className={`flex items-center justify-center h-8 w-8 rounded-full transition-all cursor-pointer ${
+                  className={`items-center justify-center h-8 w-8 rounded-full transition-all cursor-pointer ${
+                    isFocusRoom ? 'hidden lg:flex' : 'flex'
+                  } ${
                     studyPanelOpen
                       ? 'bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400'
                       : 'hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200'
@@ -405,7 +418,7 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack, hig
                       <button
                         role="menuitem"
                         onClick={() => {
-                          router.push('/growth/focus')
+                          router.push('/focus')
                           setMoreMenuOpen(false)
                         }}
                         className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/5 transition-all text-left cursor-pointer"
@@ -533,7 +546,7 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack, hig
         <div className="flex-1 flex min-h-0 overflow-hidden relative">
           
           {/* Main chat column */}
-          <div className="flex-1 flex flex-col min-h-0 min-w-0">
+          <div className="flex-1 flex flex-col min-h-0 min-w-0 relative">
             <MessageList
               messages={messages}
               isLoading={isLoading}
@@ -552,6 +565,7 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack, hig
               highlightMessageId={highlightMessageId}
             />
 
+
             <MessageInput
               studyModeActive={effectiveStudyModeActive}
               onSendMessage={(text, fileInfo, category) => sendMessage(text, fileInfo, false, category, effectiveStudyModeActive)}
@@ -566,7 +580,9 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack, hig
 
           {/* Study Room sidebar (slides in from right/absolute on mobile, relative on desktop) */}
           {effectiveStudyModeActive && studyPanelOpen && (
-            <div className="absolute top-0 right-0 z-50 h-full w-80 lg:relative lg:z-0 border-l border-black/5 dark:border-white/[0.05] shadow-2xl lg:shadow-none">
+            <div className={`absolute top-0 right-0 z-50 h-full w-80 lg:relative lg:z-0 border-l border-black/5 dark:border-white/[0.05] shadow-2xl lg:shadow-none ${
+              isFocusRoom ? 'hidden lg:block' : ''
+            }`}>
               {/* Close button on mobile overlay */}
               <button
                 onClick={() => setStudyPanelOpen(false)}
