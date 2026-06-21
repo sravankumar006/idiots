@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { X, ShieldAlert, Clock } from 'lucide-react'
 import { UserProfile, StudyRoomTimer } from '@/types'
@@ -213,6 +213,14 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
     checkFocusActive()
   }, [pathname, profile.id, router, supabase])
 
+  // Derived display values — computed before any early returns to satisfy Rules of Hooks
+  const isCurrentlyInRoom = activeSession?.group_id
+    ? pathname === `/focus/${activeSession.group_id}`
+    : false
+
+  const showFloatingPill =
+    !!activeSession && !isCurrentlyInRoom && !!roomTimer && roomTimer.status !== 'idle'
+
   // While checking focus, show a blank loader screen to prevent visual content flashes of chat/us
   if (checkingFocus && pathname !== '/focus' && !pathname?.startsWith('/focus/')) {
     return (
@@ -400,14 +408,6 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
       </div>
     )
   }
-
-  const isCurrentlyInRoom = useMemo(() => {
-    return activeSession?.group_id ? pathname === `/focus/${activeSession.group_id}` : false
-  }, [activeSession, pathname])
-
-  const showFloatingPill = useMemo(() => {
-    return activeSession && !isCurrentlyInRoom && roomTimer && roomTimer.status !== 'idle'
-  }, [activeSession, isCurrentlyInRoom, roomTimer])
 
   return (
     <PushNotificationProvider userId={profile.id}>
