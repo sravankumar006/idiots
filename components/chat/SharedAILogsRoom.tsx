@@ -103,7 +103,13 @@ export default function SharedAILogsRoom({ groupId, activeUser, onBack }: Shared
       <div className="flex flex-col h-full bg-neo-bg relative overflow-hidden">
         
         {/* Header */}
-        <header className="relative z-10 flex items-center justify-between gap-3 px-4 h-14 shrink-0 backdrop-blur-xl border-none shadow-neo bg-neo-bg">
+        <header 
+          className="relative z-10 flex items-center justify-between gap-3 px-4 shrink-0 backdrop-blur-xl border-none shadow-neo bg-neo-bg h-14"
+          style={{
+            paddingTop: 'calc(0.5rem + env(safe-area-inset-top, 0px))',
+            height: 'calc(3.5rem + env(safe-area-inset-top, 0px))',
+          }}
+        >
           <div className="flex items-center gap-3">
             {onBack && (
               <button onClick={onBack} className="md:hidden flex items-center justify-center h-8 w-8 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-gray-500">

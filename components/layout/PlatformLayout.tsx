@@ -381,7 +381,11 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
             {/* Core Page Content area */}
             <main className="flex-1 overflow-y-auto px-4 py-6 md:p-6 pb-6 min-w-0 mb-[calc(3rem+env(safe-area-inset-bottom,0px))] md:mb-0">
               {/* Top Header Bar */}
-              <div id="topbar-container" className="shrink-0 z-40 bg-transparent relative mb-6 md:mb-8 -mt-6 -mx-4 md:-mt-6 md:-mx-6">
+              <div 
+                id="topbar-container" 
+                className="shrink-0 z-40 bg-transparent relative mb-6 md:mb-8 -mt-6 -mx-4 md:-mt-6 md:-mx-6"
+                style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+              >
                 <Topbar 
                   profile={profile} 
                   rightPanelOpen={isRightPanelOpen} 

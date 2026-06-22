@@ -443,7 +443,10 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
       {mobileView === 'sidebar' && (
         <div 
           className="md:hidden flex flex-col w-full h-full bg-neo-bg z-10"
-          style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}
+          style={{ 
+            paddingTop: 'env(safe-area-inset-top, 0px)',
+            paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' 
+          }}
         >
           <SidebarContent isDesktop={false} />
           <MobileNav profile={activeProfile || undefined} />
