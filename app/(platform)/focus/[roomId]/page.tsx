@@ -267,10 +267,6 @@ export default function StudyCabinDetailPage({ params, searchParams }: PageProps
       if (error) throw error
 
       if (studyRoom) {
-        if (studyRoom.room_status === 'completed') {
-          router.push('/focus')
-          return
-        }
         setRoom(studyRoom as any)
       } else {
         router.push('/focus')
