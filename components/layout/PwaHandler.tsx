@@ -2,11 +2,26 @@
 
 import React, { useEffect, useState } from 'react'
 import { CheckCircle, X, RefreshCw } from 'lucide-react'
+import { useTheme } from 'next-themes'
 
 export default function PwaHandler() {
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const [canReload, setCanReload] = useState(false)
+  const { resolvedTheme } = useTheme()
+
+  // Dynamically update status bar theme color to match the current theme background
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    let meta = document.querySelector('meta[name="theme-color"]')
+    if (!meta) {
+      meta = document.createElement('meta')
+      meta.setAttribute('name', 'theme-color')
+      document.head.appendChild(meta)
+    }
+    const color = resolvedTheme === 'dark' ? '#171614' : '#D8D1C7'
+    meta.setAttribute('content', color)
+  }, [resolvedTheme])
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return
