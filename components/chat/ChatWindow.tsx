@@ -7,7 +7,7 @@ import { useTheme } from 'next-themes'
 import MessageList from './MessageList'
 import MessageInput from './MessageInput'
 import DragDropZone from './DragDropZone'
-import StudyPanel from './StudyPanel'
+
 import useMessages from '@/hooks/useMessages'
 import useRealtimeChat from '@/hooks/useRealtimeChat'
 import useRealtimeGroupState from '@/hooks/useRealtimeGroupState'
@@ -44,9 +44,11 @@ interface ChatWindowProps {
   activeUser: UserProfile | null
   onBack?: () => void
   highlightMessageId?: string
+  isEmbedded?: boolean
+  showBackOnDesktop?: boolean
 }
 
-export default function ChatWindow({ groupId, groupName, activeUser, onBack, highlightMessageId }: ChatWindowProps) {
+export default function ChatWindow({ groupId, groupName, activeUser, onBack, highlightMessageId, isEmbedded = false, showBackOnDesktop = false }: ChatWindowProps) {
   const { theme, setTheme } = useTheme()
   const router = useRouter()
   const [mounted, setMounted] = React.useState(false)
@@ -115,8 +117,6 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack, hig
     }
   }
 
-  // Local Study Panel Open state (default true on desktop, false on mobile)
-  const [studyPanelOpen, setStudyPanelOpen] = useState(true)
   // Local Study Filter active state
   const [studyFilterActive, setStudyFilterActive] = useState(false)
 
@@ -170,12 +170,7 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack, hig
     return () => clearInterval(interval)
   }, [isFocusRoom, supabase])
 
-  // Close study panel automatically on tiny mobile screens initially
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      setStudyPanelOpen(false)
-    }
-  }, [effectiveStudyModeActive])
+
 
   // Initials from group name
   const initials = cleanName
@@ -188,10 +183,7 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack, hig
   return (
     <DragDropZone onFileDrop={setDraftFile}>
       <div 
-        className="flex flex-col relative overflow-hidden transition-all duration-500 bg-neo-bg"
-        style={{
-          height: 'var(--visual-viewport-height, 100dvh)'
-        }}
+        className="flex flex-col relative overflow-hidden transition-all duration-500 bg-neo-bg h-full w-full"
       >
 
         {/* ── Subtle background texture ── */}
@@ -218,17 +210,17 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack, hig
             ══════════════════════════════════════ */}
         <header 
           className="relative z-10 flex items-center gap-3 px-4 shrink-0 backdrop-blur-xl border-none shadow-neo bg-neo-bg transition-all duration-500 h-14"
-          style={{
+          style={isEmbedded ? {} : {
             paddingTop: 'calc(0.5rem + env(safe-area-inset-top, 0px))',
             height: 'calc(3.5rem + env(safe-area-inset-top, 0px))', // h-14 on mobile + safe area top
           }}
         >
 
-          {/* Back arrow — mobile only */}
-          {onBack && (
+          {/* Back arrow */}
+          {onBack && !isEmbedded && (
             <button
               onClick={onBack}
-              className="md:hidden flex items-center justify-center h-8 w-8 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all cursor-pointer shrink-0"
+              className={`${showBackOnDesktop ? 'flex' : 'md:hidden'} flex items-center justify-center h-8 w-8 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all cursor-pointer shrink-0`}
               aria-label="Back to channels"
             >
               <ArrowLeft className="h-4.5 w-4.5" />
@@ -281,7 +273,7 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack, hig
           {/* Right-side actions */}
           <div className="flex items-center gap-1 shrink-0">
             {/* Start Focus Session CTA button (visible below lg for Focus Room) */}
-            {isFocusRoom && (
+            {isFocusRoom && !isEmbedded && (
               <button
                 onClick={() => router.push('/focus')}
                 className="lg:hidden flex items-center justify-center gap-1 px-3 rounded-full bg-neo-bg shadow-neo-shallow border border-black/5 dark:border-white/5 text-amber-600 dark:text-amber-500 text-[10.5px] font-black transition-all duration-300 transform active:scale-95 active:shadow-neo-inset-shallow cursor-pointer lowercase h-8.5"
@@ -292,13 +284,15 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack, hig
             )}
 
             {/* Call — architecture-ready placeholder */}
-            <button
-              className="hidden sm:flex items-center justify-center h-8 w-8 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition-all cursor-pointer"
-              title="Voice call (coming soon)"
-              aria-label="Voice call"
-            >
-              <Phone className="h-4 w-4" />
-            </button>
+            {!isEmbedded && (
+              <button
+                className="hidden sm:flex items-center justify-center h-8 w-8 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition-all cursor-pointer"
+                title="Voice call (coming soon)"
+                aria-label="Voice call"
+              >
+                <Phone className="h-4 w-4" />
+              </button>
+            )}
 
             {/* Study Mode Toggles (visible only if study mode is active) */}
             {effectiveStudyModeActive && (
@@ -317,21 +311,7 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack, hig
                   <Sparkles className="h-4.5 w-4.5" />
                 </button>
 
-                {/* Study Sidebar Toggle */}
-                <button
-                  onClick={() => setStudyPanelOpen(v => !v)}
-                  className={`items-center justify-center h-8 w-8 rounded-full transition-all cursor-pointer ${
-                    isFocusRoom ? 'hidden lg:flex' : 'flex'
-                  } ${
-                    studyPanelOpen
-                      ? 'bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400'
-                      : 'hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200'
-                  }`}
-                  title={studyPanelOpen ? "Close study room panel" : "Open study room panel"}
-                  aria-label="Toggle study room panel"
-                >
-                  <BookOpen className="h-4.5 w-4.5" />
-                </button>
+
               </>
             )}
 
@@ -342,7 +322,7 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack, hig
             </div>
 
             {/* Theme toggle (in header since global topbar is hidden) */}
-            {mounted && (
+            {mounted && !isEmbedded && (
               <button
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className="flex items-center justify-center h-8 w-8 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all cursor-pointer"
@@ -578,33 +558,7 @@ export default function ChatWindow({ groupId, groupName, activeUser, onBack, hig
             />
           </div>
 
-          {/* Study Room sidebar (slides in from right/absolute on mobile, relative on desktop) */}
-          {effectiveStudyModeActive && studyPanelOpen && (
-            <div className={`absolute top-0 right-0 z-50 h-full w-80 lg:relative lg:z-0 border-l border-black/5 dark:border-white/[0.05] shadow-2xl lg:shadow-none ${
-              isFocusRoom ? 'hidden lg:block' : ''
-            }`}>
-              {/* Close button on mobile overlay */}
-              <button
-                onClick={() => setStudyPanelOpen(false)}
-                className="lg:hidden absolute top-3.5 right-3.5 z-50 flex items-center justify-center h-8 w-8 rounded-full bg-black/5 hover:bg-black/10 text-gray-500 hover:text-gray-800 transition-all cursor-pointer"
-                aria-label="Close study room panel"
-              >
-                <X className="h-4 w-4" />
-              </button>
-              <StudyPanel
-                groupId={groupId}
-                activeUserId={activeUser?.id || ''}
-                onlineUsers={onlineUsers}
-                myFocus={myFocus}
-                updateFocusStatus={updateFocusStatus}
-                timerEndsAt={timerEndsAt}
-                timerDuration={timerDuration}
-                timerType={timerType}
-                startTimer={startTimer}
-                stopTimer={stopTimer}
-              />
-            </div>
-          )}
+
         </div>
 
       </div>

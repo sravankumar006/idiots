@@ -1,9 +1,9 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Plus, Users, Search, Play, BookOpen, Clock, X, Check } from 'lucide-react'
+import { Plus, Users, Search, Play, BookOpen, Clock, X, Check, MessageSquare } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { UserProfile, StudyRoom, StudyRoomInvitation } from '@/types'
+import { UserProfile, StudyRoom, StudyRoomInvitation, ChatGroup } from '@/types'
 import { Card } from '@/components/ui/Card'
 import PageContainer from '@/components/layout/PageContainer'
 import SectionHeader from '@/components/layout/SectionHeader'
@@ -27,6 +27,8 @@ export default function StudyLoungePage() {
   const [roomMemberCounts, setRoomMemberCounts] = useState<Record<string, number>>({})
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
+  const [focusRoomGroup, setFocusRoomGroup] = useState<ChatGroup | null>(null)
+  const [activeTab, setActiveTab] = useState<'cabins' | 'chat'>('cabins')
 
   // User Profile Directory State (for invitations)
   const [profiles, setProfiles] = useState<UserProfile[]>([])
@@ -54,6 +56,45 @@ export default function StudyLoungePage() {
     }
     fetchUser()
   }, [supabase])
+
+  // Fetch or seed focus room group for chat integration
+  useEffect(() => {
+    const fetchOrCreateFocusRoom = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('groups')
+          .select('*')
+          .eq('group_name', 'focus room')
+          .maybeSingle()
+
+        if (error) throw error
+
+        if (data) {
+          setFocusRoomGroup(data as ChatGroup)
+        } else {
+          // If no focus room group exists, seed/create one
+          const { data: newGroup, error: createError } = await supabase
+            .from('groups')
+            .insert({
+              group_name: 'focus room',
+              created_by: activeProfile?.id || 'sys'
+            })
+            .select()
+            .single()
+
+          if (!createError && newGroup) {
+            setFocusRoomGroup(newGroup as ChatGroup)
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to fetch focus room group:", err)
+      }
+    }
+
+    if (activeProfile) {
+      fetchOrCreateFocusRoom()
+    }
+  }, [supabase, activeProfile])
 
   // Fetch user profiles for invitation selections
   useEffect(() => {
@@ -303,14 +344,25 @@ export default function StudyLoungePage() {
             title="study lounge" 
             description="join dynamic, customized focus cabins or host your own live study room."
           />
-          <button
-            onClick={() => setCreateModalOpen(true)}
-            className="flex items-center justify-center gap-1.5 px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black shadow-lg transition-all duration-300 transform active:scale-95 cursor-pointer lowercase h-11 shrink-0"
-            suppressHydrationWarning
-          >
-            <Plus className="h-4.5 w-4.5" />
-            <span>create cabin</span>
-          </button>
+          <div className="flex items-center gap-2.5 shrink-0">
+            <button
+              onClick={() => router.push('/focus/chat')}
+              className="glass-neo-btn-cyan px-5 py-3 text-xs font-black h-11 shrink-0"
+              suppressHydrationWarning
+            >
+              <MessageSquare className="h-4.5 w-4.5" />
+              <span>lounge chat</span>
+            </button>
+
+            <button
+              onClick={() => setCreateModalOpen(true)}
+              className="glass-neo-btn-amber px-5 py-3 text-xs font-black h-11 shrink-0"
+              suppressHydrationWarning
+            >
+              <Plus className="h-4.5 w-4.5" />
+              <span>create cabin</span>
+            </button>
+          </div>
         </div>
 
         {/* Search bar & statistics overview */}

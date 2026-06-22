@@ -85,11 +85,12 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
   const [groups, setGroups] = useState<ChatGroup[]>(initialGroups.length > 0 ? initialGroups : MOCK_GROUPS)
   const [selectedGroup, setSelectedGroup] = useState<ChatGroup | null>(() => {
     const defaultList = initialGroups.length > 0 ? initialGroups : MOCK_GROUPS
+    const filteredList = defaultList.filter(g => g.group_name.toLowerCase() !== 'focus room')
     if (initialRoomId) {
-      const match = defaultList.find(g => g.id === initialRoomId)
+      const match = filteredList.find(g => g.id === initialRoomId)
       if (match) return match
     }
-    return defaultList[0]
+    return filteredList[0] || null
   })
 
   useEffect(() => { setMounted(true) }, [])
@@ -282,7 +283,7 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
             <div className="h-px w-8 bg-black/5 dark:bg-white/5 mb-4" />
           )}
           <div className="space-y-1 w-full flex flex-col items-center">
-            {groups.map((g) => {
+            {groups.filter(g => g.group_name.toLowerCase() !== 'focus room').map((g) => {
               const isActive = selectedGroup?.id === g.id
               const roomShortName = g.group_name.replace('#', '').toLowerCase()
               return (

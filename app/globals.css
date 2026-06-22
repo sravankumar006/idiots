@@ -487,4 +487,228 @@ h1, h2, h3, h4, h5, h6 {
   animation: rotate-triangle 2.2s cubic-bezier(0.5, 0, 0.3, 1) infinite;
 }
 
+/* =====================================================
+   GLASS-NEOMORPHIC SHINY BUTTONS
+   ===================================================== */
+
+.glass-neo-btn-cyan,
+.glass-neo-btn-amber {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 16px; /* equivalent to rounded-2xl */
+  cursor: pointer;
+  user-select: none;
+  font-weight: 900;
+  text-transform: lowercase;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Cyan glass-neomorphic button */
+.glass-neo-btn-cyan {
+  background: linear-gradient(
+    135deg,
+    rgba(8, 145, 178, 0.75) 0%,
+    rgba(6, 182, 212, 0.45) 50%,
+    rgba(8, 145, 178, 0.5) 50.1%,
+    rgba(21, 94, 117, 0.8) 100%
+  );
+  background-size: 100% 100%;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(165, 243, 252, 0.45);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  box-shadow: 
+    4px 4px 12px rgba(8, 145, 178, 0.25),
+    -4px -4px 12px rgba(255, 255, 255, 0.65),
+    inset 0 1px 1px rgba(255, 255, 255, 0.6),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.dark .glass-neo-btn-cyan {
+  background: linear-gradient(
+    135deg,
+    rgba(8, 145, 178, 0.65) 0%,
+    rgba(6, 182, 212, 0.35) 50%,
+    rgba(8, 145, 178, 0.4) 50.1%,
+    rgba(21, 94, 117, 0.7) 100%
+  );
+  border: 1px solid rgba(165, 243, 252, 0.2);
+  box-shadow: 
+    4px 4px 12px rgba(0, 0, 0, 0.45),
+    -4px -4px 12px rgba(255, 255, 255, 0.05),
+    inset 0 1px 1px rgba(255, 255, 255, 0.35),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Amber glass-neomorphic button */
+.glass-neo-btn-amber {
+  background: linear-gradient(
+    135deg,
+    rgba(217, 119, 6, 0.75) 0%,
+    rgba(245, 158, 11, 0.45) 50%,
+    rgba(217, 119, 6, 0.5) 50.1%,
+    rgba(146, 64, 14, 0.8) 100%
+  );
+  background-size: 100% 100%;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(254, 240, 138, 0.45);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  box-shadow: 
+    4px 4px 12px rgba(217, 119, 6, 0.25),
+    -4px -4px 12px rgba(255, 255, 255, 0.65),
+    inset 0 1px 1px rgba(255, 255, 255, 0.6),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.dark .glass-neo-btn-amber {
+  background: linear-gradient(
+    135deg,
+    rgba(217, 119, 6, 0.65) 0%,
+    rgba(245, 158, 11, 0.35) 50%,
+    rgba(217, 119, 6, 0.4) 50.1%,
+    rgba(146, 64, 14, 0.7) 100%
+  );
+  border: 1px solid rgba(254, 240, 138, 0.2);
+  box-shadow: 
+    4px 4px 12px rgba(0, 0, 0, 0.45),
+    -4px -4px 12px rgba(255, 255, 255, 0.05),
+    inset 0 1px 1px rgba(255, 255, 255, 0.35),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Semi-oval glossy top highlight for physical lens reflection */
+.glass-neo-btn-cyan::before,
+.glass-neo-btn-amber::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.35) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  border-radius: 15px 15px 0 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.dark .glass-neo-btn-cyan::before,
+.dark .glass-neo-btn-amber::before {
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.01) 100%
+  );
+}
+
+/* Diagonal reflection sweep on hover */
+.glass-neo-btn-cyan::after,
+.glass-neo-btn-amber::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.45) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: skewX(-25deg);
+  transition: none;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.glass-neo-btn-cyan:hover::after,
+.glass-neo-btn-amber:hover::after {
+  left: 150%;
+  transition: all 0.85s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Hover lift and shadow expansion */
+.glass-neo-btn-cyan:hover,
+.glass-neo-btn-amber:hover {
+  transform: translateY(-2px);
+}
+
+.glass-neo-btn-cyan:hover {
+  box-shadow: 
+    5px 8px 18px rgba(8, 145, 178, 0.35),
+    -5px -8px 18px rgba(255, 255, 255, 0.85),
+    inset 0 1px 1px rgba(255, 255, 255, 0.7),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.dark .glass-neo-btn-cyan:hover {
+  box-shadow: 
+    5px 8px 18px rgba(0, 0, 0, 0.6),
+    -5px -8px 18px rgba(255, 255, 255, 0.08),
+    inset 0 1px 1px rgba(255, 255, 255, 0.45),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.35);
+}
+
+.glass-neo-btn-amber:hover {
+  box-shadow: 
+    5px 8px 18px rgba(217, 119, 6, 0.35),
+    -5px -8px 18px rgba(255, 255, 255, 0.85),
+    inset 0 1px 1px rgba(255, 255, 255, 0.7),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.dark .glass-neo-btn-amber:hover {
+  box-shadow: 
+    5px 8px 18px rgba(0, 0, 0, 0.6),
+    -5px -8px 18px rgba(255, 255, 255, 0.08),
+    inset 0 1px 1px rgba(255, 255, 255, 0.45),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.35);
+}
+
+/* Active pressed state (physical neomorphic depression) */
+.glass-neo-btn-cyan:active,
+.glass-neo-btn-amber:active {
+  transform: translateY(1px);
+}
+
+.glass-neo-btn-cyan:active {
+  box-shadow: 
+    inset 4px 4px 8px rgba(0, 0, 0, 0.35),
+    inset -4px -4px 8px rgba(255, 255, 255, 0.25),
+    0 1px 2px rgba(8, 145, 178, 0.1);
+}
+
+.dark .glass-neo-btn-cyan:active {
+  box-shadow: 
+    inset 5px 5px 10px rgba(0, 0, 0, 0.75),
+    inset -5px -5px 10px rgba(255, 255, 255, 0.03),
+    0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.glass-neo-btn-amber:active {
+  box-shadow: 
+    inset 4px 4px 8px rgba(0, 0, 0, 0.35),
+    inset -4px -4px 8px rgba(255, 255, 255, 0.25),
+    0 1px 2px rgba(217, 119, 6, 0.1);
+}
+
+.dark .glass-neo-btn-amber:active {
+  box-shadow: 
+    inset 5px 5px 10px rgba(0, 0, 0, 0.75),
+    inset -5px -5px 10px rgba(255, 255, 255, 0.03),
+    0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+
 
