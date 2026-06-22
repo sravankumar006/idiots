@@ -267,6 +267,10 @@ export default function StudyCabinDetailPage({ params, searchParams }: PageProps
       if (error) throw error
 
       if (studyRoom) {
+        if (studyRoom.room_status === 'completed') {
+          router.push('/focus')
+          return
+        }
         setRoom(studyRoom as any)
       } else {
         router.push('/focus')
@@ -328,6 +332,22 @@ export default function StudyCabinDetailPage({ params, searchParams }: PageProps
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
       if (!prof) return
       setActiveProfile(prof as UserProfile)
+
+      // Check for active focus session in this room
+      const { data: activeSession } = await supabase
+        .from('focus_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('group_id', roomId)
+        .eq('completed', false)
+        .maybeSingle()
+
+      if (activeSession) {
+        setActiveSessionId(activeSession.id)
+        setNotes(activeSession.notes || '')
+        if (activeSession.goal) setSelectedGoal(activeSession.goal)
+        if (activeSession.theme) setSelectedTheme(activeSession.theme)
+      }
 
       // Fetch room details
       await fetchRoomDetails()
@@ -614,8 +634,13 @@ export default function StudyCabinDetailPage({ params, searchParams }: PageProps
       setIsFullscreen(true)
       ensureFocusSessionActive()
     } else if (roomTimer.status === 'completed') {
-      setIsFullscreen(true)
-      setShowCompletionModal(true)
+      if (activeSessionId) {
+        setIsFullscreen(true)
+        setShowCompletionModal(true)
+      } else {
+        setIsFullscreen(false)
+        setShowCompletionModal(false)
+      }
     } else if (roomTimer.status === 'idle') {
       setIsFullscreen(false)
       if (!showCompletionModal) {
@@ -623,7 +648,7 @@ export default function StudyCabinDetailPage({ params, searchParams }: PageProps
         setElapsedSeconds(0)
       }
     }
-  }, [roomTimer?.status])
+  }, [roomTimer?.status, activeSessionId])
 
   // 3. User Notepad Auto-sync Effect
   useEffect(() => {
