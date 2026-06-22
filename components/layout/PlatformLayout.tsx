@@ -188,18 +188,35 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
           .maybeSingle()
 
         if (activeSession) {
-          const createdAtTime = new Date(activeSession.created_at).getTime()
-          const nowTime = Date.now()
-          const hoursDiff = (nowTime - createdAtTime) / (1000 * 60 * 60)
-          
-          if (hoursDiff < 4) {
-            setIsFocusLocked(true)
-            if (activeSession.group_id) {
-              router.replace(`/focus/${activeSession.group_id}`)
-            } else {
-              router.replace('/focus')
+          // Fetch the timer state for this room to see if focus is actually running
+          const { data: timer } = await supabase
+            .from('study_room_timers')
+            .select('status')
+            .eq('room_id', activeSession.group_id)
+            .maybeSingle()
+
+          const isTimerActive = timer && (timer.status === 'running' || timer.status === 'paused' || timer.status === 'completed')
+
+          if (isTimerActive) {
+            const createdAtTime = new Date(activeSession.created_at).getTime()
+            const nowTime = Date.now()
+            const hoursDiff = (nowTime - createdAtTime) / (1000 * 60 * 60)
+            
+            if (hoursDiff < 4) {
+              setIsFocusLocked(true)
+              if (activeSession.group_id) {
+                router.replace(`/focus/${activeSession.group_id}`)
+              } else {
+                router.replace('/focus')
+              }
+              return
             }
-            return
+          } else {
+            // If the timer is idle or doesn't exist, the session is completed/ended
+            await supabase
+              .from('focus_sessions')
+              .update({ completed: true })
+              .eq('id', activeSession.id)
           }
         }
         setIsFocusLocked(false)
