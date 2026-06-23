@@ -14,7 +14,9 @@ import {
   Brain, 
   Settings,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  User,
+  Users
 } from 'lucide-react'
 import { UserProfile } from '@/types'
 
@@ -26,6 +28,7 @@ interface SidebarProps {
 
 export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: SidebarProps) {
   const pathname = usePathname()
+  const username = profile?.username || 'me'
 
   const navItems = [
     // Main Group
@@ -36,7 +39,8 @@ export default function Sidebar({ isCollapsed, setIsCollapsed, profile }: Sideba
     { href: '/us/timeline', label: 'timeline', icon: History, group: 'us' },
     { href: '/us/vault', label: 'scrapbook vault', icon: Archive, group: 'us' },
     // Growth Group
-    { href: '/focus', label: 'zen focus', icon: Clock, group: 'growth' },
+    { href: '/growth/zen-focus', label: 'zen focus', icon: Clock, group: 'growth' },
+    { href: '/focus', label: 'study lounge', icon: Users, group: 'growth' },
     { href: '/growth/creative', label: 'creative rooms', icon: FolderHeart, group: 'growth' },
     { href: '/growth/memories', label: 'memories', icon: Brain, group: 'growth' },
     // System Group

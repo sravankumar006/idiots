@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react'
 import {
   Settings, X, Heart, ArrowLeft,
   LayoutDashboard, Sparkles, Clock, Brain, FolderHeart,
-  Hash, Sun, Moon, ChevronDown, ChevronLeft, ChevronRight
+  Hash, Sun, Moon, ChevronDown, ChevronLeft, ChevronRight,
+  User, Users
 } from 'lucide-react'
 import { UserProfile, ChatGroup } from '@/types'
 import { createClient } from '@/lib/supabase/client'
@@ -37,14 +38,7 @@ const AVATAR_OPTIONS = [
   { id: 'avatar-shadow-blade', name: 'Deep Charcoal',    gradient: 'from-[#2A2824] to-[#1C1A17]',   symbol: 'DC' },
 ]
 
-const NAV_ITEMS = [
-  { href: '/dashboard',  label: 'home',           icon: LayoutDashboard },
-  { href: '/ai',         label: 'companion',      icon: Sparkles },
-  { href: '/focus',      label: 'zen focus',      icon: Clock },
-  { href: '/memories',   label: 'memories',       icon: Brain },
-  { href: '/projects',   label: 'creative rooms', icon: FolderHeart },
-  { href: '/settings',   label: 'settings',       icon: Settings },
-]
+
 
 interface ChatWorkspaceClientProps {
   activeUser: UserProfile | null
@@ -183,6 +177,16 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
   // ——— Sidebar inner content (shared between desktop and mobile) ———
   const SidebarContent = ({ isDesktop = false }: { isDesktop?: boolean }) => {
     const isCollapsed = isDesktop && isSidebarCollapsed
+    const username = activeProfile?.username || 'me'
+    const navItems = [
+      { href: '/dashboard',          label: 'home',           icon: LayoutDashboard },
+      { href: '/ai',                 label: 'companion',      icon: Sparkles },
+      { href: '/growth/zen-focus',   label: 'zen focus',      icon: Clock },
+      { href: '/focus',              label: 'study lounge',   icon: Users },
+      { href: '/memories',           label: 'memories',       icon: Brain },
+      { href: '/projects',           label: 'creative rooms', icon: FolderHeart },
+      { href: '/settings',           label: 'settings',       icon: Settings },
+    ]
 
     return (
       <div className="flex flex-col h-full">
@@ -225,7 +229,7 @@ export default function ChatWorkspaceClient({ activeUser, initialGroups }: ChatW
 
                 {navOpen && (
                   <div className="absolute top-full right-0 mt-1 w-48 z-50 bg-[#fefdfb] dark:bg-[#1c1f26] rounded-xl border border-black/6 dark:border-white/5 shadow-xl p-1.5 animate-scaleIn">
-                    {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
+                    {navItems.map(({ href, label, icon: Icon }) => (
                       <Link
                         key={href}
                         href={href}

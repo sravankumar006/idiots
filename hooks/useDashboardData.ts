@@ -672,6 +672,26 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
     }
   }, [userIdToLoad, fetchData])
 
+  // Subscribe to realtime focus session changes to keep stats synchronized
+  useEffect(() => {
+    if (!userIdToLoad) return
+
+    const channel = supabase
+      .channel(`dashboard-focus-realtime:${userIdToLoad}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'focus_sessions', filter: `user_id=eq.${userIdToLoad}` },
+        () => {
+          fetchData()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [userIdToLoad, fetchData, supabase])
+
   // 2. Update Career Profile (Disabled in Read-only)
   const updateCareerProfile = async (updates: Partial<CareerProfile>) => {
     if (targetUserId && targetUserId !== userId) return

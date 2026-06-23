@@ -169,6 +169,7 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
     if (
       pathname === '/chat' ||
       pathname === '/focus' ||
+      pathname === '/growth/zen-focus' ||
       pathname?.startsWith('/focus/')
     ) {
       setIsFocusLocked(false)
@@ -359,6 +360,7 @@ export default function PlatformLayout({ profile, children }: PlatformLayoutProp
 
   const isMinimalLayout = 
     pathname === '/chat' || 
+    pathname === '/growth/zen-focus' ||
     (pathname?.startsWith('/focus/') && pathname !== '/focus')
 
   const renderLayoutContent = () => {

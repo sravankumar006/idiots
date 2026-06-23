@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { 
   Bell, Search, Users, Menu, Sparkles, Sun, Moon, 
-  Check, Trash2, MessageSquare, BookOpen, Trophy, CloudLightning, ShieldAlert 
+  Check, Trash2, MessageSquare, BookOpen, Trophy, CloudLightning, ShieldAlert,
+  User
 } from 'lucide-react'
 import { UserProfile } from '@/types'
 import { useTheme } from 'next-themes'
@@ -191,6 +193,17 @@ useEffect(() => {
           <span className="h-1.5 w-1.5 rounded-full bg-[var(--active-color)] animate-pulse" />
           <span>connected & synced</span>
         </div>
+
+        {/* My Corner shortcut link */}
+        {profile?.username && (
+          <Link
+            href={`/space/${profile.username}`}
+            className="p-2.5 rounded-full bg-neo-bg shadow-neo text-neo-secondary hover:text-[var(--foreground)] hover:shadow-neo hover:-translate-y-0.5 active:shadow-neo-inset active:translate-y-0.5 transition-all duration-300 cursor-pointer border-none flex items-center justify-center shrink-0"
+            title="My Corner"
+          >
+            <User className="h-4 w-4" />
+          </Link>
+        )}
 
         {/* Theme Toggle Switcher */}
         {mounted && (
@@ -515,19 +528,6 @@ useEffect(() => {
           )}
         </div>
 
-        {/* Toggle Right Panel (Desktop/Tablet) */}
-        <button 
-          onClick={() => setRightPanelOpen(!rightPanelOpen)}
-          className={`hidden md:flex p-2 rounded-xl transition-all cursor-pointer ${
-            rightPanelOpen 
-              ? 'bg-violet-500/10 text-violet-400 border border-violet-500/20' 
-              : 'hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-950 dark:hover:text-white'
-          }`}
-          title="view details"
-          suppressHydrationWarning
-        >
-          <Users className="h-4 w-4" />
-        </button>
         {/* User Quick Profile Icon removed */}
       </div>
 

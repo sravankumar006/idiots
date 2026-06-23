@@ -14,6 +14,7 @@ import {
   GraduationCap
 } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import PageContainer from '@/components/layout/PageContainer'
 import SectionHeader from '@/components/layout/SectionHeader'
 import { Card } from '@/components/ui/Card'
@@ -23,8 +24,24 @@ import { createClient } from '@/lib/supabase/client'
 import { UserProfile } from '@/types'
 
 export default function GrowthPage() {
+  const router = useRouter()
   const supabase = createClient()
   const [activeProfile, setActiveProfile] = useState<UserProfile | null>(null)
+  const [isDesktop, setIsDesktop] = useState<boolean | null>(null)
+
+  // Redirect desktop screens to Zen Focus (bypass Growth dashboard on desktop)
+  useEffect(() => {
+    const handleRedirect = () => {
+      const desktop = window.innerWidth >= 768
+      setIsDesktop(desktop)
+      if (desktop) {
+        router.replace('/growth/zen-focus')
+      }
+    }
+    handleRedirect()
+    window.addEventListener('resize', handleRedirect)
+    return () => window.removeEventListener('resize', handleRedirect)
+  }, [router])
 
   useEffect(() => {
     const getSession = async () => {
@@ -50,6 +67,10 @@ export default function GrowthPage() {
     projects,
     loading: projectsLoading
   } = useProjectsData(activeProfile)
+
+  if (isDesktop === true) {
+    return null
+  }
 
   const isLoading = dashLoading || projectsLoading || !activeProfile
 
@@ -144,10 +165,16 @@ export default function GrowthPage() {
             )}
           </div>
 
-          <div className="pt-6">
+          <div className="pt-6 space-y-2.5">
+            <Link href="/growth/zen-focus" className="block w-full">
+              <button className="w-full py-3.5 bg-violet-600 dark:bg-violet-700 text-white rounded-2xl text-xs font-black lowercase tracking-wide cursor-pointer transition-all duration-300 transform hover:scale-[1.01] hover:bg-violet-700 dark:hover:bg-violet-650 active:translate-y-0.5 flex items-center justify-center gap-1.5 shadow-md">
+                <span>Start Solo Focus</span>
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </Link>
             <Link href="/focus" className="block w-full">
               <button className="w-full py-3.5 bg-white/20 dark:bg-white/[0.03] backdrop-blur-md border border-white/40 dark:border-white/10 text-violet-600 dark:text-violet-400 rounded-2xl text-xs font-black lowercase tracking-wide cursor-pointer transition-all duration-300 transform hover:scale-[1.01] hover:bg-white/30 dark:hover:bg-white/[0.06] hover:border-white/60 dark:hover:border-white/20 active:translate-y-0.5 flex items-center justify-center gap-1.5 shadow-sm">
-                <span>Start Focus Session</span>
+                <span>Enter Study Cabins</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
             </Link>
