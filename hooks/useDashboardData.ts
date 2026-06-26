@@ -1,8 +1,22 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { UserProfile } from '@/types'
+import {
+  getDashboardData,
+  getCrewStats,
+  updateCareerProfile as updateCareerProfileService,
+  updateCodingStats as updateCodingStatsService,
+  addActivityLog as addActivityLogService,
+  createAchievement as createAchievementService,
+  triggerAchievementNotification,
+  createRoadmapItem as createRoadmapItemService,
+  updateRoadmapItem as updateRoadmapItemService,
+  deleteRoadmapItem as deleteRoadmapItemService,
+  reorderRoadmapItems as reorderRoadmapItemsService,
+  subscribeToDashboardFocus,
+  unsubscribeChannel
+} from '@/components/dashboard/services/dashboard.service'
 
 export interface CareerProfile {
   id: string
@@ -178,7 +192,6 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
   const [communityAchievements, setCommunityAchievements] = useState<Achievement[]>([])
   const [userAchievements, setUserAchievements] = useState<Achievement[]>([])
 
-  const supabase = createClient()
   const userId = activeUser?.id
 
   // Determine active query ID
@@ -278,245 +291,65 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
     const focusKey = `mock_focus_sessions_${userIdToLoad}`
 
     try {
-      const promises: any[] = [
-        supabase.from('career_profiles').select('*').eq('id', userIdToLoad).maybeSingle(),
-        supabase.from('coding_stats').select('*').eq('user_id', userIdToLoad).maybeSingle(),
-        supabase.from('study_stats').select('*').eq('user_id', userIdToLoad).maybeSingle(),
-        supabase.from('activity_logs').select('*').eq('user_id', userIdToLoad).order('created_at', { ascending: false }).limit(20),
-        supabase.from('focus_sessions').select('*').eq('user_id', userIdToLoad).eq('completed', true).order('created_at', { ascending: false }).limit(1000),
-        supabase.from('roadmap_items').select('*').eq('user_id', userIdToLoad).order('display_order', { ascending: true }),
-        supabase.from('achievements').select('*, profiles(*)').eq('user_id', userIdToLoad).order('created_at', { ascending: false }),
-        supabase.from('achievements').select('*, profiles(*)').neq('user_id', userIdToLoad).order('created_at', { ascending: false }).limit(20)
-      ]
-
-      // Fetch target user profiles metadata if different
-      if (targetUserId && targetUserId !== userId) {
-        promises.push(supabase.from('profiles').select('*').eq('id', targetUserId).maybeSingle())
+      const res = await getDashboardData(userIdToLoad, targetUserId || null, userId)
+      if (!res.success || !res.data) {
+        throw new Error(typeof res.error === 'string' ? res.error : 'Failed to fetch dashboard data')
       }
 
-      const [
-        careerRes, codingRes, studyRes, activitiesRes, focusRes, roadmapRes,
-        userAchRes, commAchRes, profileRes
-      ] = await Promise.all(promises)
+      const {
+        careerProfile: resCP,
+        codingStats: resCS,
+        studyStats: resSS,
+        activities: resAct,
+        focusSessions: resFocus,
+        roadmapItems: resRoadmap,
+        userAchievements: resUserAch,
+        communityAchievements: resCommAch,
+        targetUserProfile: resTargetUser
+      } = res.data
 
       // Set target user details
-      if (profileRes && profileRes.data) {
-        setTargetUser(profileRes.data as UserProfile)
+      if (resTargetUser) {
+        setTargetUser(resTargetUser as UserProfile)
       } else {
         setTargetUser(activeUser)
       }
 
-      // Profile handle
-      let careerProfileData: CareerProfile | null = null
-      if (careerRes.error) throw careerRes.error
-      if (careerRes.data) {
-        careerProfileData = careerRes.data as CareerProfile
-      } else {
-        // Create initial record (only if it is current user)
-        const def = DEFAULT_CAREER_PROFILE(userIdToLoad)
-        if (userIdToLoad === userId) {
-          await supabase.from('career_profiles').insert(def)
-        }
-        careerProfileData = def
-      }
-      setCareerProfile(careerProfileData)
+      setCareerProfile(resCP)
+      setCodingStats(resCS)
 
-      // Coding Stats handle
-      if (codingRes.error) throw codingRes.error
-      if (codingRes.data) {
-        setCodingStats(codingRes.data as CodingStats)
-      } else {
-        const def = DEFAULT_CODING_STATS(userIdToLoad)
-        if (userIdToLoad === userId) {
-          await supabase.from('coding_stats').insert({ user_id: userIdToLoad, ...def })
-        }
-        setCodingStats(def)
-      }
-
-      // Focus Sessions handle
-      let finalFocusSessions: FocusSession[] = []
-      let finalFocusStats: FocusStats = {
-        totalHours: 0,
-        totalSessions: 0,
-        weeklyMinutes: 0,
-        monthlyMinutes: 0,
-        collaborativeSessions: 0,
-        streak: 0,
-        goalBreakdown: {}
-      }
-
-      if (focusRes.error) throw focusRes.error
-      if (focusRes.data && focusRes.data.length > 0) {
-        finalFocusSessions = focusRes.data as FocusSession[]
-        finalFocusStats = computeFocusStats(finalFocusSessions)
-      } else {
-        const def = DEFAULT_FOCUS_SESSIONS(userIdToLoad)
-        finalFocusSessions = def
-        finalFocusStats = computeFocusStats(def)
-      }
-      setFocusSessions(finalFocusSessions)
+      const finalFocusStats = computeFocusStats(resFocus)
+      setFocusSessions(resFocus)
       setFocusStats(finalFocusStats)
 
       // Study Stats handle - override streak and completed sessions with real calculated stats!
-      if (studyRes.error) throw studyRes.error
-      let studyStatsData: StudyStats
-      if (studyRes.data) {
-        studyStatsData = studyRes.data as StudyStats
-      } else {
-        studyStatsData = DEFAULT_STUDY_STATS(userIdToLoad)
-        if (userIdToLoad === userId) {
-          await supabase.from('study_stats').insert({ user_id: userIdToLoad, ...studyStatsData })
-        }
-      }
-      // Overwrite with real database activity stats
+      const studyStatsData = { ...(resSS || DEFAULT_STUDY_STATS(userIdToLoad)) }
       studyStatsData.completed_pomodoros = finalFocusStats.totalSessions
       studyStatsData.current_streak = finalFocusStats.streak
       setStudyStats(studyStatsData)
 
-      // Activities handle
-      if (activitiesRes.error) throw activitiesRes.error
-      if (activitiesRes.data && activitiesRes.data.length > 0) {
-        setActivities(activitiesRes.data as ActivityLog[])
-      } else {
-        const def = DEFAULT_ACTIVITIES(userIdToLoad)
-        if (userIdToLoad === userId) {
-          await supabase.from('activity_logs').insert(def)
-        }
-        setActivities(def)
-      }
-
-      // Roadmap Items handle - with auto-migration from careerProfile markdown roadmap
-      if (roadmapRes.error) throw roadmapRes.error
-      let finalRoadmapItems: RoadmapItem[] = []
-      if (roadmapRes.data && roadmapRes.data.length > 0) {
-        finalRoadmapItems = roadmapRes.data as RoadmapItem[]
-      } else {
-        // If empty, check if we can migrate from careerProfile markdown roadmap
-        if (careerProfileData && careerProfileData.learning_roadmap) {
-          const lines = careerProfileData.learning_roadmap.split('\n').filter(Boolean)
-          const newItems = lines.map((line, idx) => {
-            const match = line.match(/^-\s*\[([ x/]+)\]\s*(.*)$/)
-            const completed = match ? match[1].toLowerCase().includes('x') : false
-            const title = match ? match[2].trim() : line.trim()
-            return {
-              user_id: userIdToLoad,
-              stage: 'General',
-              title,
-              completed,
-              display_order: idx
-            }
-          }).filter(item => item.title.length > 0)
-
-          if (newItems.length > 0 && userIdToLoad === userId) {
-            const { data: inserted } = await supabase.from('roadmap_items').insert(newItems).select()
-            if (inserted) {
-              finalRoadmapItems = inserted as RoadmapItem[]
-            }
-          }
-        }
-      }
-      setRoadmapItems(finalRoadmapItems)
-
-      // User Achievements handle
-      let finalUserAchievements: Achievement[] = []
-      if (userAchRes && !userAchRes.error && userAchRes.data) {
-        finalUserAchievements = userAchRes.data as Achievement[]
-      }
-      setUserAchievements(finalUserAchievements)
-
-      // Community Achievements handle
-      let finalCommAchievements: Achievement[] = []
-      if (commAchRes && !commAchRes.error && commAchRes.data) {
-        finalCommAchievements = commAchRes.data as Achievement[]
-      }
-      setCommunityAchievements(finalCommAchievements)
+      setActivities(resAct)
+      setRoadmapItems(resRoadmap)
+      setUserAchievements(resUserAch)
+      setCommunityAchievements(resCommAch)
 
       // Auto-detect Achievements
       if (userIdToLoad === userId) {
-        const currentVisibility = careerProfileData?.achievement_visibility || 'public'
+        const currentVisibility = resCP?.achievement_visibility || 'public'
         await checkAndTriggerAchievements(
           userIdToLoad,
           finalFocusStats,
-          finalRoadmapItems,
-          finalUserAchievements,
+          resRoadmap,
+          resUserAch,
           currentVisibility
         )
       }
 
       // Fetch crew stats (platform-wide)
-      let crewStatsData: CrewStats = {
-        weeklyFocusHours: 0,
-        activeMembersToday: 0,
-        activeSessions: 0,
-        completedSessions: 0,
-        totalActivities: 0,
-        totalMemories: 0,
-        totalChatMessages: 0
+      const crewRes = await getCrewStats()
+      if (crewRes.success && crewRes.data) {
+        setCrewStats(crewRes.data)
       }
-
-      try {
-        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
-
-        // 1. Weekly focus hours (all users, last 7 days)
-        const { data: weeklySessions } = await supabase
-          .from('focus_sessions')
-          .select('actual_minutes')
-          .eq('completed', true)
-          .gte('created_at', oneWeekAgo.toISOString())
-        const weeklyMinutes = weeklySessions?.reduce((acc, s) => acc + s.actual_minutes, 0) || 0
-        crewStatsData.weeklyFocusHours = Number((weeklyMinutes / 60).toFixed(1))
-
-        // 2. Active members today (all users, last 24 hours)
-        const [recentFocusUsers, recentActivityUsers, recentMessageUsers] = await Promise.all([
-          supabase.from('focus_sessions').select('user_id').gte('created_at', oneDayAgo.toISOString()),
-          supabase.from('activity_logs').select('user_id').gte('created_at', oneDayAgo.toISOString()),
-          supabase.from('messages').select('sender_id').gte('created_at', oneDayAgo.toISOString())
-        ])
-
-        const activeUserIds = new Set<string>()
-        recentFocusUsers.data?.forEach(u => activeUserIds.add(u.user_id))
-        recentActivityUsers.data?.forEach(u => activeUserIds.add(u.user_id))
-        recentMessageUsers.data?.forEach(u => activeUserIds.add(u.sender_id))
-        crewStatsData.activeMembersToday = activeUserIds.size
-
-        // 3. Active focus sessions
-        const { count: activeSessions } = await supabase
-          .from('focus_sessions')
-          .select('*', { count: 'exact', head: true })
-          .eq('completed', false)
-        crewStatsData.activeSessions = activeSessions || 0
-
-        // 4. Completed focus sessions
-        const { count: completedSessions } = await supabase
-          .from('focus_sessions')
-          .select('*', { count: 'exact', head: true })
-          .eq('completed', true)
-        crewStatsData.completedSessions = completedSessions || 0
-
-        // 5. Total timeline activity
-        const { count: totalActivities } = await supabase
-          .from('activity_logs')
-          .select('*', { count: 'exact', head: true })
-        crewStatsData.totalActivities = totalActivities || 0
-
-        // 6. Total memories
-        const { count: totalMemories } = await supabase
-          .from('ai_memories')
-          .select('*', { count: 'exact', head: true })
-        crewStatsData.totalMemories = totalMemories || 0
-
-        // 7. Total chat messages
-        const { count: totalChatMessages } = await supabase
-          .from('messages')
-          .select('*', { count: 'exact', head: true })
-        crewStatsData.totalChatMessages = totalChatMessages || 0
-
-      } catch (err) {
-        console.warn("Failed to fetch crew stats from DB:", err)
-      }
-
-      setCrewStats(crewStatsData)
 
     } catch (err: any) {
       console.warn("DB Dashboard Fetch failed (switching to localStorage fallback):", err.message)
@@ -664,7 +497,7 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
     } finally {
       setLoading(false)
     }
-  }, [userIdToLoad, userId, targetUserId, activeUser, supabase])
+  }, [userIdToLoad, userId, targetUserId, activeUser])
 
   useEffect(() => {
     if (userIdToLoad) {
@@ -676,21 +509,14 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
   useEffect(() => {
     if (!userIdToLoad) return
 
-    const channel = supabase
-      .channel(`dashboard-focus-realtime:${userIdToLoad}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'focus_sessions', filter: `user_id=eq.${userIdToLoad}` },
-        () => {
-          fetchData()
-        }
-      )
-      .subscribe()
+    const channel = subscribeToDashboardFocus(userIdToLoad, () => {
+      fetchData()
+    })
 
     return () => {
-      supabase.removeChannel(channel)
+      unsubscribeChannel(channel)
     }
-  }, [userIdToLoad, fetchData, supabase])
+  }, [userIdToLoad, fetchData])
 
   // 2. Update Career Profile (Disabled in Read-only)
   const updateCareerProfile = async (updates: Partial<CareerProfile>) => {
@@ -702,11 +528,8 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
 
     // Sync to DB
     try {
-      const { error } = await supabase
-        .from('career_profiles')
-        .update(updates)
-        .eq('id', userId)
-      if (error) throw error
+      const res = await updateCareerProfileService(userId, updates)
+      if (!res.success) throw res.error
     } catch (err: any) {
       console.warn("DB Update Career Profile failed, using localStorage fallback:", err.message)
       localStorage.setItem(`mock_career_profile_${userId}`, JSON.stringify(nextCP))
@@ -739,15 +562,8 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
 
     // Sync to DB
     try {
-      const { error } = await supabase
-        .from('coding_stats')
-        .update({
-          leetcode_solved: nextCS.leetcode_solved,
-          leetcode_streak: nextCS.leetcode_streak,
-          github_contributions: nextCS.github_contributions
-        })
-        .eq('user_id', userId)
-      if (error) throw error
+      const res = await updateCodingStatsService(userId, nextCS.leetcode_solved, nextCS.leetcode_streak, nextCS.github_contributions)
+      if (!res.success) throw res.error
     } catch (err: any) {
       console.warn("DB Update Coding Stats failed, using localStorage fallback:", err.message)
       localStorage.setItem(`mock_coding_stats_${userId}`, JSON.stringify(nextCS))
@@ -771,14 +587,8 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
 
     // Save to DB
     try {
-      const { error } = await supabase
-        .from('activity_logs')
-        .insert({
-          user_id: userId,
-          activity_type: type,
-          description
-        })
-      if (error) throw error
+      const res = await addActivityLogService(userId, type, description)
+      if (!res.success) throw res.error
     } catch (err: any) {
       console.warn("DB Insert Activity Log failed, using localStorage fallback:", err.message)
       const activitiesKey = `mock_activities_${userId}`
@@ -798,13 +608,9 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
     }
 
     try {
-      const { data, error } = await supabase
-        .from('achievements')
-        .insert(newAch)
-        .select('*, profiles(*)')
-        .single()
-      
-      if (error) throw error
+      const res = await createAchievementService(newAch)
+      if (!res.success) throw res.error
+      const data = res.data
       if (data) {
         setUserAchievements(prev => [data as Achievement, ...prev])
         if (visibility !== 'private') {
@@ -812,17 +618,13 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
         }
 
         // Trigger notification
-        fetch('/api/notifications/trigger', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: uid,
-            title: 'achievement unlocked! 🏆',
-            body: `you ${verb} ${title}`,
-            category: 'achievement',
-            type: 'milestone',
-            relatedId: data.id
-          })
+        triggerAchievementNotification({
+          userId: uid,
+          title: 'achievement unlocked! 🏆',
+          body: `you ${verb} ${title}`,
+          category: 'achievement',
+          type: 'milestone',
+          relatedId: data.id
         }).catch(err => console.error('Failed to trigger achievement notification:', err))
 
         return data as Achievement
@@ -844,17 +646,13 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
       }
 
       // Trigger notification for mocked achievement
-      fetch('/api/notifications/trigger', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: uid,
-          title: 'achievement unlocked! 🏆',
-          body: `you ${verb} ${title}`,
-          category: 'achievement',
-          type: 'milestone',
-          relatedId: mockAch.id
-        })
+      triggerAchievementNotification({
+        userId: uid,
+        title: 'achievement unlocked! 🏆',
+        body: `you ${verb} ${title}`,
+        category: 'achievement',
+        type: 'milestone',
+        relatedId: mockAch.id
       }).catch(err => console.error('Failed to trigger mock achievement notification:', err))
 
       const localKey = `mock_achievements_${uid}`
@@ -909,7 +707,7 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
     if (!userId) return null
 
     const maxOrder = roadmapItems.reduce((max, item) => Math.max(max, item.display_order), -1)
-    const newItem: Omit<RoadmapItem, 'id' | 'created_at'> & { id?: string; created_at?: string } = {
+    const newItem = {
       user_id: userId,
       stage,
       title,
@@ -918,13 +716,9 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
     }
 
     try {
-      const { data, error } = await supabase
-        .from('roadmap_items')
-        .insert(newItem)
-        .select()
-        .single()
-      
-      if (error) throw error
+      const res = await createRoadmapItemService(newItem)
+      if (!res.success) throw res.error
+      const data = res.data
       if (data) {
         setRoadmapItems(prev => [...prev, data as RoadmapItem])
         return data as RoadmapItem
@@ -953,11 +747,8 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
     setRoadmapItems(updated)
 
     try {
-      const { error } = await supabase
-        .from('roadmap_items')
-        .update(updates)
-        .eq('id', id)
-      if (error) throw error
+      const res = await updateRoadmapItemService(id, updates)
+      if (!res.success) throw res.error
     } catch (err: any) {
       console.warn("DB Update Roadmap Item failed, using localStorage fallback:", err.message)
       localStorage.setItem(`mock_roadmap_items_${userId}`, JSON.stringify(updated))
@@ -973,11 +764,8 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
     setRoadmapItems(updated)
 
     try {
-      const { error } = await supabase
-        .from('roadmap_items')
-        .delete()
-        .eq('id', id)
-      if (error) throw error
+      const res = await deleteRoadmapItemService(id)
+      if (!res.success) throw res.error
     } catch (err: any) {
       console.warn("DB Delete Roadmap Item failed, using localStorage fallback:", err.message)
       localStorage.setItem(`mock_roadmap_items_${userId}`, JSON.stringify(updated))
@@ -992,13 +780,8 @@ export function useDashboardData(activeUser: UserProfile | null, targetUserId?: 
     setRoadmapItems(reordered)
 
     try {
-      const promises = reordered.map(item => 
-        supabase
-          .from('roadmap_items')
-          .update({ display_order: item.display_order })
-          .eq('id', item.id)
-      )
-      await Promise.all(promises)
+      const res = await reorderRoadmapItemsService(reordered.map(item => ({ id: item.id, display_order: item.display_order })))
+      if (!res.success) throw res.error
     } catch (err: any) {
       console.warn("DB Reorder Roadmap Items failed, using localStorage fallback:", err.message)
       localStorage.setItem(`mock_roadmap_items_${userId}`, JSON.stringify(reordered))
