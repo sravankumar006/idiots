@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { X, FileText, Film } from 'lucide-react'
+import { formatSize } from '@/lib/utils/files'
 
 interface FilePreviewProps {
   file: File | null
@@ -36,14 +37,6 @@ export default function FilePreview({
 
   const isImage = file.type.startsWith('image/')
   const isVideo = file.type.startsWith('video/')
-
-  const formatSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`
-    const kb = bytes / 1024
-    if (kb < 1024) return `${kb.toFixed(1)} KB`
-    const mb = kb / 1024
-    return `${mb.toFixed(1)} MB`
-  }
 
   return (
     <div className="p-3 border border-black/5 dark:border-white/5 border-b-0 bg-[#fcfbf9]/90 dark:bg-[#0a0b15]/60 backdrop-blur-md rounded-t-2xl flex items-center justify-between gap-3 animate-fadeIn select-none">

@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { FileText, Download, ExternalLink } from 'lucide-react'
+import { formatSize } from '@/lib/utils/files'
 
 interface PDFMessageProps {
   src: string
@@ -14,16 +15,6 @@ export default function PDFMessage({
   fileName = 'document.pdf',
   fileSize
 }: PDFMessageProps) {
-  
-  // Convert bytes into formatted human readable size strings
-  const formatSize = (bytes?: number | null) => {
-    if (!bytes) return ''
-    if (bytes < 1024) return `${bytes} B`
-    const kb = bytes / 1024
-    if (kb < 1024) return `${kb.toFixed(1)} KB`
-    const mb = kb / 1024
-    return `${mb.toFixed(1)} MB`
-  }
 
   return (
     <div className="flex items-center gap-3.5 p-3 rounded-2xl border border-black/5 dark:border-white/5 bg-white/10 dark:bg-white/2 backdrop-blur-md max-w-[280px] sm:max-w-xs md:max-w-sm w-full select-none transition-all duration-300 hover:border-violet-500/20 hover:bg-black/5 dark:hover:bg-white/4">

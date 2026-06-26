@@ -11,6 +11,7 @@ import RightPanel from './RightPanel'
 import MobileNav from './MobileNav'
 import useVisualViewport from '@/hooks/useVisualViewport'
 import { PushNotificationProvider } from '@/hooks/usePushNotifications'
+import { formatTime, calculateSeconds } from '@/lib/utils/time'
 
 
 
@@ -535,18 +536,10 @@ function FloatingSessionPill({ roomName, timer, roomId }: FloatingSessionPillPro
     if (timer.status === 'running') {
       setIsActive(true)
 
-      const calculateSeconds = () => {
-        if (!timer.start_time) return timer.elapsed_seconds
-        const startMs = new Date(timer.start_time).getTime()
-        const nowMs = Date.now()
-        const diffSecs = Math.floor((nowMs - startMs) / 1000)
-        return timer.elapsed_seconds + diffSecs
-      }
-
-      setElapsedSeconds(calculateSeconds())
+      setElapsedSeconds(calculateSeconds(timer))
 
       const interval = setInterval(() => {
-        setElapsedSeconds(calculateSeconds())
+        setElapsedSeconds(calculateSeconds(timer))
       }, 1000)
 
       return () => clearInterval(interval)
@@ -554,12 +547,6 @@ function FloatingSessionPill({ roomName, timer, roomId }: FloatingSessionPillPro
   }, [timer])
 
   if (!mounted) return null
-
-  const formatTime = (totalSecs: number) => {
-    const m = Math.floor(totalSecs / 60)
-    const s = totalSecs % 60
-    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-  }
 
   const remainingSeconds = isNoTimer ? elapsedSeconds : Math.max(0, ((timer?.duration_minutes || 0) * 60) - elapsedSeconds)
 

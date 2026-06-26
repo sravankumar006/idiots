@@ -20,6 +20,7 @@ import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import Link from 'next/link'
 import MessageToolbar from './MessageToolbar'
 import { Copy } from 'lucide-react'
+import { handleCopy as copyToClipboard } from '@/lib/utils/clipboard'
 
 // Emoji quick-access for hover bar
 const EMOJI_PICKER = ['👍', '❤️', '🔥', '😂', '😮', '✨']
@@ -197,7 +198,7 @@ export default function MessageBubble({
   // ——— Copy text ———
   const handleCopy = useCallback(() => {
     if (message.message) {
-      navigator.clipboard.writeText(message.message).catch(() => {})
+      copyToClipboard(message.message).catch(() => {})
     }
   }, [message.message])
 

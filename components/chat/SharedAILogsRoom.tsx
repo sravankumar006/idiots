@@ -12,6 +12,7 @@ import DragDropZone from './DragDropZone'
 import UploadButton from './UploadButton'
 import FilePreview from './FilePreview'
 import AiMessageSkeleton from './AiMessageSkeleton'
+import { handleCopy as copyToClipboard } from '@/lib/utils/clipboard'
 
 // Avatar palette
 const AVATAR_MAP: Record<string, { gradient: string; symbol: string }> = {
@@ -82,7 +83,7 @@ export default function SharedAILogsRoom({ groupId, activeUser, onBack }: Shared
   }
 
   const handleCopy = (id: string, text: string) => {
-    navigator.clipboard.writeText(text).then(() => {
+    copyToClipboard(text, () => {
       setCopiedId(id)
       setTimeout(() => setCopiedId(null), 2000)
     })
