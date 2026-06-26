@@ -48,3 +48,6 @@ next-env.d.ts
 /public/fallback-*.js
 /public/fallback-*.js.map
 
+
+# Visual Studio
+.vs/
